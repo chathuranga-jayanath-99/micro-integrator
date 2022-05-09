@@ -1670,8 +1670,6 @@
         <google-http-client.orbit.version>1.20.0.wso2v2</google-http-client.orbit.version>
         <google-http-client.orbit.imp.pkg.version>[1.20,2.0)</google-http-client.orbit.imp.pkg.version>
 
-        <google-api-client.orbit.imp.pkg.version>[1.20,2.0)</google-api-client.orbit.imp.pkg.version>
-
         <google-oauth-client.orbit.version>1.20.0.wso2v1</google-oauth-client.orbit.version>
         <google-oauth-client.orbit.imp.pkg.version>[1.20,2.0)</google-oauth-client.orbit.imp.pkg.version>
 
