@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.wso2.micro.integrator.http.client.test;
+package org.wso2.micro.integrator.http.utils;
 
 /**
  * This class contains the JSON payloads used in HTTP Core test cases.

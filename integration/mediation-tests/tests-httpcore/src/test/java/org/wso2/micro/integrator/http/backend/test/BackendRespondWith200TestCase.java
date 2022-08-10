@@ -31,8 +31,8 @@ import java.util.List;
 import static org.testng.Assert.assertEquals;
 import static org.wso2.micro.integrator.http.backend.test.Constants.HTTP_VERSION;
 import static org.wso2.micro.integrator.http.backend.test.Utils.getServerSocket;
-import static org.wso2.micro.integrator.http.client.test.Constants.CRLF;
-import static org.wso2.micro.integrator.http.client.test.Utils.getPayload;
+import static org.wso2.micro.integrator.http.utils.Constants.CRLF;
+import static org.wso2.micro.integrator.http.utils.Utils.getPayload;
 
 public class BackendRespondWith200TestCase extends HTTPCoreBackendTest {
 

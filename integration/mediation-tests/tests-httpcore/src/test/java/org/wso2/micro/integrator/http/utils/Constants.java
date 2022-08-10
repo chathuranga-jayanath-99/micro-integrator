@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.wso2.micro.integrator.http.client.test;
+package org.wso2.micro.integrator.http.utils;
 
 import org.testng.annotations.DataProvider;
 import org.wso2.carbon.utils.ServerConstants;
@@ -36,7 +36,7 @@ public class Constants {
     public static final String HOST = "localhost";
     public static final int HTTP_PORT = 8480;
     public static final int HTTPS_PORT = 8443;
-    public static final String API_CONTEXT = "/httpcore-test";
+    public static final String HTTPCORE_API_CONTEXT = "/httpcore-test";
     public static final String CRLF = "\r\n";
 
     public static final int CPU_POLL_TIMEOUT = 30;
@@ -45,6 +45,10 @@ public class Constants {
     public static final String HTTP_SC_200 = "200 OK";
     public static final String HTTP_SC_202 = "202 Accepted";
     public static final String HTTP_SC_400 = "400 Bad request";
+
+    public static final int CLIENT_THREAD_POOL_TERMINATION_SECONDS = 30;
+    public static final int CLIENT_THREAD_POOL_SIZE = 5;
+    public static final int CLIENT_INSTANCES = 5;
 
     @DataProvider(name = "httpRequests")
     public static Object[][] httpRequests() {
@@ -62,6 +66,25 @@ public class Constants {
                 {new HTTPRequest(RequestMethods.POST, PayloadSize.EMPTY, false)},
                 {new HTTPRequest(RequestMethods.POST, PayloadSize.SMALL, false)},
                 {new HTTPRequest(RequestMethods.POST, PayloadSize.LARGE, false)}
+        };
+    }
+
+    @DataProvider(name = "httpRequestsWith200OK")
+    public static Object[][] httpRequestsWith200OK() {
+
+        return new Object[][]{
+                {new HttpRequestWithExpectedHTTPSC(RequestMethods.GET, PayloadSize.EMPTY, true, HTTP_SC_200)},
+                {new HttpRequestWithExpectedHTTPSC(RequestMethods.GET, PayloadSize.SMALL, true, HTTP_SC_200)},
+                {new HttpRequestWithExpectedHTTPSC(RequestMethods.GET, PayloadSize.LARGE, true, HTTP_SC_200)},
+                {new HttpRequestWithExpectedHTTPSC(RequestMethods.POST, PayloadSize.EMPTY, true, HTTP_SC_200)},
+                {new HttpRequestWithExpectedHTTPSC(RequestMethods.POST, PayloadSize.SMALL, true, HTTP_SC_200)},
+                {new HttpRequestWithExpectedHTTPSC(RequestMethods.POST, PayloadSize.LARGE, true, HTTP_SC_200)},
+                {new HttpRequestWithExpectedHTTPSC(RequestMethods.GET, PayloadSize.EMPTY, false, HTTP_SC_200)},
+                {new HttpRequestWithExpectedHTTPSC(RequestMethods.GET, PayloadSize.SMALL, false, HTTP_SC_200)},
+                {new HttpRequestWithExpectedHTTPSC(RequestMethods.GET, PayloadSize.LARGE, false, HTTP_SC_200)},
+                {new HttpRequestWithExpectedHTTPSC(RequestMethods.POST, PayloadSize.EMPTY, false, HTTP_SC_200)},
+                {new HttpRequestWithExpectedHTTPSC(RequestMethods.POST, PayloadSize.SMALL, false, HTTP_SC_200)},
+                {new HttpRequestWithExpectedHTTPSC(RequestMethods.POST, PayloadSize.LARGE, false, HTTP_SC_200)}
         };
     }
 }

@@ -32,7 +32,7 @@ import java.util.List;
 import static org.testng.Assert.assertEquals;
 import static org.wso2.micro.integrator.http.backend.test.Constants.HTTP_VERSION;
 import static org.wso2.micro.integrator.http.backend.test.Utils.getServerSocket;
-import static org.wso2.micro.integrator.http.client.test.Constants.CRLF;
+import static org.wso2.micro.integrator.http.utils.Constants.CRLF;
 
 /**
  * Test case for MI behaviour(specifically CPU usage) when a invalid chunked HTTP response is received.

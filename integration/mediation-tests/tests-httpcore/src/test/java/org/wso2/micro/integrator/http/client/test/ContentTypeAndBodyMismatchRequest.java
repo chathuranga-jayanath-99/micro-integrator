@@ -18,15 +18,17 @@
 package org.wso2.micro.integrator.http.client.test;
 
 import org.apache.commons.lang3.StringUtils;
-import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import org.wso2.esb.integration.common.utils.clients.tcpclient.Client;
+import org.wso2.micro.integrator.http.utils.Constants;
+import org.wso2.micro.integrator.http.utils.HttpRequestWithExpectedHTTPSC;
+import org.wso2.micro.integrator.http.utils.PayloadSize;
+import org.wso2.micro.integrator.http.utils.RequestMethods;
 
-import java.io.PrintWriter;
+import java.io.PrintStream;
 
-import static org.wso2.micro.integrator.http.client.test.Constants.HTTP_SC_200;
-import static org.wso2.micro.integrator.http.client.test.Constants.HTTP_SC_202;
+import static org.wso2.micro.integrator.http.utils.Constants.HTTP_SC_200;
+import static org.wso2.micro.integrator.http.utils.Constants.HTTP_SC_202;
 
 /**
  * Test case tests for MI behaviour(specifically CPU usage) when a content type and body mismatch HTTPS request is
@@ -39,23 +41,13 @@ public class ContentTypeAndBodyMismatchRequest extends HTTPCoreClientTest {
             "request.", dataProvider = "httpRequestWithExpectedHTTPSC")
     public void testContentTypeAndBodyMismatchRequest(HttpRequestWithExpectedHTTPSC httpRequest) throws Exception {
 
-        Client tcpClient = Utils.getTCPClient(httpRequest);
-        tcpClient.open();
-        sendHTTPRequest(tcpClient.getPrintWriter(), httpRequest.getMethod(), Utils
-                .getPayload(httpRequest.getPayloadSize()));
-
-        assertCPUUsageBeforeClosingSocket();
-
-        Assert.assertTrue(tcpClient.getResponseAsString().contains(httpRequest.getExpectedHTTPSC()),
-                "A " + httpRequest.getExpectedHTTPSC() + " HTTP Status");
-        tcpClient.close();
-
-        assertCPUUsageAfterClosingSocket();
+        invokeHTTPCoreTestAPI(httpRequest);
     }
 
-    private static void sendHTTPRequest(PrintWriter printWriter, RequestMethods method, String payload) {
+    @Override
+    protected void sendHTTPRequest(PrintStream printWriter, RequestMethods method, String payload) {
 
-        printWriter.print(method + " " + Constants.API_CONTEXT + " HTTP/1.1" + Constants.CRLF);
+        printWriter.print(method + " " + Constants.HTTPCORE_API_CONTEXT + " HTTP/1.1" + Constants.CRLF);
         printWriter.print("Accept: application/json" + Constants.CRLF);
         printWriter.print("Connection: keep-alive" + Constants.CRLF);
         printWriter.print("Content-Type: application/xml" + Constants.CRLF);

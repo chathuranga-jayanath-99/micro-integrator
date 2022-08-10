@@ -17,7 +17,7 @@
 
 package org.wso2.micro.integrator.http.backend.test;
 
-import org.wso2.micro.integrator.http.client.test.HTTPRequest;
+import org.wso2.micro.integrator.http.utils.HTTPRequest;
 
 /**
  * This class is used to hold the HTTP request and Mock backend response information used for HTTP Core test cases.

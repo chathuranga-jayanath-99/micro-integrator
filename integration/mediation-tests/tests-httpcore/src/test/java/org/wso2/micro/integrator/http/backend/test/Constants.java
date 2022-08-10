@@ -18,9 +18,9 @@
 package org.wso2.micro.integrator.http.backend.test;
 
 import org.testng.annotations.DataProvider;
-import org.wso2.micro.integrator.http.client.test.HTTPRequest;
-import org.wso2.micro.integrator.http.client.test.PayloadSize;
-import org.wso2.micro.integrator.http.client.test.RequestMethods;
+import org.wso2.micro.integrator.http.utils.HTTPRequest;
+import org.wso2.micro.integrator.http.utils.PayloadSize;
+import org.wso2.micro.integrator.http.utils.RequestMethods;
 
 public class Constants {
 

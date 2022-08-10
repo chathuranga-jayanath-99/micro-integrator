@@ -17,16 +17,18 @@
 
 package org.wso2.micro.integrator.http.client.test;
 
-import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import org.wso2.esb.integration.common.utils.clients.tcpclient.Client;
+import org.wso2.micro.integrator.http.utils.Constants;
+import org.wso2.micro.integrator.http.utils.HttpRequestWithExpectedHTTPSC;
+import org.wso2.micro.integrator.http.utils.PayloadSize;
+import org.wso2.micro.integrator.http.utils.RequestMethods;
 
-import java.io.PrintWriter;
+import java.io.PrintStream;
 
-import static org.wso2.micro.integrator.http.client.test.Constants.HTTP_SC_200;
-import static org.wso2.micro.integrator.http.client.test.Constants.HTTP_SC_202;
-import static org.wso2.micro.integrator.http.client.test.Constants.HTTP_SC_400;
+import static org.wso2.micro.integrator.http.utils.Constants.HTTP_SC_200;
+import static org.wso2.micro.integrator.http.utils.Constants.HTTP_SC_202;
+import static org.wso2.micro.integrator.http.utils.Constants.HTTP_SC_400;
 
 /**
  * Test case tests for MI behaviour(specifically CPU usage) when a content length header and body content length
@@ -34,23 +36,15 @@ import static org.wso2.micro.integrator.http.client.test.Constants.HTTP_SC_400;
  */
 public class ContentLengthDifferFromPayloadContentLength extends HTTPCoreClientTest {
 
+    int contentLengthDiff = 0;
+
     @Test(groups = {"wso2.esb"}, description = "Test for MI behaviour when Content Length is greater than actual Body" +
             " length.", dataProvider = "httpRequestWithGreaterContentLength")
     public void testContentLengthHeaderGreaterFromPayloadContentLength(HttpRequestWithExpectedHTTPSC httpRequest)
             throws Exception {
 
-        Client tcpClient = Utils.getTCPClient(httpRequest);
-        tcpClient.open();
-        sendHTTPRequest(tcpClient.getPrintWriter(), httpRequest.getMethod(),
-                Utils.getPayload(httpRequest.getPayloadSize()), 100);
-
-        assertCPUUsageBeforeClosingSocket();
-
-        Assert.assertTrue(tcpClient.getResponseAsString().contains(httpRequest.getExpectedHTTPSC()),
-                "A " + httpRequest.getExpectedHTTPSC() + " HTTP Status");
-        tcpClient.close();
-
-        assertCPUUsageAfterClosingSocket();
+        contentLengthDiff = 100;
+        invokeHTTPCoreTestAPI(httpRequest);
     }
 
     @Test(groups = {"wso2.esb"}, description = "Test for MI behaviour when Content Length is lower than actual Body" +
@@ -58,24 +52,14 @@ public class ContentLengthDifferFromPayloadContentLength extends HTTPCoreClientT
     public void testContentLengthHeaderLowerFromPayloadContentLength(HttpRequestWithExpectedHTTPSC httpRequest)
             throws Exception {
 
-        Client tcpClient = Utils.getTCPClient(httpRequest);
-        tcpClient.open();
-        sendHTTPRequest(tcpClient.getPrintWriter(), httpRequest.getMethod(),
-                Utils.getPayload(httpRequest.getPayloadSize()), -100);
-
-        assertCPUUsageBeforeClosingSocket();
-
-        Assert.assertTrue(tcpClient.getResponseAsString().contains(httpRequest.getExpectedHTTPSC()),
-                "A " + httpRequest.getExpectedHTTPSC() + " HTTP Status");
-        tcpClient.close();
-
-        assertCPUUsageAfterClosingSocket();
+        contentLengthDiff = -100;
+        invokeHTTPCoreTestAPI(httpRequest);
     }
 
-    private static void sendHTTPRequest(PrintWriter printWriter, RequestMethods method, String payload,
-                                        int contentLengthDiff) {
+    @Override
+    protected void sendHTTPRequest(PrintStream printWriter, RequestMethods method, String payload) {
 
-        printWriter.print(method + " " + Constants.API_CONTEXT + " HTTP/1.1" + Constants.CRLF);
+        printWriter.print(method + " " + Constants.HTTPCORE_API_CONTEXT + " HTTP/1.1" + Constants.CRLF);
         printWriter.print("Accept: application/json" + Constants.CRLF);
         printWriter.print("Connection: keep-alive" + Constants.CRLF);
         printWriter.print("Content-Type: application/json" + Constants.CRLF);

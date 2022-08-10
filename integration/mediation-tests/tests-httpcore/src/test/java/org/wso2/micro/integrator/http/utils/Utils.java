@@ -15,18 +15,15 @@
  * limitations under the License.
  */
 
-package org.wso2.micro.integrator.http.client.test;
+package org.wso2.micro.integrator.http.utils;
 
 import org.awaitility.Awaitility;
 import org.wso2.esb.integration.common.utils.CPUMonitor;
-import org.wso2.esb.integration.common.utils.clients.tcpclient.Client;
-import org.wso2.esb.integration.common.utils.clients.tcpclient.SecureTCPClient;
-import org.wso2.esb.integration.common.utils.clients.tcpclient.TCPClient;
 
 import java.util.concurrent.TimeUnit;
 
-import static org.wso2.micro.integrator.http.client.test.Constants.CPU_POLL_INTERVAL;
-import static org.wso2.micro.integrator.http.client.test.Constants.CPU_POLL_TIMEOUT;
+import static org.wso2.micro.integrator.http.utils.Constants.CPU_POLL_INTERVAL;
+import static org.wso2.micro.integrator.http.utils.Constants.CPU_POLL_TIMEOUT;
 
 /**
  * This util class contains the helper methods used in HTTP Core test cases.
@@ -47,23 +44,6 @@ public class Utils {
             return SamplePayloads.SMALL_PAYLOAD;
         }
         return "";
-    }
-
-    /**
-     * Get the TCP Client with SSL enabled or disabled depending on the HTTP request.
-     *
-     * @param httpRequest The http request we are planning to send
-     * @return the tcp client with SSL enabled or disabled
-     * @see Client
-     */
-    public static Client getTCPClient(HTTPRequest httpRequest) throws Exception {
-
-        if (httpRequest.isSSLEnabled()) {
-            return new SecureTCPClient(
-                    Constants.HOST, Constants.HTTPS_PORT, Constants.KEYSTORE_PATH, Constants.KEYSTORE_PASS,
-                    Constants.KEYSTORE_PASS);
-        }
-        return new TCPClient(Constants.HOST, Constants.HTTP_PORT);
     }
 
     /**

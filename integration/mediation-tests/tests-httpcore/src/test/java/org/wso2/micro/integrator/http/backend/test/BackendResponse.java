@@ -17,7 +17,7 @@
 
 package org.wso2.micro.integrator.http.backend.test;
 
-import org.wso2.micro.integrator.http.client.test.PayloadSize;
+import org.wso2.micro.integrator.http.utils.PayloadSize;
 
 import static org.wso2.micro.integrator.http.backend.test.Constants.HTTPS_BACKEND_PORT;
 import static org.wso2.micro.integrator.http.backend.test.Constants.HTTP_BACKEND_PORT;

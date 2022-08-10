@@ -18,16 +18,15 @@
 package org.wso2.micro.integrator.http.client.test;
 
 import org.apache.commons.lang3.StringUtils;
-import org.testng.Assert;
 import org.testng.annotations.Test;
-import org.wso2.esb.integration.common.utils.clients.tcpclient.Client;
+import org.wso2.micro.integrator.http.utils.Constants;
+import org.wso2.micro.integrator.http.utils.HttpRequestWithExpectedHTTPSC;
+import org.wso2.micro.integrator.http.utils.RequestMethods;
 
-import java.io.PrintWriter;
+import java.io.PrintStream;
 
-import static org.wso2.micro.integrator.http.client.test.Constants.API_CONTEXT;
-import static org.wso2.micro.integrator.http.client.test.Constants.CRLF;
-import static org.wso2.micro.integrator.http.client.test.Utils.getPayload;
-import static org.wso2.micro.integrator.http.client.test.Utils.getTCPClient;
+import static org.wso2.micro.integrator.http.utils.Constants.CRLF;
+import static org.wso2.micro.integrator.http.utils.Constants.HTTPCORE_API_CONTEXT;
 
 /**
  * Test case tests for MI behaviour(specifically CPU usage) when a slow writing client sends a request.
@@ -35,28 +34,17 @@ import static org.wso2.micro.integrator.http.client.test.Utils.getTCPClient;
 public class SlowWritingClientTestCase extends HTTPCoreClientTest {
 
     @Test(groups = {"wso2.esb"}, description = "Test for MI behaviour when a slow writing client sends a request.",
-            dataProvider = "httpRequests", dataProviderClass = Constants.class)
-    public void testSlowWritingClient(HTTPRequest httpRequest) throws Exception {
+            dataProvider = "httpRequestsWith200OK", dataProviderClass = Constants.class)
+    public void testSlowWritingClient(HttpRequestWithExpectedHTTPSC httpRequest) throws Exception {
 
-        Client tcpClient = getTCPClient(httpRequest);
-        tcpClient.open();
-        sendHTTPRequest(tcpClient.getPrintWriter(), httpRequest.getMethod(), getPayload(httpRequest.getPayloadSize()));
-
-        assertCPUUsageBeforeClosingSocket();
-
-        Assert.assertTrue(tcpClient.getResponseAsString().contains(Constants.HTTP_SC_200),
-                "Expected a 200 OK response");
-
-        tcpClient.close();
-
-        assertCPUUsageAfterClosingSocket();
+        invokeHTTPCoreTestAPI(httpRequest);
     }
 
-    private static void sendHTTPRequest(PrintWriter printWriter, RequestMethods method, String payload)
-            throws Exception {
+    @Override
+    protected void sendHTTPRequest(PrintStream printWriter, RequestMethods method, String payload) throws Exception {
 
         StringBuilder sb = new StringBuilder();
-        sb.append(method).append(" ").append(API_CONTEXT).append(" HTTP/1.1").append(CRLF);
+        sb.append(method).append(" ").append(HTTPCORE_API_CONTEXT).append(" HTTP/1.1").append(CRLF);
         sb.append("Content-Type: application/json" + CRLF);
         sb.append("Accept: application/json" + CRLF);
         sb.append("Connection: keep-alive" + CRLF);

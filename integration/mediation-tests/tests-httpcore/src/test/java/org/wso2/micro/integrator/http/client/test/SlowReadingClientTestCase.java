@@ -18,16 +18,17 @@
 package org.wso2.micro.integrator.http.client.test;
 
 import org.apache.commons.lang3.StringUtils;
+import org.testng.Assert;
 import org.testng.annotations.Test;
-import org.wso2.esb.integration.common.utils.clients.tcpclient.Client;
+import org.wso2.micro.integrator.http.utils.Constants;
+import org.wso2.micro.integrator.http.utils.HttpRequestWithExpectedHTTPSC;
+import org.wso2.micro.integrator.http.utils.RequestMethods;
 
 import java.io.BufferedReader;
-import java.io.PrintWriter;
+import java.io.PrintStream;
 
-import static org.wso2.micro.integrator.http.client.test.Constants.API_CONTEXT;
-import static org.wso2.micro.integrator.http.client.test.Constants.CRLF;
-import static org.wso2.micro.integrator.http.client.test.Utils.getPayload;
-import static org.wso2.micro.integrator.http.client.test.Utils.getTCPClient;
+import static org.wso2.micro.integrator.http.utils.Constants.CRLF;
+import static org.wso2.micro.integrator.http.utils.Constants.HTTPCORE_API_CONTEXT;
 
 /**
  * Test case tests for MI behaviour(specifically CPU usage) when a slow reading client sends a request.
@@ -35,25 +36,34 @@ import static org.wso2.micro.integrator.http.client.test.Utils.getTCPClient;
 public class SlowReadingClientTestCase extends HTTPCoreClientTest {
 
     @Test(groups = {"wso2.esb"}, description = "Test for MI behaviour when a slow reading client sends a request.",
-            dataProvider = "httpRequests", dataProviderClass = Constants.class)
-    public void testSlowReadingClient(HTTPRequest httpRequest) throws Exception {
+            dataProvider = "httpRequestsWith200OK", dataProviderClass = Constants.class)
+    public void testSlowReadingClient(HttpRequestWithExpectedHTTPSC httpRequest) throws Exception {
 
-        Client tcpClient = getTCPClient(httpRequest);
-        tcpClient.open();
-        sendHTTPRequest(tcpClient.getPrintWriter(), httpRequest.getMethod(), getPayload(httpRequest.getPayloadSize()));
-
-        assertCPUUsageBeforeClosingSocket();
-
-        readHTTPResponse(tcpClient.getBufferedReader());
-
-        tcpClient.close();
-
-        assertCPUUsageAfterClosingSocket();
+        invokeHTTPCoreTestAPI(httpRequest);
     }
 
-    private static void sendHTTPRequest(PrintWriter printWriter, RequestMethods method, String payload) {
+    @Override
+    protected void readHTTPResponse(BufferedReader reader, String expectedHTTPSC) throws Exception {
 
-        printWriter.print(method + " " + API_CONTEXT + " HTTP/1.1" + CRLF);
+        String line;
+        boolean responseHasExpectedHTTPSC = false;
+        while ((line = reader.readLine()) != null) {
+            if (line.contains(expectedHTTPSC)) {
+                responseHasExpectedHTTPSC = true;
+            }
+            Thread.sleep(500);
+            if (line.equals("0")) {
+                break;
+            }
+        }
+
+        Assert.assertTrue(responseHasExpectedHTTPSC, "A " + expectedHTTPSC + " HTTP Status");
+    }
+
+    @Override
+    protected void sendHTTPRequest(PrintStream printWriter, RequestMethods method, String payload) {
+
+        printWriter.print(method + " " + HTTPCORE_API_CONTEXT + " HTTP/1.1" + CRLF);
         printWriter.print("Content-Type: application/json" + CRLF);
         printWriter.print("Accept: application/json" + CRLF);
         printWriter.print("Connection: keep-alive" + CRLF);
@@ -65,16 +75,5 @@ public class SlowReadingClientTestCase extends HTTPCoreClientTest {
             printWriter.print(payload);
         }
         printWriter.flush();
-    }
-
-    private static void readHTTPResponse(BufferedReader reader) throws Exception {
-
-        String line;
-        while ((line = reader.readLine()) != null) {
-            Thread.sleep(500);
-            if (line.equals("0")) {
-                break;
-            }
-        }
     }
 }

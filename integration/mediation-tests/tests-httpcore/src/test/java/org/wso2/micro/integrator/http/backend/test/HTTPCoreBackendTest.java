@@ -26,8 +26,8 @@ import org.wso2.esb.integration.common.extensions.carbonserver.CarbonServerExten
 import org.wso2.esb.integration.common.utils.CPUMonitor;
 import org.wso2.esb.integration.common.utils.ESBIntegrationTest;
 import org.wso2.esb.integration.common.utils.clients.SimpleHttpClient;
-import org.wso2.micro.integrator.http.client.test.RequestMethods;
-import org.wso2.micro.integrator.http.client.test.SamplePayloads;
+import org.wso2.micro.integrator.http.utils.RequestMethods;
+import org.wso2.micro.integrator.http.utils.SamplePayloads;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -35,9 +35,9 @@ import java.util.List;
 import java.util.Map;
 
 import static org.wso2.micro.integrator.http.backend.test.Constants.API_CONTEXT;
-import static org.wso2.micro.integrator.http.client.test.Constants.KEYSTORE_PATH;
-import static org.wso2.micro.integrator.http.client.test.Utils.checkCPUUsage;
-import static org.wso2.micro.integrator.http.client.test.Utils.getPayload;
+import static org.wso2.micro.integrator.http.utils.Constants.KEYSTORE_PATH;
+import static org.wso2.micro.integrator.http.utils.Utils.checkCPUUsage;
+import static org.wso2.micro.integrator.http.utils.Utils.getPayload;
 
 public abstract class HTTPCoreBackendTest extends ESBIntegrationTest {
 

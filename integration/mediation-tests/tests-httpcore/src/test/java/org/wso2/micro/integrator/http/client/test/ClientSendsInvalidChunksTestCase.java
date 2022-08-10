@@ -18,15 +18,14 @@
 package org.wso2.micro.integrator.http.client.test;
 
 import org.testng.annotations.Test;
-import org.wso2.esb.integration.common.utils.clients.tcpclient.Client;
+import org.wso2.micro.integrator.http.utils.Constants;
+import org.wso2.micro.integrator.http.utils.HttpRequestWithExpectedHTTPSC;
+import org.wso2.micro.integrator.http.utils.RequestMethods;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
-
-import static org.wso2.micro.integrator.http.client.test.Utils.getPayload;
-import static org.wso2.micro.integrator.http.client.test.Utils.getTCPClient;
 
 /**
  * Test case tests for MI behaviour(specifically CPU usage) when the client sends invalid chunks.
@@ -34,24 +33,16 @@ import static org.wso2.micro.integrator.http.client.test.Utils.getTCPClient;
 public class ClientSendsInvalidChunksTestCase extends HTTPCoreClientTest {
 
     @Test(groups = {"wso2.esb"}, description =
-            "Test for MI behaviour when a client sends invalid chunks.", dataProvider = "httpRequests", dataProviderClass = Constants.class)
-    public void testClientSendsInvalidChunks(HTTPRequest httpRequest) throws Exception {
+            "Test for MI behaviour when a client sends invalid chunks.", dataProvider = "httpRequestsWith200OK", dataProviderClass = Constants.class)
+    public void testClientSendsInvalidChunks(HttpRequestWithExpectedHTTPSC httpRequest) throws Exception {
 
-        Client tcpClient = getTCPClient(httpRequest);
-        tcpClient.open();
-        sendHTTPRequest(tcpClient.getPrintStream(), httpRequest.getMethod(), getPayload(httpRequest.getPayloadSize()));
-
-        assertCPUUsageBeforeClosingSocket();
-
-        tcpClient.close();
-
-        assertCPUUsageAfterClosingSocket();
+        invokeHTTPCoreTestAPI(httpRequest);
     }
 
-    private static void sendHTTPRequest(PrintStream printWriter, RequestMethods method, String payload)
-            throws Exception {
+    @Override
+    protected void sendHTTPRequest(PrintStream printWriter, RequestMethods method, String payload) throws Exception {
 
-        printWriter.print(method + " " + Constants.API_CONTEXT + " HTTP/1.1" + Constants.CRLF);
+        printWriter.print(method + " " + Constants.HTTPCORE_API_CONTEXT + " HTTP/1.1" + Constants.CRLF);
         printWriter.print("Content-Type: application/json" + Constants.CRLF);
         printWriter.print("Accept: application/json" + Constants.CRLF);
         printWriter.print("Connection: keep-alive" + Constants.CRLF);

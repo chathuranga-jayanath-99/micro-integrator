@@ -15,14 +15,14 @@
  * limitations under the License.
  */
 
-package org.wso2.esb.integration.common.utils.clients.tcpclient;
+package org.wso2.micro.integrator.http.utils.tcpclient;
+
+import org.wso2.micro.integrator.http.utils.HTTPRequest;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.io.PrintStream;
-import java.io.PrintWriter;
 import java.security.KeyStore;
 
 import javax.net.ssl.KeyManager;
@@ -37,23 +37,23 @@ import javax.net.ssl.TrustManagerFactory;
 /**
  * This class extends Client to use a Secure socket for the communications.
  */
-public class SecureTCPClient extends Client {
+public abstract class SecureTCPClient extends Client {
 
     private final SSLSocketFactory sslSocketFactory;
     private SSLSocket socket;
 
-    public SecureTCPClient(String host, int port, String keyStorePath, String keyStorePassword, String keyPassword) {
+    public SecureTCPClient(String host, int port, String keyStorePath, String keyStorePassword, String keyPassword,
+                           HTTPRequest httpRequest) {
 
-        super(host, port);
+        super(host, port, httpRequest);
 
-        SSLContext sslContext = this.createSSLContext(keyStorePath, keyStorePassword, keyPassword);
+        SSLContext sslContext = createSSLContext(keyStorePath, keyStorePassword, keyPassword);
         // Create socket factory
         sslSocketFactory = sslContext.getSocketFactory();
     }
 
     @Override
-    public void open() throws Exception {
-
+    public void connect() throws Exception {
         // Create socket
         socket = (SSLSocket) sslSocketFactory.createSocket(getHost(), getPort());
 
@@ -67,14 +67,14 @@ public class SecureTCPClient extends Client {
         log.info("\tProtocol : " + sslSession.getProtocol());
         log.info("\tCipher suite : " + sslSession.getCipherSuite());
 
-        printWriter = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()));
         printStream = new PrintStream(socket.getOutputStream());
         bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
     }
 
     @Override
-    public void close() throws Exception {
+    public void disconnect() throws Exception {
 
+        log.info("SecureTCPClient closed :");
         socket.close();
     }
 

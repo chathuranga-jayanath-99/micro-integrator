@@ -19,9 +19,11 @@ package org.wso2.micro.integrator.http.client.test;
 
 import org.apache.commons.lang3.StringUtils;
 import org.testng.annotations.Test;
-import org.wso2.esb.integration.common.utils.clients.tcpclient.Client;
+import org.wso2.micro.integrator.http.utils.Constants;
+import org.wso2.micro.integrator.http.utils.HTTPRequest;
+import org.wso2.micro.integrator.http.utils.RequestMethods;
 
-import java.io.PrintWriter;
+import java.io.PrintStream;
 
 /**
  * Test case tests for MI behaviour(specifically CPU usage) when the client closes the socket before sending the
@@ -32,23 +34,16 @@ public class ClosesConnectionBeforeSendingRequestBody extends HTTPCoreClientTest
     @Test(groups = {"wso2.esb"}, description =
             "Test for MI behaviour when a client closes the socket before sending the " +
                     "request body.", dataProvider = "httpRequests", dataProviderClass = Constants.class)
-    public void testClosesConnectionBeforeSendingRequestBody(HTTPRequest httpRequest) throws Exception {
+    public void testClosesConnectionBeforeSendingRequestBody(HTTPRequest httpRequest)
+            throws Exception {
 
-        Client tcpClient = Utils.getTCPClient(httpRequest);
-        tcpClient.open();
-        sendHTTPRequest(tcpClient.getPrintWriter(), httpRequest.getMethod(), Utils
-                .getPayload(httpRequest.getPayloadSize()));
-
-        assertCPUUsageBeforeClosingSocket();
-
-        tcpClient.close();
-
-        assertCPUUsageAfterClosingSocket();
+        invokeHTTPCoreTestAPI(httpRequest);
     }
 
-    private static void sendHTTPRequest(PrintWriter printWriter, RequestMethods method, String payload) {
+    @Override
+    protected void sendHTTPRequest(PrintStream printWriter, RequestMethods method, String payload) {
 
-        printWriter.print(method + " " + Constants.API_CONTEXT + " HTTP/1.1" + Constants.CRLF);
+        printWriter.print(method + " " + Constants.HTTPCORE_API_CONTEXT + " HTTP/1.1" + Constants.CRLF);
         printWriter.print("Content-Type: application/json" + Constants.CRLF);
         printWriter.print("Accept: application/json" + Constants.CRLF);
         printWriter.print("Connection: keep-alive" + Constants.CRLF);

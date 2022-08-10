@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.wso2.micro.integrator.http.client.test;
+package org.wso2.micro.integrator.http.utils;
 
 /**
  * This class is used to hold the HTTP request information used HTTP Core test cases.

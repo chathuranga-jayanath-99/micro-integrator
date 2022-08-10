@@ -19,10 +19,12 @@ package org.wso2.micro.integrator.http.client.test;
 
 import org.apache.commons.lang3.StringUtils;
 import org.testng.annotations.Test;
-import org.wso2.esb.integration.common.utils.clients.tcpclient.Client;
+import org.wso2.micro.integrator.http.utils.Constants;
+import org.wso2.micro.integrator.http.utils.HTTPRequest;
+import org.wso2.micro.integrator.http.utils.RequestMethods;
 
 import java.io.BufferedReader;
-import java.io.PrintWriter;
+import java.io.PrintStream;
 import java.io.StringReader;
 
 /**
@@ -34,24 +36,16 @@ public class ClosesConnectionWhileSendingRequestBody extends HTTPCoreClientTest 
     @Test(groups = {"wso2.esb"}, description =
             "Test for MI behaviour when a client closes the socket while sending the " +
                     "body.", dataProvider = "httpRequests", dataProviderClass = Constants.class)
-    public void testClosesConnectionWhileSendingRequestBody(HTTPRequest httpRequest) throws Exception {
-
-        Client tcpClient = Utils.getTCPClient(httpRequest);
-        tcpClient.open();
-        sendHTTPRequest(tcpClient.getPrintWriter(), httpRequest.getMethod(), Utils
-                .getPayload(httpRequest.getPayloadSize()));
-
-        assertCPUUsageBeforeClosingSocket();
-
-        tcpClient.close();
-
-        assertCPUUsageAfterClosingSocket();
-    }
-
-    private static void sendHTTPRequest(PrintWriter printWriter, RequestMethods method, String payload)
+    public void testClosesConnectionWhileSendingRequestBody(HTTPRequest httpRequest)
             throws Exception {
 
-        printWriter.print(method + " " + Constants.API_CONTEXT + " HTTP/1.1" + Constants.CRLF);
+        invokeHTTPCoreTestAPI(httpRequest);
+    }
+
+    @Override
+    protected void sendHTTPRequest(PrintStream printWriter, RequestMethods method, String payload) throws Exception {
+
+        printWriter.print(method + " " + Constants.HTTPCORE_API_CONTEXT + " HTTP/1.1" + Constants.CRLF);
         printWriter.print("Content-Type: application/json" + Constants.CRLF);
         printWriter.print("Accept: application/json" + Constants.CRLF);
         printWriter.print("Connection: keep-alive" + Constants.CRLF);
@@ -68,6 +62,7 @@ public class ClosesConnectionWhileSendingRequestBody extends HTTPCoreClientTest 
                     return;
                 }
                 printWriter.print(line);
+                printWriter.flush();
             }
         }
     }

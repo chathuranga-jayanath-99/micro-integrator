@@ -18,16 +18,15 @@
 package org.wso2.micro.integrator.http.client.test;
 
 import org.apache.commons.lang3.StringUtils;
-import org.testng.Assert;
 import org.testng.annotations.Test;
-import org.wso2.esb.integration.common.utils.clients.tcpclient.Client;
+import org.wso2.micro.integrator.http.utils.Constants;
+import org.wso2.micro.integrator.http.utils.HttpRequestWithExpectedHTTPSC;
+import org.wso2.micro.integrator.http.utils.RequestMethods;
 
-import java.io.PrintWriter;
+import java.io.PrintStream;
 
-import static org.wso2.micro.integrator.http.client.test.Constants.API_CONTEXT;
-import static org.wso2.micro.integrator.http.client.test.Constants.CRLF;
-import static org.wso2.micro.integrator.http.client.test.Utils.getPayload;
-import static org.wso2.micro.integrator.http.client.test.Utils.getTCPClient;
+import static org.wso2.micro.integrator.http.utils.Constants.CRLF;
+import static org.wso2.micro.integrator.http.utils.Constants.HTTPCORE_API_CONTEXT;
 
 /**
  * Test case tests for MI behaviour(specifically CPU usage) when the client sends a valid request and wait for a
@@ -37,26 +36,16 @@ public class WaitUntilAResponseReceivedTestCase extends HTTPCoreClientTest {
 
     @Test(groups = {"wso2.esb"}, description =
             "Test for MI behaviour when a client sends a valid request and wait for a response.", dataProvider =
-            "httpRequests", dataProviderClass = Constants.class)
-    public void testWaitUntilAResponseReceived(HTTPRequest httpRequest) throws Exception {
+            "httpRequestsWith200OK", dataProviderClass = Constants.class)
+    public void testWaitUntilAResponseReceived(HttpRequestWithExpectedHTTPSC httpRequest) throws Exception {
 
-        Client tcpClient = getTCPClient(httpRequest);
-        tcpClient.open();
-        sendHTTPRequest(tcpClient.getPrintWriter(), httpRequest.getMethod(), getPayload(httpRequest.getPayloadSize()));
-
-        assertCPUUsageBeforeClosingSocket();
-
-        Assert.assertTrue(tcpClient.getResponseAsString().contains(Constants.HTTP_SC_200),
-                "Expected a 200 OK response");
-
-        tcpClient.close();
-
-        assertCPUUsageAfterClosingSocket();
+        invokeHTTPCoreTestAPI(httpRequest);
     }
 
-    private static void sendHTTPRequest(PrintWriter printWriter, RequestMethods method, String payload) {
+    @Override
+    protected void sendHTTPRequest(PrintStream printWriter, RequestMethods method, String payload) {
 
-        printWriter.print(method + " " + API_CONTEXT + " HTTP/1.1" + CRLF);
+        printWriter.print(method + " " + HTTPCORE_API_CONTEXT + " HTTP/1.1" + CRLF);
         printWriter.print("Content-Type: application/json" + CRLF);
         printWriter.print("Accept: application/json" + CRLF);
         printWriter.print("Connection: keep-alive" + CRLF);
