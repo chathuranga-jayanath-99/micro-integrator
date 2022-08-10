@@ -9,9 +9,14 @@
         <listener class-name="org.wso2.carbon.automation.engine.testlisteners.TestTransformerListener"/>
     </listeners>
 
-    <test name="HttpCore-Tests" preserve-order="true" verbose="2">
+    <test name="HttpCore-Client-Tests" preserve-order="true" verbose="2">
         <packages>
             <package name="org.wso2.micro.integrator.http.client.test.*"/>
+        </packages>
+    </test>
+    <test name="HttpCore-Backend-Tests" preserve-order="true" verbose="2">
+        <packages>
+            <package name="org.wso2.micro.integrator.http.backend.test.*"/>
         </packages>
     </test>
 </suite>
