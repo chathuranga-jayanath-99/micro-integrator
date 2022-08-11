@@ -18,8 +18,12 @@
 package org.wso2.micro.integrator.http.backend.test;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.testng.annotations.Test;
+import org.wso2.micro.integrator.http.utils.BackendServer;
+import org.wso2.micro.integrator.http.utils.Constants;
+import org.wso2.micro.integrator.http.utils.HTTPRequestWithBackendResponse;
+import org.wso2.micro.integrator.http.utils.MultiThreadedHTTPClient;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -31,9 +35,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.testng.Assert.assertEquals;
-import static org.wso2.micro.integrator.http.backend.test.Constants.HTTP_VERSION;
-import static org.wso2.micro.integrator.http.backend.test.Utils.getServerSocket;
 import static org.wso2.micro.integrator.http.utils.Constants.CRLF;
+import static org.wso2.micro.integrator.http.utils.Constants.HTTP_VERSION;
 import static org.wso2.micro.integrator.http.utils.Utils.getPayload;
 
 /**
@@ -47,16 +50,20 @@ public class SlowReadingBackendTestCase extends HTTPCoreBackendTest {
     public void testSlowReadingBackend(HTTPRequestWithBackendResponse httpRequestWithBackendResponse)
             throws Exception {
 
-        HttpResponse response = invokeHTTPCoreBETestAPI(httpRequestWithBackendResponse);
+        invokeHTTPCoreBETestAPI(httpRequestWithBackendResponse);
+    }
 
-        assertCPUUsage();
+    @Override
+    protected boolean validateResponse(CloseableHttpResponse response,
+                                       HTTPRequestWithBackendResponse httpRequestWithBackendResponse) throws Exception {
 
         assertEquals(response.getStatusLine().getStatusCode(), 200, "Response not received");
 
-        assertEquals(client.getResponsePayload(response).getBytes().length,
+        assertEquals(MultiThreadedHTTPClient.getResponsePayload(response).getBytes().length,
                 getPayload(httpRequestWithBackendResponse.getBackendResponse().getBackendPayloadSize())
                         .getBytes().length,
                 "Response size mismatch");
+        return true;
     }
 
     @Override
@@ -79,19 +86,16 @@ public class SlowReadingBackendTestCase extends HTTPCoreBackendTest {
         @Override
         protected void readInput(Socket socket) throws Exception {
 
-//            socket.setReceiveBufferSize(50);
             // Get input and output streams to talk to the client
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             //code to read and print headers
-            String line = null;
-            while((line = in.readLine()).length() != 0){
-                System.out.println(line);
+            while ((in.readLine()).length() != 0) {
                 Thread.sleep(1000);
             }
         }
 
         @Override
-        protected synchronized void writeOutput(Socket socket) throws Exception {
+        protected void writeOutput(Socket socket) throws Exception {
 
             BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
 

@@ -15,9 +15,7 @@
  * limitations under the License.
  */
 
-package org.wso2.micro.integrator.http.backend.test;
-
-import org.wso2.micro.integrator.http.utils.HTTPRequest;
+package org.wso2.micro.integrator.http.utils;
 
 /**
  * This class is used to hold the HTTP request and Mock backend response information used for HTTP Core test cases.

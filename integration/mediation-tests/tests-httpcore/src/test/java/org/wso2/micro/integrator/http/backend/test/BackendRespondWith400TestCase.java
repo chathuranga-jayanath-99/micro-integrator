@@ -17,8 +17,12 @@
 
 package org.wso2.micro.integrator.http.backend.test;
 
-import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.testng.annotations.Test;
+import org.wso2.micro.integrator.http.utils.BackendServer;
+import org.wso2.micro.integrator.http.utils.Constants;
+import org.wso2.micro.integrator.http.utils.HTTPRequestWithBackendResponse;
+import org.wso2.micro.integrator.http.utils.MultiThreadedHTTPClient;
 
 import java.io.BufferedWriter;
 import java.io.OutputStreamWriter;
@@ -28,28 +32,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.testng.Assert.assertEquals;
-import static org.wso2.micro.integrator.http.backend.test.Constants.HTTP_VERSION;
-import static org.wso2.micro.integrator.http.backend.test.Utils.getServerSocket;
 import static org.wso2.micro.integrator.http.utils.Constants.CRLF;
-import static org.wso2.micro.integrator.http.utils.Utils.getPayload;
+import static org.wso2.micro.integrator.http.utils.Constants.HTTP_VERSION;
 
 public class BackendRespondWith400TestCase extends HTTPCoreBackendTest {
 
     @Test(groups = {"wso2.esb"}, description =
             "Test for MI behaviour when a backend response with a 400 Bad Request.",
             dataProvider = "httpRequestResponse", dataProviderClass = Constants.class)
-    public void testBackendRespondWith400(HTTPRequestWithBackendResponse httpRequestWithBackendResponse) throws Exception {
+    public void testBackendRespondWith400(HTTPRequestWithBackendResponse httpRequestWithBackendResponse)
+            throws Exception {
 
-        HttpResponse response = invokeHTTPCoreBETestAPI(httpRequestWithBackendResponse);
-
-        assertCPUUsage();
-
-        assertEquals(response.getStatusLine().getStatusCode(), 400, "Response not received");
-
-        assertEquals(client.getResponsePayload(response).getBytes().length,
-                getPayload(httpRequestWithBackendResponse.getBackendResponse().getBackendPayloadSize())
-                        .getBytes().length,
-                "Response size mismatch");
+        invokeHTTPCoreBETestAPI(httpRequestWithBackendResponse);
     }
 
     @Override
@@ -60,6 +54,21 @@ public class BackendRespondWith400TestCase extends HTTPCoreBackendTest {
         serverList.add(new BackendServerResponseWith400(getServerSocket(false)));
 
         return serverList;
+    }
+
+    @Override
+    protected boolean validateResponse(CloseableHttpResponse response,
+                                       HTTPRequestWithBackendResponse httpRequestWithBackendResponse) throws Exception {
+
+        assertEquals(response.getStatusLine().getStatusCode(), 400, "Response not received");
+
+        assertEquals(MultiThreadedHTTPClient.getResponsePayload(response).getBytes().length,
+                org.wso2.micro.integrator.http.utils.Utils
+                        .getPayload(httpRequestWithBackendResponse.getBackendResponse().getBackendPayloadSize())
+                        .getBytes().length,
+                "Response size mismatch");
+
+        return true;
     }
 
     private static class BackendServerResponseWith400 extends BackendServer {

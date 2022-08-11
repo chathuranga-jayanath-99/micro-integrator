@@ -32,6 +32,14 @@ public class Constants {
                     "resources" + File.separator +
                     "security" + File.separator + "wso2carbon.jks";
 
+    public static final int HTTP_BACKEND_PORT = 7000;
+    public static final int HTTPS_BACKEND_PORT = 7443;
+    public static final String HTTP_VERSION = "HTTP/1.1";
+    public static final String HTTPCORE_BE_API_CONTEXT = "httpcore-backend-test";
+
+    public static final String JAVAX_KEYSTORE_PROP = "javax.net.ssl.keyStore";
+    public static final String JAVAX_KEYSTORE_PASSWORD_PROP = "javax.net.ssl.keyStorePassword";
+
     public static final String KEYSTORE_PASS = "wso2carbon";
     public static final String HOST = "localhost";
     public static final int HTTP_PORT = 8480;
@@ -46,7 +54,6 @@ public class Constants {
     public static final String HTTP_SC_202 = "202 Accepted";
     public static final String HTTP_SC_400 = "400 Bad request";
 
-    public static final int CLIENT_THREAD_POOL_TERMINATION_SECONDS = 30;
     public static final int CLIENT_THREAD_POOL_SIZE = 5;
     public static final int CLIENT_INSTANCES = 5;
 
@@ -85,6 +92,72 @@ public class Constants {
                 {new HttpRequestWithExpectedHTTPSC(RequestMethods.POST, PayloadSize.EMPTY, false, HTTP_SC_200)},
                 {new HttpRequestWithExpectedHTTPSC(RequestMethods.POST, PayloadSize.SMALL, false, HTTP_SC_200)},
                 {new HttpRequestWithExpectedHTTPSC(RequestMethods.POST, PayloadSize.LARGE, false, HTTP_SC_200)}
+        };
+    }
+
+    @DataProvider(name = "httpRequestResponse")
+    private static Object[][] httpRequestResponse() {
+
+        return new Object[][]{
+                // Backend response with Empty Payload
+                {new HTTPRequestWithBackendResponse(new HTTPRequest(RequestMethods.GET, PayloadSize.SMALL, false),
+                        new BackendResponse(PayloadSize.EMPTY, false))},
+                {new HTTPRequestWithBackendResponse(new HTTPRequest(RequestMethods.POST, PayloadSize.SMALL, false),
+                        new BackendResponse(PayloadSize.EMPTY, false))},
+                {new HTTPRequestWithBackendResponse(new HTTPRequest(RequestMethods.GET, PayloadSize.SMALL, true),
+                        new BackendResponse(PayloadSize.EMPTY, false))},
+                {new HTTPRequestWithBackendResponse(new HTTPRequest(RequestMethods.POST, PayloadSize.SMALL, true),
+                        new BackendResponse(PayloadSize.EMPTY, false))},
+
+                // Backend response with Small Payload
+                {new HTTPRequestWithBackendResponse(new HTTPRequest(RequestMethods.GET, PayloadSize.SMALL, false),
+                        new BackendResponse(PayloadSize.SMALL, false))},
+                {new HTTPRequestWithBackendResponse(new HTTPRequest(RequestMethods.POST, PayloadSize.SMALL, false),
+                        new BackendResponse(PayloadSize.SMALL, false))},
+                {new HTTPRequestWithBackendResponse(new HTTPRequest(RequestMethods.GET, PayloadSize.SMALL, true),
+                        new BackendResponse(PayloadSize.SMALL, false))},
+                {new HTTPRequestWithBackendResponse(new HTTPRequest(RequestMethods.POST, PayloadSize.SMALL, true),
+                        new BackendResponse(PayloadSize.SMALL, false))},
+
+                // Backend response with Large Payload
+                {new HTTPRequestWithBackendResponse(new HTTPRequest(RequestMethods.GET, PayloadSize.SMALL, false),
+                        new BackendResponse(PayloadSize.LARGE, false))},
+                {new HTTPRequestWithBackendResponse(new HTTPRequest(RequestMethods.POST, PayloadSize.SMALL, false),
+                        new BackendResponse(PayloadSize.LARGE, false))},
+                {new HTTPRequestWithBackendResponse(new HTTPRequest(RequestMethods.GET, PayloadSize.SMALL, true),
+                        new BackendResponse(PayloadSize.LARGE, false))},
+                {new HTTPRequestWithBackendResponse(new HTTPRequest(RequestMethods.POST, PayloadSize.SMALL, true),
+                        new BackendResponse(PayloadSize.LARGE, false))},
+
+                // SSL Backend response with Empty Payload
+                {new HTTPRequestWithBackendResponse(new HTTPRequest(RequestMethods.GET, PayloadSize.SMALL, false),
+                        new BackendResponse(PayloadSize.EMPTY, true))},
+                {new HTTPRequestWithBackendResponse(new HTTPRequest(RequestMethods.POST, PayloadSize.SMALL, false),
+                        new BackendResponse(PayloadSize.EMPTY, true))},
+                {new HTTPRequestWithBackendResponse(new HTTPRequest(RequestMethods.GET, PayloadSize.SMALL, true),
+                        new BackendResponse(PayloadSize.EMPTY, true))},
+                {new HTTPRequestWithBackendResponse(new HTTPRequest(RequestMethods.POST, PayloadSize.SMALL, true),
+                        new BackendResponse(PayloadSize.EMPTY, true))},
+
+                // SSL Backend response with Small Payload
+                {new HTTPRequestWithBackendResponse(new HTTPRequest(RequestMethods.GET, PayloadSize.SMALL, false),
+                        new BackendResponse(PayloadSize.SMALL, true))},
+                {new HTTPRequestWithBackendResponse(new HTTPRequest(RequestMethods.POST, PayloadSize.SMALL, false),
+                        new BackendResponse(PayloadSize.SMALL, true))},
+                {new HTTPRequestWithBackendResponse(new HTTPRequest(RequestMethods.GET, PayloadSize.SMALL, true),
+                        new BackendResponse(PayloadSize.SMALL, true))},
+                {new HTTPRequestWithBackendResponse(new HTTPRequest(RequestMethods.POST, PayloadSize.SMALL, true),
+                        new BackendResponse(PayloadSize.SMALL, true))},
+
+                // SSL Backend response with Large Payload
+                {new HTTPRequestWithBackendResponse(new HTTPRequest(RequestMethods.GET, PayloadSize.SMALL, false),
+                        new BackendResponse(PayloadSize.LARGE, true))},
+                {new HTTPRequestWithBackendResponse(new HTTPRequest(RequestMethods.POST, PayloadSize.SMALL, false),
+                        new BackendResponse(PayloadSize.LARGE, true))},
+                {new HTTPRequestWithBackendResponse(new HTTPRequest(RequestMethods.GET, PayloadSize.SMALL, true),
+                        new BackendResponse(PayloadSize.LARGE, true))},
+                {new HTTPRequestWithBackendResponse(new HTTPRequest(RequestMethods.POST, PayloadSize.LARGE, true),
+                        new BackendResponse(PayloadSize.LARGE, true))}
         };
     }
 }

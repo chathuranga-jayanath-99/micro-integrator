@@ -18,8 +18,11 @@
 package org.wso2.micro.integrator.http.backend.test;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.testng.annotations.Test;
+import org.wso2.micro.integrator.http.utils.BackendServer;
+import org.wso2.micro.integrator.http.utils.Constants;
+import org.wso2.micro.integrator.http.utils.HTTPRequestWithBackendResponse;
 
 import java.io.BufferedWriter;
 import java.io.OutputStreamWriter;
@@ -29,9 +32,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.testng.Assert.assertEquals;
-import static org.wso2.micro.integrator.http.backend.test.Constants.HTTP_VERSION;
-import static org.wso2.micro.integrator.http.backend.test.Utils.getServerSocket;
 import static org.wso2.micro.integrator.http.utils.Constants.CRLF;
+import static org.wso2.micro.integrator.http.utils.Constants.HTTP_VERSION;
 
 /**
  * Test case for MI behaviour(specifically CPU usage) when a HTTP response with content length header greater
@@ -47,9 +49,7 @@ public class ContentLengthGreaterThanResponseSizeBackendTestCase extends HTTPCor
             HTTPRequestWithBackendResponse httpRequestWithBackendResponse)
             throws Exception {
 
-        HttpResponse response = invokeHTTPCoreBETestAPI(httpRequestWithBackendResponse);
-        assertCPUUsage();
-        assertEquals(response.getStatusLine().getStatusCode(), 200, "Response not received");
+        invokeHTTPCoreBETestAPI(httpRequestWithBackendResponse);
     }
 
     @Override
@@ -62,6 +62,14 @@ public class ContentLengthGreaterThanResponseSizeBackendTestCase extends HTTPCor
         return serverList;
     }
 
+    @Override
+    protected boolean validateResponse(CloseableHttpResponse response,
+                                       HTTPRequestWithBackendResponse httpRequestWithBackendResponse) throws Exception {
+
+        assertEquals(response.getStatusLine().getStatusCode(), 200, "Response not received");
+        return true;
+    }
+
     private static class ContentLengthGreaterThanBodyBackend extends BackendServer {
 
         public ContentLengthGreaterThanBodyBackend(ServerSocket serverSocket) {
@@ -70,7 +78,7 @@ public class ContentLengthGreaterThanResponseSizeBackendTestCase extends HTTPCor
         }
 
         @Override
-        protected synchronized void writeOutput(Socket socket) throws Exception {
+        protected void writeOutput(Socket socket) throws Exception {
 
             BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
 

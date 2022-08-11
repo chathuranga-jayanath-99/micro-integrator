@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.wso2.micro.integrator.http.backend.test;
+package org.wso2.micro.integrator.http.utils;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -26,6 +26,9 @@ import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 
+/**
+ * This class provides the base implementation for a Socket Server.
+ */
 public abstract class BackendServer extends Thread {
 
     protected static final Log log = LogFactory.getLog(BackendServer.class);
@@ -34,9 +37,16 @@ public abstract class BackendServer extends Thread {
 
     protected void readInput(Socket socket) throws Exception {
 
+        boolean isGETRequest = false;
         BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         String line;
         while ((line = reader.readLine()) != null) {
+            if (line.contains("GET")) {
+                isGETRequest = true;
+            }
+            if (line.trim().isEmpty() && isGETRequest) {
+                break;
+            }
             if (line.trim().equals("0")) {
                 break;
             }
@@ -72,11 +82,31 @@ public abstract class BackendServer extends Thread {
         try {
             while (serverSocket != null && !serverSocket.isClosed()) {
                 Socket clientSocket = serverSocket.accept();
-                readInput(clientSocket);
-                writeOutput(clientSocket);
+                new Thread(new ClientHandler(clientSocket)).start();
             }
         } catch (Exception e) {
             log.error("Error running the Backend Server: " + e.getMessage());
+        }
+    }
+
+    private class ClientHandler implements Runnable {
+
+        private final Socket clientSocket;
+
+        public ClientHandler(Socket socket) {
+
+            this.clientSocket = socket;
+        }
+
+        @Override
+        public void run() {
+
+            try {
+                readInput(clientSocket);
+                writeOutput(clientSocket);
+            } catch (Exception e) {
+                log.error("Error handling client instance in the Backend Server: " + e.getMessage());
+            }
         }
     }
 }

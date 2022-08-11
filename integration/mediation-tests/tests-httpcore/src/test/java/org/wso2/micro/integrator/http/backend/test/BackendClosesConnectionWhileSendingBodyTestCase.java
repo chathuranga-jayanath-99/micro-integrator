@@ -18,7 +18,11 @@
 package org.wso2.micro.integrator.http.backend.test;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.testng.annotations.Test;
+import org.wso2.micro.integrator.http.utils.BackendServer;
+import org.wso2.micro.integrator.http.utils.Constants;
+import org.wso2.micro.integrator.http.utils.HTTPRequestWithBackendResponse;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -29,9 +33,8 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.wso2.micro.integrator.http.backend.test.Constants.HTTP_VERSION;
-import static org.wso2.micro.integrator.http.backend.test.Utils.getServerSocket;
 import static org.wso2.micro.integrator.http.utils.Constants.CRLF;
+import static org.wso2.micro.integrator.http.utils.Constants.HTTP_VERSION;
 
 public class BackendClosesConnectionWhileSendingBodyTestCase extends HTTPCoreBackendTest {
 
@@ -43,7 +46,6 @@ public class BackendClosesConnectionWhileSendingBodyTestCase extends HTTPCoreBac
             throws Exception {
 
         invokeHTTPCoreBETestAPI(httpRequestWithBackendResponse);
-        assertCPUUsage();
     }
 
     @Override
@@ -56,6 +58,15 @@ public class BackendClosesConnectionWhileSendingBodyTestCase extends HTTPCoreBac
         return serverList;
     }
 
+    @Override
+    protected boolean validateResponse(CloseableHttpResponse response,
+                                       HTTPRequestWithBackendResponse httpRequestWithBackendResponse) throws Exception {
+
+        // Depending on the underlying connections we may or not receive a response.
+        // Hence response validation is ignored.
+        return false;
+    }
+
     private static class CloseConnectionWhileSendingBodyBackend extends BackendServer {
 
         public CloseConnectionWhileSendingBodyBackend(ServerSocket serverSocket) {
@@ -64,7 +75,7 @@ public class BackendClosesConnectionWhileSendingBodyTestCase extends HTTPCoreBac
         }
 
         @Override
-        protected synchronized void writeOutput(Socket socket) throws Exception {
+        protected void writeOutput(Socket socket) throws Exception {
 
             BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
 

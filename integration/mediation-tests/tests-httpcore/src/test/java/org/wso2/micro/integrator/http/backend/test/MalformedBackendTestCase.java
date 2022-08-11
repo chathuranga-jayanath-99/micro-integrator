@@ -18,8 +18,11 @@
 package org.wso2.micro.integrator.http.backend.test;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.testng.annotations.Test;
+import org.wso2.micro.integrator.http.utils.BackendServer;
+import org.wso2.micro.integrator.http.utils.Constants;
+import org.wso2.micro.integrator.http.utils.HTTPRequestWithBackendResponse;
 
 import java.io.BufferedWriter;
 import java.io.OutputStreamWriter;
@@ -29,7 +32,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.testng.Assert.assertEquals;
-import static org.wso2.micro.integrator.http.backend.test.Utils.getServerSocket;
 import static org.wso2.micro.integrator.http.utils.Constants.CRLF;
 
 public class MalformedBackendTestCase extends HTTPCoreBackendTest {
@@ -40,9 +42,15 @@ public class MalformedBackendTestCase extends HTTPCoreBackendTest {
     public void testMalformedBackendServer(HTTPRequestWithBackendResponse httpRequestWithBackendResponse)
             throws Exception {
 
-        HttpResponse response = invokeHTTPCoreBETestAPI(httpRequestWithBackendResponse);
-        assertCPUUsage();
+        invokeHTTPCoreBETestAPI(httpRequestWithBackendResponse);
+    }
+
+    @Override
+    protected boolean validateResponse(CloseableHttpResponse response,
+                                       HTTPRequestWithBackendResponse httpRequestWithBackendResponse) throws Exception {
+
         assertEquals(response.getStatusLine().getStatusCode(), 500, "Response not received");
+        return true;
     }
 
     @Override
@@ -63,7 +71,7 @@ public class MalformedBackendTestCase extends HTTPCoreBackendTest {
         }
 
         @Override
-        protected synchronized void writeOutput(Socket socket) throws Exception {
+        protected void writeOutput(Socket socket) throws Exception {
 
             BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
 

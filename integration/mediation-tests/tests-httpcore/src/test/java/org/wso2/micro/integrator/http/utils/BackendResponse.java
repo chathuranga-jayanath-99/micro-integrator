@@ -15,12 +15,10 @@
  * limitations under the License.
  */
 
-package org.wso2.micro.integrator.http.backend.test;
+package org.wso2.micro.integrator.http.utils;
 
-import org.wso2.micro.integrator.http.utils.PayloadSize;
-
-import static org.wso2.micro.integrator.http.backend.test.Constants.HTTPS_BACKEND_PORT;
-import static org.wso2.micro.integrator.http.backend.test.Constants.HTTP_BACKEND_PORT;
+import static org.wso2.micro.integrator.http.utils.Constants.HTTPS_BACKEND_PORT;
+import static org.wso2.micro.integrator.http.utils.Constants.HTTP_BACKEND_PORT;
 
 /**
  * This class is used to hold the Backend response information used for HTTP Core test cases.

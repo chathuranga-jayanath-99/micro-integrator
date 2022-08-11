@@ -17,13 +17,15 @@
 
 package org.wso2.micro.integrator.http.backend.test;
 
-import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.testng.annotations.Test;
+import org.wso2.micro.integrator.http.utils.BackendServer;
+import org.wso2.micro.integrator.http.utils.Constants;
+import org.wso2.micro.integrator.http.utils.HTTPRequestWithBackendResponse;
+import org.wso2.micro.integrator.http.utils.MultiThreadedHTTPClient;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -32,9 +34,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.testng.Assert.assertEquals;
-import static org.wso2.micro.integrator.http.backend.test.Constants.HTTP_VERSION;
-import static org.wso2.micro.integrator.http.backend.test.Utils.getServerSocket;
 import static org.wso2.micro.integrator.http.utils.Constants.CRLF;
+import static org.wso2.micro.integrator.http.utils.Constants.HTTP_VERSION;
 import static org.wso2.micro.integrator.http.utils.Utils.getPayload;
 
 /**
@@ -48,16 +49,7 @@ public class ChunkedBackendTestCase extends HTTPCoreBackendTest {
     public void testChunkedBackend(HTTPRequestWithBackendResponse httpRequestWithBackendResponse)
             throws Exception {
 
-        HttpResponse response = invokeHTTPCoreBETestAPI(httpRequestWithBackendResponse);
-
-        assertCPUUsage();
-
-        assertEquals(response.getStatusLine().getStatusCode(), 403, "Response not received");
-
-        assertEquals(client.getResponsePayload(response).getBytes().length,
-                getPayload(httpRequestWithBackendResponse.getBackendResponse().getBackendPayloadSize())
-                        .getBytes().length,
-                "Response size mismatch");
+        invokeHTTPCoreBETestAPI(httpRequestWithBackendResponse);
     }
 
     @Override
@@ -70,6 +62,19 @@ public class ChunkedBackendTestCase extends HTTPCoreBackendTest {
         return serverList;
     }
 
+    @Override
+    protected boolean validateResponse(CloseableHttpResponse response,
+                                       HTTPRequestWithBackendResponse httpRequestWithBackendResponse) throws Exception {
+
+        assertEquals(response.getStatusLine().getStatusCode(), 200, "Response not received");
+
+        assertEquals(MultiThreadedHTTPClient.getResponsePayload(response).getBytes().length,
+                getPayload(httpRequestWithBackendResponse.getBackendResponse().getBackendPayloadSize())
+                        .getBytes().length,
+                "Response size mismatch");
+        return true;
+    }
+
     private static class ChunkedBackendServer extends BackendServer {
 
         public ChunkedBackendServer(ServerSocket serverSocket) {
@@ -78,27 +83,7 @@ public class ChunkedBackendTestCase extends HTTPCoreBackendTest {
         }
 
         @Override
-        protected void readInput(Socket socket) throws Exception {
-
-            // Get input and output streams to talk to the client
-            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
-            char[] buf = new char[10];
-            StringBuilder outt = new StringBuilder();
-            while (true) {
-                try {
-                    int read = in.read(buf);
-                    outt.append(buf, 0, read);
-                    if (read < 100)
-                        break;
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-
-        @Override
-        protected synchronized void writeOutput(Socket socket) throws Exception {
+        protected void writeOutput(Socket socket) throws Exception {
 
             PrintStream out = new PrintStream(socket.getOutputStream());
 
@@ -108,7 +93,7 @@ public class ChunkedBackendTestCase extends HTTPCoreBackendTest {
             int count;
             byte[] buffer = new byte[chunkSize];
 
-            out.print(HTTP_VERSION + " 403 Forbidden" + CRLF);
+            out.print(HTTP_VERSION + " 200 OK" + CRLF);
             out.print("Content-Type: application/json" + CRLF);
             out.print("Transfer-Encoding: chunked" + CRLF);
             out.print("Connection: keep-alive" + CRLF);

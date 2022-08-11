@@ -17,8 +17,11 @@
 
 package org.wso2.micro.integrator.http.backend.test;
 
-import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.testng.annotations.Test;
+import org.wso2.micro.integrator.http.utils.BackendServer;
+import org.wso2.micro.integrator.http.utils.Constants;
+import org.wso2.micro.integrator.http.utils.HTTPRequestWithBackendResponse;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -30,9 +33,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.testng.Assert.assertEquals;
-import static org.wso2.micro.integrator.http.backend.test.Constants.HTTP_VERSION;
-import static org.wso2.micro.integrator.http.backend.test.Utils.getServerSocket;
 import static org.wso2.micro.integrator.http.utils.Constants.CRLF;
+import static org.wso2.micro.integrator.http.utils.Constants.HTTP_VERSION;
 
 /**
  * Test case for MI behaviour(specifically CPU usage) when a invalid chunked HTTP response is received.
@@ -45,11 +47,15 @@ public class InvalidChunkedBackendTestCase extends HTTPCoreBackendTest {
     public void testInvalidChunkedBackend(HTTPRequestWithBackendResponse httpRequestWithBackendResponse)
             throws Exception {
 
-        HttpResponse response = invokeHTTPCoreBETestAPI(httpRequestWithBackendResponse);
+        invokeHTTPCoreBETestAPI(httpRequestWithBackendResponse);
+    }
 
-        assertCPUUsage();
+    @Override
+    protected boolean validateResponse(CloseableHttpResponse response,
+                                       HTTPRequestWithBackendResponse httpRequestWithBackendResponse) throws Exception {
 
         assertEquals(response.getStatusLine().getStatusCode(), 200, "Response not received");
+        return true;
     }
 
     @Override
@@ -70,7 +76,7 @@ public class InvalidChunkedBackendTestCase extends HTTPCoreBackendTest {
         }
 
         @Override
-        protected synchronized void writeOutput(Socket socket) throws Exception {
+        protected void writeOutput(Socket socket) throws Exception {
 
             PrintStream out = new PrintStream(socket.getOutputStream());
 

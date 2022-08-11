@@ -17,7 +17,10 @@
 
 package org.wso2.micro.integrator.http.backend.test;
 
-import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
@@ -25,31 +28,52 @@ import org.testng.annotations.BeforeMethod;
 import org.wso2.esb.integration.common.extensions.carbonserver.CarbonServerExtension;
 import org.wso2.esb.integration.common.utils.CPUMonitor;
 import org.wso2.esb.integration.common.utils.ESBIntegrationTest;
-import org.wso2.esb.integration.common.utils.clients.SimpleHttpClient;
-import org.wso2.micro.integrator.http.utils.RequestMethods;
-import org.wso2.micro.integrator.http.utils.SamplePayloads;
+import org.wso2.micro.integrator.http.utils.BackendResponse;
+import org.wso2.micro.integrator.http.utils.BackendServer;
+import org.wso2.micro.integrator.http.utils.HTTPRequestWithBackendResponse;
+import org.wso2.micro.integrator.http.utils.MultiThreadedHTTPClient;
 
 import java.io.IOException;
-import java.util.HashMap;
+import java.net.ServerSocket;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
-import static org.wso2.micro.integrator.http.backend.test.Constants.API_CONTEXT;
+import javax.net.ServerSocketFactory;
+import javax.net.ssl.SSLServerSocketFactory;
+
+import static org.wso2.micro.integrator.http.utils.Constants.CLIENT_INSTANCES;
+import static org.wso2.micro.integrator.http.utils.Constants.HTTPCORE_BE_API_CONTEXT;
+import static org.wso2.micro.integrator.http.utils.Constants.HTTPS_BACKEND_PORT;
+import static org.wso2.micro.integrator.http.utils.Constants.HTTP_BACKEND_PORT;
+import static org.wso2.micro.integrator.http.utils.Constants.JAVAX_KEYSTORE_PASSWORD_PROP;
+import static org.wso2.micro.integrator.http.utils.Constants.JAVAX_KEYSTORE_PROP;
+import static org.wso2.micro.integrator.http.utils.Constants.KEYSTORE_PASS;
 import static org.wso2.micro.integrator.http.utils.Constants.KEYSTORE_PATH;
 import static org.wso2.micro.integrator.http.utils.Utils.checkCPUUsage;
 import static org.wso2.micro.integrator.http.utils.Utils.getPayload;
 
+/**
+ * This class provides an abstraction for HTTP Core backend scenario test cases.
+ */
 public abstract class HTTPCoreBackendTest extends ESBIntegrationTest {
 
+    private static CloseableHttpClient httpclient;
     private static CPUMonitor cpuMonitor;
     private List<BackendServer> backendServerList;
-    protected SimpleHttpClient client;
 
     @BeforeClass
     public void init() throws Exception {
 
         cpuMonitor = new CPUMonitor();
         startBackendServers();
+        PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
+        cm.setMaxTotal(CLIENT_INSTANCES);
+        cm.setDefaultMaxPerRoute(CLIENT_INSTANCES);
+
+        httpclient = HttpClients.custom().setConnectionManager(cm).build();
         super.init();
     }
 
@@ -59,7 +83,6 @@ public abstract class HTTPCoreBackendTest extends ESBIntegrationTest {
         HTTPRequestWithBackendResponse httpRequestWithBackendResponse = (HTTPRequestWithBackendResponse) testArgs[0];
         CarbonServerExtension.restartServer();
         setBackendServerParams(getPayload(httpRequestWithBackendResponse.getBackendResponse().getBackendPayloadSize()));
-        client = new SimpleHttpClient();
         cpuMonitor.startLogging();
     }
 
@@ -76,10 +99,54 @@ public abstract class HTTPCoreBackendTest extends ESBIntegrationTest {
         super.cleanup();
     }
 
+    /**
+     * This method will invoke the invokeHTTPCoreBETestAPI concurrently using an Executor Service. You can configure the
+     * thread pool size and number of client instances using the constants CLIENT_THREAD_POOL_SIZE and
+     * CLIENT_INSTANCES respectively.
+     *
+     * @param httpRequestWithBackendResponse The Mock HTTP request and backend response
+     * @throws Exception If an error occurs while executing the client and the backend
+     */
+    protected void invokeHTTPCoreBETestAPI(HTTPRequestWithBackendResponse httpRequestWithBackendResponse)
+            throws Exception {
+
+        String apiInvocationURL = httpRequestWithBackendResponse.getHttpRequest().isSSLEnabled() ?
+                getApiInvocationURLHttps(HTTPCORE_BE_API_CONTEXT) : getApiInvocationURL(HTTPCORE_BE_API_CONTEXT);
+
+        apiInvocationURL += populatePathParam(httpRequestWithBackendResponse.getBackendResponse());
+
+        List<Future<Boolean>> list = new ArrayList<>();
+
+        ExecutorService executorService = Executors.newFixedThreadPool(
+                org.wso2.micro.integrator.http.utils.Constants.CLIENT_THREAD_POOL_SIZE);
+        for (int i = 0; i < CLIENT_INSTANCES; i++) {
+            Future<Boolean> future = executorService.submit(new MultiThreadedHTTPClient(httpclient, apiInvocationURL,
+                    httpRequestWithBackendResponse) {
+                @Override
+                protected boolean onResponseReceived(CloseableHttpResponse response,
+                                                     HTTPRequestWithBackendResponse httpRequestWithBackendResponse)
+                        throws Exception {
+
+                    return validateResponse(response, httpRequestWithBackendResponse);
+                }
+            });
+            list.add(future);
+        }
+        for (Future<?> future : list) {
+            future.get();
+        }
+        executorService.shutdown();
+
+        assertCPUUsage();
+    }
+
+    /**
+     * Helper method to start the servers defined in the backend server list.
+     */
     private void startBackendServers() throws Exception {
 
-        System.setProperty("javax.net.ssl.keyStore", KEYSTORE_PATH);
-        System.setProperty("javax.net.ssl.keyStorePassword", "wso2carbon");
+        System.setProperty(JAVAX_KEYSTORE_PROP, KEYSTORE_PATH);
+        System.setProperty(JAVAX_KEYSTORE_PASSWORD_PROP, KEYSTORE_PASS);
 
         backendServerList = getBackEndServers();
 
@@ -88,6 +155,9 @@ public abstract class HTTPCoreBackendTest extends ESBIntegrationTest {
         }
     }
 
+    /**
+     * Helper method to stop the servers defined in the backend server list.
+     */
     private void stopBackendServers() {
 
         for (BackendServer server : backendServerList) {
@@ -95,6 +165,11 @@ public abstract class HTTPCoreBackendTest extends ESBIntegrationTest {
         }
     }
 
+    /**
+     * This method will set properties to the backend servers.
+     *
+     * @param backendPayload The response payload that the backend server must sent
+     */
     private void setBackendServerParams(String backendPayload) {
 
         for (BackendServer server : backendServerList) {
@@ -102,41 +177,66 @@ public abstract class HTTPCoreBackendTest extends ESBIntegrationTest {
         }
     }
 
+    /**
+     * This method must be implemented by concrete implementations of this class to provide the backend server
+     * implementation.
+     *
+     * @return List of implemented backend servers
+     * @throws Exception If an error occurs while creating the mock backends
+     */
     protected abstract List<BackendServer> getBackEndServers() throws Exception;
 
     /**
-     * Asserts the CPU usage. This method will add an alias to track the assertion that was called before closing the
+     * This method must be implemented by concrete implementations of this class to provide the logic to validate the
+     * response.
+     *
+     * @param response                       The HTTP response returned by the client
+     * @param httpRequestWithBackendResponse The Mock HTTP request and backend response
+     * @throws Exception If an error occurs while validating the response
+     */
+    protected abstract boolean validateResponse(CloseableHttpResponse response,
+                                                HTTPRequestWithBackendResponse httpRequestWithBackendResponse)
+            throws Exception;
+
+    /**
+     * This method will return a ServerSocket with or without SSL.
+     *
+     * @param enableSSL Whether the server socket should have SSL or not
+     * @return ServerSocket with or without SSL
+     */
+    protected static ServerSocket getServerSocket(boolean enableSSL) throws IOException {
+
+        ServerSocketFactory ssf;
+        if (enableSSL) {
+            ssf = SSLServerSocketFactory.getDefault();
+            return ssf.createServerSocket(HTTPS_BACKEND_PORT);
+        }
+        ssf = ServerSocketFactory.getDefault();
+        return ssf.createServerSocket(HTTP_BACKEND_PORT);
+    }
+
+    /**
+     * Asserts the CPU usage. This method will add an alias to track the assertion that was called after closing the
      * socket.
      */
-    protected static void assertCPUUsage() {
+    private static void assertCPUUsage() {
 
         checkCPUUsage(cpuMonitor, "CPU settled after closing the socket by client");
     }
 
-    protected HttpResponse invokeHTTPCoreBETestAPI(HTTPRequestWithBackendResponse httpRequestWithBackendResponse)
-            throws IOException {
-
-        String apiInvocationURL = httpRequestWithBackendResponse.getHttpRequest().isSSLEnabled() ?
-                getApiInvocationURLHttps(API_CONTEXT) : getApiInvocationURL(API_CONTEXT);
-
-        apiInvocationURL += populatePathParam(httpRequestWithBackendResponse.getBackendResponse());
-
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Content-Type", "text/plain");
-
-        if (httpRequestWithBackendResponse.getHttpRequest().getMethod().equals(RequestMethods.GET)) {
-            return client.doGet((apiInvocationURL), headers);
-        }
-        return client.doPost((apiInvocationURL), headers, SamplePayloads.LARGE_PAYLOAD, "text/plain");
-    }
-
-    private static String populatePathParam(BackendResponse httpRequest) {
+    /**
+     * Returns an url string which contains the backend server protocol and port.
+     *
+     * @param backendResponse The Mock HTTP backend response
+     * @return A string which contains the backend server protocol and port
+     */
+    private static String populatePathParam(BackendResponse backendResponse) {
 
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("/");
-        stringBuilder.append(httpRequest.getProtocol());
+        stringBuilder.append(backendResponse.getProtocol());
         stringBuilder.append("/");
-        stringBuilder.append(httpRequest.getPort());
+        stringBuilder.append(backendResponse.getPort());
         return stringBuilder.toString();
     }
 }
