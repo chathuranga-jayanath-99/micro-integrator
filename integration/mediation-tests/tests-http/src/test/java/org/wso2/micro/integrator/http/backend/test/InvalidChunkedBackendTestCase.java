@@ -17,35 +17,33 @@
 
 package org.wso2.micro.integrator.http.backend.test;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.testng.annotations.Test;
 import org.wso2.micro.integrator.http.utils.BackendServer;
 import org.wso2.micro.integrator.http.utils.Constants;
 import org.wso2.micro.integrator.http.utils.HTTPRequestWithBackendResponse;
-import org.wso2.micro.integrator.http.utils.MultiThreadedHTTPClient;
 
-import java.io.BufferedWriter;
-import java.io.OutputStreamWriter;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.io.PrintStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.testng.Assert.assertEquals;
 import static org.wso2.micro.integrator.http.utils.Constants.CRLF;
 import static org.wso2.micro.integrator.http.utils.Constants.HTTP_VERSION;
-import static org.wso2.micro.integrator.http.utils.Utils.getPayload;
 
 /**
- * Test case for MI behaviour(specifically CPU usage) when a slow writing backend sends a HTTP response.
+ * Test case for MI behaviour(specifically CPU usage) when a invalid chunked HTTP response is received.
  */
-public class SlowWritingBackendTestCase extends HTTPCoreBackendTest {
+public class InvalidChunkedBackendTestCase extends HTTPCoreBackendTest {
 
     @Test(groups = {"wso2.esb"}, description =
-            "Test for MI behaviour when a slow writing backend sends a HTTP response.",
+            "Test for MI behaviour when a invalid chunked HTTP response is received.",
             dataProvider = "httpRequestResponse", dataProviderClass = Constants.class)
-    public void testSlowWritingBackend(HTTPRequestWithBackendResponse httpRequestWithBackendResponse)
+    public void testInvalidChunkedBackend(HTTPRequestWithBackendResponse httpRequestWithBackendResponse)
             throws Exception {
 
         invokeHTTPCoreBETestAPI(httpRequestWithBackendResponse);
@@ -55,12 +53,7 @@ public class SlowWritingBackendTestCase extends HTTPCoreBackendTest {
     protected boolean validateResponse(CloseableHttpResponse response,
                                        HTTPRequestWithBackendResponse httpRequestWithBackendResponse) throws Exception {
 
-        assertEquals(response.getStatusLine().getStatusCode(), 200, "Response not received");
-
-        assertEquals(MultiThreadedHTTPClient.getResponsePayload(response).getBytes().length,
-                getPayload(httpRequestWithBackendResponse.getBackendResponse().getBackendPayloadSize())
-                        .getBytes().length,
-                "Response size mismatch");
+        assertHTTPStatusCodeEquals200(response);
         return true;
     }
 
@@ -68,15 +61,15 @@ public class SlowWritingBackendTestCase extends HTTPCoreBackendTest {
     protected List<BackendServer> getBackEndServers() throws Exception {
 
         List<BackendServer> serverList = new ArrayList<>();
-        serverList.add(new SlowWritingBackend(getServerSocket(true)));
-        serverList.add(new SlowWritingBackend(getServerSocket(false)));
+        serverList.add(new InvalidChunkedBackendServer(getServerSocket(true)));
+        serverList.add(new InvalidChunkedBackendServer(getServerSocket(false)));
 
         return serverList;
     }
 
-    private static class SlowWritingBackend extends BackendServer {
+    private static class InvalidChunkedBackendServer extends BackendServer {
 
-        public SlowWritingBackend(ServerSocket serverSocket) {
+        public InvalidChunkedBackendServer(ServerSocket serverSocket) {
 
             super(serverSocket);
         }
@@ -84,27 +77,29 @@ public class SlowWritingBackendTestCase extends HTTPCoreBackendTest {
         @Override
         protected void writeOutput(Socket socket) throws Exception {
 
-            BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+            PrintStream out = new PrintStream(socket.getOutputStream());
 
-            StringBuilder sb = new StringBuilder();
+            InputStream payloadStream = new ByteArrayInputStream(payload.getBytes(StandardCharsets.UTF_8));
 
-            sb.append(HTTP_VERSION + " 200 OK" + CRLF);
-            sb.append("Content-Type: application/json" + CRLF);
-            if (StringUtils.isNotBlank(payload)) {
-                sb.append("Content-Length:  " + payload.getBytes().length + CRLF);
-            }
-            sb.append("Connection: keep-alive" + CRLF);
-            sb.append(CRLF);
-            if (StringUtils.isNotBlank(payload)) {
-                sb.append(payload);
-            }
-            for (int i = 0; i < sb.length(); ++i) {
-                out.write(sb.charAt(i));
+            int chunkSize = 100;
+            int count;
+            byte[] buffer = new byte[chunkSize];
+
+            out.print(HTTP_VERSION + " 200 OK" + CRLF);
+            out.print("Content-Type: application/json" + CRLF);
+            out.print("Transfer-Encoding: chunked" + CRLF);
+            out.print("Connection: keep-alive" + CRLF);
+            out.print(CRLF);
+
+            while ((count = payloadStream.read(buffer)) > 0) {
+                out.print(count + CRLF);
+                out.write(buffer, 0, count);
+                out.print(CRLF);
                 out.flush();
-                if (i % 500 == 0) {
-                    Thread.sleep(100);
-                }
             }
+
+            out.print("0" + CRLF);
+            out.print(CRLF);
             out.flush();
             socket.close();
         }

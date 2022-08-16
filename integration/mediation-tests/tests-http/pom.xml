@@ -29,7 +29,7 @@
 
     <modelVersion>4.0.0</modelVersion>
     <artifactId>org.wso2.micro.integrator.tests.http</artifactId>
-    <name>MI test Module-HttpCore</name>
+    <name>MI test Module-HTTP</name>
     <packaging>jar</packaging>
 
     <build>

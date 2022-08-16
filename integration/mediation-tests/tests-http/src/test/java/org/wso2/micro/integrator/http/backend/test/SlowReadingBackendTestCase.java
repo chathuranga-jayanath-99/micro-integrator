@@ -17,6 +17,7 @@
 
 package org.wso2.micro.integrator.http.backend.test;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.testng.annotations.Test;
 import org.wso2.micro.integrator.http.utils.BackendServer;
@@ -24,12 +25,12 @@ import org.wso2.micro.integrator.http.utils.Constants;
 import org.wso2.micro.integrator.http.utils.HTTPRequestWithBackendResponse;
 import org.wso2.micro.integrator.http.utils.MultiThreadedHTTPClient;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.io.PrintStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,34 +40,24 @@ import static org.wso2.micro.integrator.http.utils.Constants.HTTP_VERSION;
 import static org.wso2.micro.integrator.http.utils.Utils.getPayload;
 
 /**
- * Test case for MI behaviour(specifically CPU usage) when a chunked HTTP response is received.
+ * Test case for MI behaviour(specifically CPU usage) when a slow reading backend is connected.
  */
-public class ChunkedBackendTestCase extends HTTPCoreBackendTest {
+public class SlowReadingBackendTestCase extends HTTPCoreBackendTest {
 
     @Test(groups = {"wso2.esb"}, description =
-            "Test for MI behaviour when a chunked HTTP response is received.",
+            "Test for MI behaviour when a slow reading backend is used.",
             dataProvider = "httpRequestResponse", dataProviderClass = Constants.class)
-    public void testChunkedBackend(HTTPRequestWithBackendResponse httpRequestWithBackendResponse)
+    public void testSlowReadingBackend(HTTPRequestWithBackendResponse httpRequestWithBackendResponse)
             throws Exception {
 
         invokeHTTPCoreBETestAPI(httpRequestWithBackendResponse);
     }
 
     @Override
-    protected List<BackendServer> getBackEndServers() throws Exception {
-
-        List<BackendServer> serverList = new ArrayList<>();
-        serverList.add(new ChunkedBackendServer(getServerSocket(true)));
-        serverList.add(new ChunkedBackendServer(getServerSocket(false)));
-
-        return serverList;
-    }
-
-    @Override
     protected boolean validateResponse(CloseableHttpResponse response,
                                        HTTPRequestWithBackendResponse httpRequestWithBackendResponse) throws Exception {
 
-        assertEquals(response.getStatusLine().getStatusCode(), 200, "Response not received");
+        assertHTTPStatusCodeEquals200(response);
 
         assertEquals(MultiThreadedHTTPClient.getResponsePayload(response).getBytes().length,
                 getPayload(httpRequestWithBackendResponse.getBackendResponse().getBackendPayloadSize())
@@ -75,38 +66,49 @@ public class ChunkedBackendTestCase extends HTTPCoreBackendTest {
         return true;
     }
 
-    private static class ChunkedBackendServer extends BackendServer {
+    @Override
+    protected List<BackendServer> getBackEndServers() throws Exception {
 
-        public ChunkedBackendServer(ServerSocket serverSocket) {
+        List<BackendServer> serverList = new ArrayList<>();
+        serverList.add(new SlowReadingBackend(getServerSocket(true)));
+        serverList.add(new SlowReadingBackend(getServerSocket(false)));
+
+        return serverList;
+    }
+
+    private static class SlowReadingBackend extends BackendServer {
+
+        public SlowReadingBackend(ServerSocket serverSocket) {
 
             super(serverSocket);
         }
 
         @Override
+        protected void readInput(Socket socket) throws Exception {
+
+            // Get input and output streams to talk to the client
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            //code to read and print headers
+            while ((in.readLine()).length() != 0) {
+                Thread.sleep(1000);
+            }
+        }
+
+        @Override
         protected void writeOutput(Socket socket) throws Exception {
 
-            PrintStream out = new PrintStream(socket.getOutputStream());
+            BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
 
-            InputStream payloadStream = new ByteArrayInputStream(payload.getBytes(StandardCharsets.UTF_8));
-
-            int chunkSize = 100;
-            int count;
-            byte[] buffer = new byte[chunkSize];
-
-            out.print(HTTP_VERSION + " 200 OK" + CRLF);
-            out.print("Content-Type: application/json" + CRLF);
-            out.print("Transfer-Encoding: chunked" + CRLF);
-            out.print("Connection: keep-alive" + CRLF);
-            out.print(CRLF);
-
-            while ((count = payloadStream.read(buffer)) > 0) {
-                out.printf("%x" + CRLF, count);
-                out.write(buffer, 0, count);
-                out.print(CRLF);
+            out.write(HTTP_VERSION + " 200 OK" + CRLF);
+            out.write("Content-Type: application/json" + CRLF);
+            if (StringUtils.isNotBlank(payload)) {
+                out.write("Content-Length:  " + payload.getBytes().length + CRLF);
             }
-
-            out.print("0" + CRLF);
-            out.print(CRLF);
+            out.write("Connection: keep-alive" + CRLF);
+            out.write(CRLF);
+            if (StringUtils.isNotBlank(payload)) {
+                out.write(payload);
+            }
             out.flush();
             socket.close();
         }

@@ -21,6 +21,7 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.awaitility.Awaitility;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
@@ -37,13 +38,16 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import javax.net.ServerSocketFactory;
 import javax.net.ssl.SSLServerSocketFactory;
 
+import static org.testng.Assert.assertEquals;
 import static org.wso2.micro.integrator.http.utils.Constants.CLIENT_INSTANCES;
 import static org.wso2.micro.integrator.http.utils.Constants.HTTPCORE_BE_API_CONTEXT;
 import static org.wso2.micro.integrator.http.utils.Constants.HTTPS_BACKEND_PORT;
@@ -82,6 +86,7 @@ public abstract class HTTPCoreBackendTest extends ESBIntegrationTest {
 
         HTTPRequestWithBackendResponse httpRequestWithBackendResponse = (HTTPRequestWithBackendResponse) testArgs[0];
         CarbonServerExtension.restartServer();
+        assertBackendServerStatus();
         setBackendServerParams(getPayload(httpRequestWithBackendResponse.getBackendResponse().getBackendPayloadSize()));
         cpuMonitor.startLogging();
     }
@@ -216,6 +221,47 @@ public abstract class HTTPCoreBackendTest extends ESBIntegrationTest {
     }
 
     /**
+     * Asserts whether the HTTP Status code in the response is 200.
+     *
+     * @param response The HTTP response received from MI
+     */
+    protected void assertHTTPStatusCodeEquals200(CloseableHttpResponse response) {
+
+        assertHTTPStatusCode(response, 200);
+    }
+
+    /**
+     * Asserts whether the HTTP Status code in the response is 400.
+     *
+     * @param response The HTTP response received from MI
+     */
+    protected void assertHTTPStatusCodeEquals400(CloseableHttpResponse response) {
+
+        assertHTTPStatusCode(response, 400);
+    }
+
+    /**
+     * Asserts whether the HTTP Status code in the response is 500.
+     *
+     * @param response The HTTP response received from MI
+     */
+    protected void assertHTTPStatusCodeEquals500(CloseableHttpResponse response) {
+
+        assertHTTPStatusCode(response, 500);
+    }
+
+    /**
+     * Asserts the HTTP Status code in the response.
+     *
+     * @param response       The HTTP response received from MI
+     * @param expectedHTTPSC The expected HTTP status code
+     */
+    private void assertHTTPStatusCode(CloseableHttpResponse response, int expectedHTTPSC) {
+
+        assertEquals(response.getStatusLine().getStatusCode(), expectedHTTPSC, "Invalid HTTP Status code received");
+    }
+
+    /**
      * Asserts the CPU usage. This method will add an alias to track the assertion that was called after closing the
      * socket.
      */
@@ -238,5 +284,22 @@ public abstract class HTTPCoreBackendTest extends ESBIntegrationTest {
         stringBuilder.append("/");
         stringBuilder.append(backendResponse.getPort());
         return stringBuilder.toString();
+    }
+
+    /**
+     * Asserts whether the Backend Servers are running.
+     */
+    private void assertBackendServerStatus() {
+
+        for (BackendServer server : backendServerList) {
+            Awaitility.await().pollInterval(10, TimeUnit.MILLISECONDS).
+                    atMost(5, TimeUnit.SECONDS).
+                    until(hasThreadStarted(server));
+        }
+    }
+
+    private Callable<Boolean> hasThreadStarted(final Thread thread) {
+
+        return thread::isAlive;
     }
 }

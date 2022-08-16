@@ -23,6 +23,7 @@ import org.testng.annotations.Test;
 import org.wso2.micro.integrator.http.utils.BackendServer;
 import org.wso2.micro.integrator.http.utils.Constants;
 import org.wso2.micro.integrator.http.utils.HTTPRequestWithBackendResponse;
+import org.wso2.micro.integrator.http.utils.MultiThreadedHTTPClient;
 
 import java.io.BufferedWriter;
 import java.io.OutputStreamWriter;
@@ -33,13 +34,18 @@ import java.util.List;
 
 import static org.testng.Assert.assertEquals;
 import static org.wso2.micro.integrator.http.utils.Constants.CRLF;
+import static org.wso2.micro.integrator.http.utils.Constants.HTTP_VERSION;
+import static org.wso2.micro.integrator.http.utils.Utils.getPayload;
 
-public class MalformedBackendTestCase extends HTTPCoreBackendTest {
+/**
+ * Test case for MI behaviour(specifically CPU usage) when a slow writing backend sends a HTTP response.
+ */
+public class SlowWritingBackendTestCase extends HTTPCoreBackendTest {
 
     @Test(groups = {"wso2.esb"}, description =
-            "Test for MI behaviour when a backend sends a Malformed response.",
+            "Test for MI behaviour when a slow writing backend sends a HTTP response.",
             dataProvider = "httpRequestResponse", dataProviderClass = Constants.class)
-    public void testMalformedBackendServer(HTTPRequestWithBackendResponse httpRequestWithBackendResponse)
+    public void testSlowWritingBackend(HTTPRequestWithBackendResponse httpRequestWithBackendResponse)
             throws Exception {
 
         invokeHTTPCoreBETestAPI(httpRequestWithBackendResponse);
@@ -49,7 +55,12 @@ public class MalformedBackendTestCase extends HTTPCoreBackendTest {
     protected boolean validateResponse(CloseableHttpResponse response,
                                        HTTPRequestWithBackendResponse httpRequestWithBackendResponse) throws Exception {
 
-        assertEquals(response.getStatusLine().getStatusCode(), 500, "Response not received");
+        assertHTTPStatusCodeEquals200(response);
+
+        assertEquals(MultiThreadedHTTPClient.getResponsePayload(response).getBytes().length,
+                getPayload(httpRequestWithBackendResponse.getBackendResponse().getBackendPayloadSize())
+                        .getBytes().length,
+                "Response size mismatch");
         return true;
     }
 
@@ -57,15 +68,15 @@ public class MalformedBackendTestCase extends HTTPCoreBackendTest {
     protected List<BackendServer> getBackEndServers() throws Exception {
 
         List<BackendServer> serverList = new ArrayList<>();
-        serverList.add(new MalformedBackendServer(getServerSocket(true)));
-        serverList.add(new MalformedBackendServer(getServerSocket(false)));
+        serverList.add(new SlowWritingBackend(getServerSocket(true)));
+        serverList.add(new SlowWritingBackend(getServerSocket(false)));
 
         return serverList;
     }
 
-    private static class MalformedBackendServer extends BackendServer {
+    private static class SlowWritingBackend extends BackendServer {
 
-        public MalformedBackendServer(ServerSocket serverSocket) {
+        public SlowWritingBackend(ServerSocket serverSocket) {
 
             super(serverSocket);
         }
@@ -75,17 +86,24 @@ public class MalformedBackendTestCase extends HTTPCoreBackendTest {
 
             BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
 
-            // sending an invalid header
-            out.write(0 + CRLF);
-            out.write("1.1 200 OK" + CRLF);
-            out.write("Content-Type: application/json" + CRLF);
+            StringBuilder sb = new StringBuilder();
+
+            sb.append(HTTP_VERSION + " 200 OK" + CRLF);
+            sb.append("Content-Type: application/json" + CRLF);
             if (StringUtils.isNotBlank(payload)) {
-                out.write("Content-Length:  " + payload.getBytes().length + CRLF);
+                sb.append("Content-Length:  " + payload.getBytes().length + CRLF);
             }
-            out.write("Connection: keep-alive" + CRLF);
-            out.write(CRLF);
+            sb.append("Connection: keep-alive" + CRLF);
+            sb.append(CRLF);
             if (StringUtils.isNotBlank(payload)) {
-                out.write(payload);
+                sb.append(payload);
+            }
+            for (int i = 0; i < sb.length(); ++i) {
+                out.write(sb.charAt(i));
+                out.flush();
+                if (i % 500 == 0) {
+                    Thread.sleep(100);
+                }
             }
             out.flush();
             socket.close();

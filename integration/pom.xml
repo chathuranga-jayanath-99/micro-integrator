@@ -964,10 +964,10 @@
             </modules>
         </profile>
         <profile>
-            <id>httpcore</id>
+            <id>http-tests</id>
             <modules>
                 <module>tests-common</module>
-                <module>mediation-tests/tests-httpcore</module>
+                <module>mediation-tests/tests-http</module>
                 <module>mediation-tests/coverage-report</module>
             </modules>
         </profile>

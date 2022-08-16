@@ -17,13 +17,11 @@
 
 package org.wso2.micro.integrator.http.backend.test;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.testng.annotations.Test;
 import org.wso2.micro.integrator.http.utils.BackendServer;
 import org.wso2.micro.integrator.http.utils.Constants;
 import org.wso2.micro.integrator.http.utils.HTTPRequestWithBackendResponse;
-import org.wso2.micro.integrator.http.utils.MultiThreadedHTTPClient;
 
 import java.io.BufferedWriter;
 import java.io.OutputStreamWriter;
@@ -32,17 +30,16 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.testng.Assert.assertEquals;
 import static org.wso2.micro.integrator.http.utils.Constants.CRLF;
 import static org.wso2.micro.integrator.http.utils.Constants.HTTP_VERSION;
-import static org.wso2.micro.integrator.http.utils.Utils.getPayload;
 
-public class BackendRespondWith200TestCase extends HTTPCoreBackendTest {
+public class BackendClosesConnectionWhileSendingHeadersTestCase extends HTTPCoreBackendTest {
 
     @Test(groups = {"wso2.esb"}, description =
-            "Test for MI behaviour when a backend sends a 200 OK response.",
+            "Test for MI behaviour when a backend closes the socket while sending response headers.",
             dataProvider = "httpRequestResponse", dataProviderClass = Constants.class)
-    public void testBackendRespondWith200(HTTPRequestWithBackendResponse httpRequestWithBackendResponse)
+    public void testBackendClosesConnectionWhileSendingHeaders(
+            HTTPRequestWithBackendResponse httpRequestWithBackendResponse)
             throws Exception {
 
         invokeHTTPCoreBETestAPI(httpRequestWithBackendResponse);
@@ -52,8 +49,8 @@ public class BackendRespondWith200TestCase extends HTTPCoreBackendTest {
     protected List<BackendServer> getBackEndServers() throws Exception {
 
         List<BackendServer> serverList = new ArrayList<>();
-        serverList.add(new BackendServerResponseWith200(getServerSocket(true)));
-        serverList.add(new BackendServerResponseWith200(getServerSocket(false)));
+        serverList.add(new CloseConnectionWhileSendingHeadersBackend(getServerSocket(true)));
+        serverList.add(new CloseConnectionWhileSendingHeadersBackend(getServerSocket(false)));
 
         return serverList;
     }
@@ -62,19 +59,13 @@ public class BackendRespondWith200TestCase extends HTTPCoreBackendTest {
     protected boolean validateResponse(CloseableHttpResponse response,
                                        HTTPRequestWithBackendResponse httpRequestWithBackendResponse) throws Exception {
 
-        assertEquals(response.getStatusLine().getStatusCode(), 200, "Response not received");
-
-        assertEquals(MultiThreadedHTTPClient.getResponsePayload(response).getBytes().length,
-                getPayload(httpRequestWithBackendResponse.getBackendResponse().getBackendPayloadSize())
-                        .getBytes().length,
-                "Response size mismatch");
-
+        assertHTTPStatusCodeEquals200(response);
         return true;
     }
 
-    private static class BackendServerResponseWith200 extends BackendServer {
+    private static class CloseConnectionWhileSendingHeadersBackend extends BackendServer {
 
-        public BackendServerResponseWith200(ServerSocket serverSocket) {
+        public CloseConnectionWhileSendingHeadersBackend(ServerSocket serverSocket) {
 
             super(serverSocket);
         }
@@ -86,14 +77,8 @@ public class BackendRespondWith200TestCase extends HTTPCoreBackendTest {
 
             out.write(HTTP_VERSION + " 200 OK" + CRLF);
             out.write("Content-Type: application/json" + CRLF);
-            if (StringUtils.isNotBlank(payload)) {
-                out.write("Content-Length:  " + payload.getBytes().length + CRLF);
-            }
-            out.write("Connection: keep-alive" + CRLF);
-            out.write(CRLF);
-            if (StringUtils.isNotBlank(payload)) {
-                out.write(payload);
-            }
+            out.write("Content-Length:  " + payload.getBytes().length + CRLF);
+            out.write("Connection:");
             out.flush();
             socket.close();
         }

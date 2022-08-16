@@ -57,7 +57,7 @@ public class ContentTypeAndBodyMismatchBackendTestCase extends HTTPCoreBackendTe
                                        HTTPRequestWithBackendResponse httpRequestWithBackendResponse) throws Exception {
 
         assertEquals(response.getStatusLine().getStatusCode(), getExpectedHTTPSC(httpRequestWithBackendResponse),
-                "Response not received");
+                "Invalid HTTP Status code received");
         return true;
     }
 

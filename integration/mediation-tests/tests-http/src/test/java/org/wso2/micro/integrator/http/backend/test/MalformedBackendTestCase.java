@@ -17,6 +17,7 @@
 
 package org.wso2.micro.integrator.http.backend.test;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.testng.annotations.Test;
 import org.wso2.micro.integrator.http.utils.BackendServer;
@@ -30,43 +31,40 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.testng.Assert.assertEquals;
 import static org.wso2.micro.integrator.http.utils.Constants.CRLF;
-import static org.wso2.micro.integrator.http.utils.Constants.HTTP_VERSION;
 
-public class BackendClosesConnectionWhileSendingHeadersTestCase extends HTTPCoreBackendTest {
+public class MalformedBackendTestCase extends HTTPCoreBackendTest {
 
     @Test(groups = {"wso2.esb"}, description =
-            "Test for MI behaviour when a backend closes the socket while sending response headers.",
+            "Test for MI behaviour when a backend sends a Malformed response.",
             dataProvider = "httpRequestResponse", dataProviderClass = Constants.class)
-    public void testBackendClosesConnectionWhileSendingHeaders(
-            HTTPRequestWithBackendResponse httpRequestWithBackendResponse)
+    public void testMalformedBackendServer(HTTPRequestWithBackendResponse httpRequestWithBackendResponse)
             throws Exception {
 
         invokeHTTPCoreBETestAPI(httpRequestWithBackendResponse);
     }
 
     @Override
+    protected boolean validateResponse(CloseableHttpResponse response,
+                                       HTTPRequestWithBackendResponse httpRequestWithBackendResponse) throws Exception {
+
+        assertHTTPStatusCodeEquals500(response);
+        return true;
+    }
+
+    @Override
     protected List<BackendServer> getBackEndServers() throws Exception {
 
         List<BackendServer> serverList = new ArrayList<>();
-        serverList.add(new CloseConnectionWhileSendingHeadersBackend(getServerSocket(true)));
-        serverList.add(new CloseConnectionWhileSendingHeadersBackend(getServerSocket(false)));
+        serverList.add(new MalformedBackendServer(getServerSocket(true)));
+        serverList.add(new MalformedBackendServer(getServerSocket(false)));
 
         return serverList;
     }
 
-    @Override
-    protected boolean validateResponse(CloseableHttpResponse response,
-                                       HTTPRequestWithBackendResponse httpRequestWithBackendResponse) throws Exception {
+    private static class MalformedBackendServer extends BackendServer {
 
-        assertEquals(response.getStatusLine().getStatusCode(), 200, "Response not received");
-        return true;
-    }
-
-    private static class CloseConnectionWhileSendingHeadersBackend extends BackendServer {
-
-        public CloseConnectionWhileSendingHeadersBackend(ServerSocket serverSocket) {
+        public MalformedBackendServer(ServerSocket serverSocket) {
 
             super(serverSocket);
         }
@@ -76,10 +74,18 @@ public class BackendClosesConnectionWhileSendingHeadersTestCase extends HTTPCore
 
             BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
 
-            out.write(HTTP_VERSION + " 200 OK" + CRLF);
+            // sending an invalid header
+            out.write(0 + CRLF);
+            out.write("1.1 200 OK" + CRLF);
             out.write("Content-Type: application/json" + CRLF);
-            out.write("Content-Length:  " + payload.getBytes().length + CRLF);
-            out.write("Connection:");
+            if (StringUtils.isNotBlank(payload)) {
+                out.write("Content-Length:  " + payload.getBytes().length + CRLF);
+            }
+            out.write("Connection: keep-alive" + CRLF);
+            out.write(CRLF);
+            if (StringUtils.isNotBlank(payload)) {
+                out.write(payload);
+            }
             out.flush();
             socket.close();
         }

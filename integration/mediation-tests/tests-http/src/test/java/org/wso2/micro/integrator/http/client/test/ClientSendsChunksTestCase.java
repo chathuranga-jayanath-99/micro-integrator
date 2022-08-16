@@ -27,14 +27,17 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 
+import static org.wso2.micro.integrator.http.utils.Constants.CRLF;
+import static org.wso2.micro.integrator.http.utils.Constants.HTTPCORE_API_CONTEXT;
+
 /**
- * Test case tests for MI behaviour(specifically CPU usage) when the client sends invalid chunks.
+ * Test case tests for MI behaviour(specifically CPU usage) when the client sends chunks.
  */
-public class ClientSendsInvalidChunksTestCase extends HTTPCoreClientTest {
+public class ClientSendsChunksTestCase extends HTTPCoreClientTest {
 
     @Test(groups = {"wso2.esb"}, description =
-            "Test for MI behaviour when a client sends invalid chunks.", dataProvider = "httpRequestsWith200OK", dataProviderClass = Constants.class)
-    public void testClientSendsInvalidChunks(HttpRequestWithExpectedHTTPSC httpRequest) throws Exception {
+            "Test for MI behaviour when a client sends chunks.", dataProvider = "httpRequestsWith200OK", dataProviderClass = Constants.class)
+    public void testClientSendsChunks(HttpRequestWithExpectedHTTPSC httpRequest) throws Exception {
 
         invokeHTTPCoreTestAPI(httpRequest);
     }
@@ -42,12 +45,12 @@ public class ClientSendsInvalidChunksTestCase extends HTTPCoreClientTest {
     @Override
     protected void sendHTTPRequest(PrintStream printWriter, RequestMethods method, String payload) throws Exception {
 
-        printWriter.print(method + " " + Constants.HTTPCORE_API_CONTEXT + " HTTP/1.1" + Constants.CRLF);
-        printWriter.print("Content-Type: application/json" + Constants.CRLF);
-        printWriter.print("Accept: application/json" + Constants.CRLF);
-        printWriter.print("Connection: keep-alive" + Constants.CRLF);
-        printWriter.print("Transfer-Encoding: chunked" + Constants.CRLF);
-        printWriter.print(Constants.CRLF);
+        printWriter.print(method + " " + HTTPCORE_API_CONTEXT + " HTTP/1.1" + CRLF);
+        printWriter.print("Content-Type: application/json" + CRLF);
+        printWriter.print("Accept: application/json" + CRLF);
+        printWriter.print("Connection: keep-alive" + CRLF);
+        printWriter.print("Transfer-Encoding: chunked" + CRLF);
+        printWriter.print(CRLF);
 
         InputStream payloadStream = new ByteArrayInputStream(payload.getBytes(StandardCharsets.UTF_8));
 
@@ -56,12 +59,14 @@ public class ClientSendsInvalidChunksTestCase extends HTTPCoreClientTest {
         byte[] buffer = new byte[chunkSize];
 
         while ((count = payloadStream.read(buffer)) > 0) {
-            printWriter.print(count + Constants.CRLF);
+            printWriter.printf("%x" + CRLF, count);
             printWriter.write(buffer, 0, count);
-            printWriter.print(Constants.CRLF);
+            printWriter.print(CRLF);
+            printWriter.flush();
         }
 
-        printWriter.print("0" + Constants.CRLF);
+        printWriter.print("0" + CRLF);
+        printWriter.print(CRLF);
         printWriter.flush();
     }
 }

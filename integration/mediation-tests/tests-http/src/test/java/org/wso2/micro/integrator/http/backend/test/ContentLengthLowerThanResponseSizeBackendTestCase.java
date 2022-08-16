@@ -17,12 +17,12 @@
 
 package org.wso2.micro.integrator.http.backend.test;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.testng.annotations.Test;
 import org.wso2.micro.integrator.http.utils.BackendServer;
 import org.wso2.micro.integrator.http.utils.Constants;
 import org.wso2.micro.integrator.http.utils.HTTPRequestWithBackendResponse;
-import org.wso2.micro.integrator.http.utils.MultiThreadedHTTPClient;
 
 import java.io.BufferedWriter;
 import java.io.OutputStreamWriter;
@@ -31,49 +31,47 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.testng.Assert.assertEquals;
 import static org.wso2.micro.integrator.http.utils.Constants.CRLF;
 import static org.wso2.micro.integrator.http.utils.Constants.HTTP_VERSION;
 
-public class BackendRespondWith400TestCase extends HTTPCoreBackendTest {
+/**
+ * Test case for MI behaviour(specifically CPU usage) when a HTTP response with content length header lower
+ * than the actual body size is received.
+ */
+public class ContentLengthLowerThanResponseSizeBackendTestCase extends HTTPCoreBackendTest {
 
     @Test(groups = {"wso2.esb"}, description =
-            "Test for MI behaviour when a backend response with a 400 Bad Request.",
+            "Test for MI behaviour when the content length header is lower than the the size of the backend " +
+                    "response.",
             dataProvider = "httpRequestResponse", dataProviderClass = Constants.class)
-    public void testBackendRespondWith400(HTTPRequestWithBackendResponse httpRequestWithBackendResponse)
+    public void testContentLengthLowerThanResponsePayloadSize(
+            HTTPRequestWithBackendResponse httpRequestWithBackendResponse)
             throws Exception {
 
         invokeHTTPCoreBETestAPI(httpRequestWithBackendResponse);
     }
 
     @Override
+    protected boolean validateResponse(CloseableHttpResponse response,
+                                       HTTPRequestWithBackendResponse httpRequestWithBackendResponse) throws Exception {
+
+        assertHTTPStatusCodeEquals200(response);
+        return true;
+    }
+
+    @Override
     protected List<BackendServer> getBackEndServers() throws Exception {
 
         List<BackendServer> serverList = new ArrayList<>();
-        serverList.add(new BackendServerResponseWith400(getServerSocket(true)));
-        serverList.add(new BackendServerResponseWith400(getServerSocket(false)));
+        serverList.add(new ContentLengthLowerThanBodyBackend(getServerSocket(true)));
+        serverList.add(new ContentLengthLowerThanBodyBackend(getServerSocket(false)));
 
         return serverList;
     }
 
-    @Override
-    protected boolean validateResponse(CloseableHttpResponse response,
-                                       HTTPRequestWithBackendResponse httpRequestWithBackendResponse) throws Exception {
+    private static class ContentLengthLowerThanBodyBackend extends BackendServer {
 
-        assertEquals(response.getStatusLine().getStatusCode(), 400, "Response not received");
-
-        assertEquals(MultiThreadedHTTPClient.getResponsePayload(response).getBytes().length,
-                org.wso2.micro.integrator.http.utils.Utils
-                        .getPayload(httpRequestWithBackendResponse.getBackendResponse().getBackendPayloadSize())
-                        .getBytes().length,
-                "Response size mismatch");
-
-        return true;
-    }
-
-    private static class BackendServerResponseWith400 extends BackendServer {
-
-        public BackendServerResponseWith400(ServerSocket serverSocket) {
+        public ContentLengthLowerThanBodyBackend(ServerSocket serverSocket) {
 
             super(serverSocket);
         }
@@ -83,12 +81,16 @@ public class BackendRespondWith400TestCase extends HTTPCoreBackendTest {
 
             BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
 
-            out.write(HTTP_VERSION + " 400 Bad Request" + CRLF);
+            out.write(HTTP_VERSION + " 200 OK" + CRLF);
             out.write("Content-Type: application/json" + CRLF);
-            out.write("Content-Length:  " + payload.getBytes().length + CRLF);
-            out.write("Connection: Close" + CRLF);
+            if (StringUtils.isNotBlank(payload)) {
+                out.write("Content-Length:  " + (payload.getBytes().length - 200) + CRLF);
+            }
+            out.write("Connection: keep-alive" + CRLF);
             out.write(CRLF);
-            out.write(payload);
+            if (StringUtils.isNotBlank(payload)) {
+                out.write(payload);
+            }
             out.flush();
             socket.close();
         }

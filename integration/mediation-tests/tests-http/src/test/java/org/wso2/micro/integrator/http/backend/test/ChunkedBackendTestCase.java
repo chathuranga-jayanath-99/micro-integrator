@@ -24,10 +24,12 @@ import org.wso2.micro.integrator.http.utils.Constants;
 import org.wso2.micro.integrator.http.utils.HTTPRequestWithBackendResponse;
 import org.wso2.micro.integrator.http.utils.MultiThreadedHTTPClient;
 
-import java.io.BufferedWriter;
-import java.io.OutputStreamWriter;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.io.PrintStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,12 +38,15 @@ import static org.wso2.micro.integrator.http.utils.Constants.CRLF;
 import static org.wso2.micro.integrator.http.utils.Constants.HTTP_VERSION;
 import static org.wso2.micro.integrator.http.utils.Utils.getPayload;
 
-public class BackendRespondWith500TestCase extends HTTPCoreBackendTest {
+/**
+ * Test case for MI behaviour(specifically CPU usage) when a chunked HTTP response is received.
+ */
+public class ChunkedBackendTestCase extends HTTPCoreBackendTest {
 
     @Test(groups = {"wso2.esb"}, description =
-            "Test for MI behaviour when a backend sends a 500 Internal Server Error response.",
+            "Test for MI behaviour when a chunked HTTP response is received.",
             dataProvider = "httpRequestResponse", dataProviderClass = Constants.class)
-    public void testBackendRespondWith500(HTTPRequestWithBackendResponse httpRequestWithBackendResponse)
+    public void testChunkedBackend(HTTPRequestWithBackendResponse httpRequestWithBackendResponse)
             throws Exception {
 
         invokeHTTPCoreBETestAPI(httpRequestWithBackendResponse);
@@ -51,8 +56,8 @@ public class BackendRespondWith500TestCase extends HTTPCoreBackendTest {
     protected List<BackendServer> getBackEndServers() throws Exception {
 
         List<BackendServer> serverList = new ArrayList<>();
-        serverList.add(new BackendServerResponseWith500(getServerSocket(true)));
-        serverList.add(new BackendServerResponseWith500(getServerSocket(false)));
+        serverList.add(new ChunkedBackendServer(getServerSocket(true)));
+        serverList.add(new ChunkedBackendServer(getServerSocket(false)));
 
         return serverList;
     }
@@ -61,19 +66,18 @@ public class BackendRespondWith500TestCase extends HTTPCoreBackendTest {
     protected boolean validateResponse(CloseableHttpResponse response,
                                        HTTPRequestWithBackendResponse httpRequestWithBackendResponse) throws Exception {
 
-        assertEquals(response.getStatusLine().getStatusCode(), 500, "Response not received");
+        assertHTTPStatusCodeEquals200(response);
 
         assertEquals(MultiThreadedHTTPClient.getResponsePayload(response).getBytes().length,
                 getPayload(httpRequestWithBackendResponse.getBackendResponse().getBackendPayloadSize())
                         .getBytes().length,
                 "Response size mismatch");
-
         return true;
     }
 
-    private static class BackendServerResponseWith500 extends BackendServer {
+    private static class ChunkedBackendServer extends BackendServer {
 
-        public BackendServerResponseWith500(ServerSocket serverSocket) {
+        public ChunkedBackendServer(ServerSocket serverSocket) {
 
             super(serverSocket);
         }
@@ -81,14 +85,29 @@ public class BackendRespondWith500TestCase extends HTTPCoreBackendTest {
         @Override
         protected void writeOutput(Socket socket) throws Exception {
 
-            BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+            PrintStream out = new PrintStream(socket.getOutputStream());
 
-            out.write(HTTP_VERSION + " 500 Internal Server Error" + CRLF);
-            out.write("Content-Type: application/json" + CRLF);
-            out.write("Content-Length:  " + payload.getBytes().length + CRLF);
-            out.write("Connection: Close" + CRLF);
-            out.write(CRLF);
-            out.write(payload);
+            InputStream payloadStream = new ByteArrayInputStream(payload.getBytes(StandardCharsets.UTF_8));
+
+            int chunkSize = 100;
+            int count;
+            byte[] buffer = new byte[chunkSize];
+
+            out.print(HTTP_VERSION + " 200 OK" + CRLF);
+            out.print("Content-Type: application/json" + CRLF);
+            out.print("Transfer-Encoding: chunked" + CRLF);
+            out.print("Connection: keep-alive" + CRLF);
+            out.print(CRLF);
+
+            while ((count = payloadStream.read(buffer)) > 0) {
+                out.printf("%x" + CRLF, count);
+                out.write(buffer, 0, count);
+                out.print(CRLF);
+                out.flush();
+            }
+
+            out.print("0" + CRLF);
+            out.print(CRLF);
             out.flush();
             socket.close();
         }

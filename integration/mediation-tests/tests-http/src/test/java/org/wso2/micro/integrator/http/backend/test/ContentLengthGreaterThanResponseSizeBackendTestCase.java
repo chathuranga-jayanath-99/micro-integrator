@@ -31,7 +31,6 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.testng.Assert.assertEquals;
 import static org.wso2.micro.integrator.http.utils.Constants.CRLF;
 import static org.wso2.micro.integrator.http.utils.Constants.HTTP_VERSION;
 
@@ -66,7 +65,7 @@ public class ContentLengthGreaterThanResponseSizeBackendTestCase extends HTTPCor
     protected boolean validateResponse(CloseableHttpResponse response,
                                        HTTPRequestWithBackendResponse httpRequestWithBackendResponse) throws Exception {
 
-        assertEquals(response.getStatusLine().getStatusCode(), 200, "Response not received");
+        assertHTTPStatusCodeEquals200(response);
         return true;
     }
 

@@ -17,12 +17,12 @@
 
 package org.wso2.micro.integrator.http.backend.test;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.testng.annotations.Test;
 import org.wso2.micro.integrator.http.utils.BackendServer;
 import org.wso2.micro.integrator.http.utils.Constants;
 import org.wso2.micro.integrator.http.utils.HTTPRequestWithBackendResponse;
+import org.wso2.micro.integrator.http.utils.MultiThreadedHTTPClient;
 
 import java.io.BufferedWriter;
 import java.io.OutputStreamWriter;
@@ -34,45 +34,46 @@ import java.util.List;
 import static org.testng.Assert.assertEquals;
 import static org.wso2.micro.integrator.http.utils.Constants.CRLF;
 import static org.wso2.micro.integrator.http.utils.Constants.HTTP_VERSION;
+import static org.wso2.micro.integrator.http.utils.Utils.getPayload;
 
-/**
- * Test case for MI behaviour(specifically CPU usage) when a HTTP response with content length header lower
- * than the actual body size is received.
- */
-public class ContentLengthLowerThanResponseSizeBackendTestCase extends HTTPCoreBackendTest {
+public class BackendRespondWith500TestCase extends HTTPCoreBackendTest {
 
     @Test(groups = {"wso2.esb"}, description =
-            "Test for MI behaviour when the content length header is lower than the the size of the backend " +
-                    "response.",
+            "Test for MI behaviour when a backend sends a 500 Internal Server Error response.",
             dataProvider = "httpRequestResponse", dataProviderClass = Constants.class)
-    public void testContentLengthLowerThanResponsePayloadSize(
-            HTTPRequestWithBackendResponse httpRequestWithBackendResponse)
+    public void testBackendRespondWith500(HTTPRequestWithBackendResponse httpRequestWithBackendResponse)
             throws Exception {
 
         invokeHTTPCoreBETestAPI(httpRequestWithBackendResponse);
     }
 
     @Override
-    protected boolean validateResponse(CloseableHttpResponse response,
-                                       HTTPRequestWithBackendResponse httpRequestWithBackendResponse) throws Exception {
-
-        assertEquals(response.getStatusLine().getStatusCode(), 200, "Response not received");
-        return true;
-    }
-
-    @Override
     protected List<BackendServer> getBackEndServers() throws Exception {
 
         List<BackendServer> serverList = new ArrayList<>();
-        serverList.add(new ContentLengthLowerThanBodyBackend(getServerSocket(true)));
-        serverList.add(new ContentLengthLowerThanBodyBackend(getServerSocket(false)));
+        serverList.add(new BackendServerResponseWith500(getServerSocket(true)));
+        serverList.add(new BackendServerResponseWith500(getServerSocket(false)));
 
         return serverList;
     }
 
-    private static class ContentLengthLowerThanBodyBackend extends BackendServer {
+    @Override
+    protected boolean validateResponse(CloseableHttpResponse response,
+                                       HTTPRequestWithBackendResponse httpRequestWithBackendResponse) throws Exception {
 
-        public ContentLengthLowerThanBodyBackend(ServerSocket serverSocket) {
+        assertHTTPStatusCodeEquals500(response);
+
+        assertEquals(MultiThreadedHTTPClient.getResponsePayload(response).getBytes().length,
+                getPayload(httpRequestWithBackendResponse.getBackendResponse().getBackendPayloadSize())
+                        .getBytes().length,
+                "Response size mismatch");
+
+        return true;
+    }
+
+    private static class BackendServerResponseWith500 extends BackendServer {
+
+        public BackendServerResponseWith500(ServerSocket serverSocket) {
 
             super(serverSocket);
         }
@@ -82,16 +83,12 @@ public class ContentLengthLowerThanResponseSizeBackendTestCase extends HTTPCoreB
 
             BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
 
-            out.write(HTTP_VERSION + " 200 OK" + CRLF);
+            out.write(HTTP_VERSION + " 500 Internal Server Error" + CRLF);
             out.write("Content-Type: application/json" + CRLF);
-            if (StringUtils.isNotBlank(payload)) {
-                out.write("Content-Length:  " + (payload.getBytes().length - 200) + CRLF);
-            }
-            out.write("Connection: keep-alive" + CRLF);
+            out.write("Content-Length:  " + payload.getBytes().length + CRLF);
+            out.write("Connection: Close" + CRLF);
             out.write(CRLF);
-            if (StringUtils.isNotBlank(payload)) {
-                out.write(payload);
-            }
+            out.write(payload);
             out.flush();
             socket.close();
         }
