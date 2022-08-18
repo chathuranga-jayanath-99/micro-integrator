@@ -18,6 +18,9 @@
 package org.wso2.esb.integration.common.utils;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.awaitility.Awaitility;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -25,11 +28,14 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.URL;
 import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 
 /**
  * This class is used to monitor the CPU usage of the MI instance.
  */
 public class CPUMonitor {
+
+    private static final Log log = LogFactory.getLog(CPUMonitor.class);
 
     private static final int CPU_THRESHOLD = 80;
 
@@ -54,9 +60,15 @@ public class CPUMonitor {
      */
     public void startLogging() throws IOException {
 
+        log.info("Starting the CPU Monitor...");
+
         File file = new File(CPU_LOGGER_SH_PATH);
         file.setExecutable(true);
         process = new ProcessBuilder(CPU_LOGGER_SH_PATH, CARBON_PID_PATH, CPU_USAGE_FILE_PATH).start();
+
+        Awaitility.await().pollInterval(10, TimeUnit.MILLISECONDS).
+                atMost(5, TimeUnit.SECONDS).
+                until(isRunning());
     }
 
     /**
@@ -70,7 +82,22 @@ public class CPUMonitor {
                 return Integer.parseInt(line);
             }
         }
-        return -1;
+        throw new IOException("Error reading the CPU Usage");
+    }
+
+    /**
+     * Check whether the CPU Monitor is running and started to write to the CPU_USAGE_FILE_PATH file.
+     */
+    private Callable<Boolean> isRunning() {
+
+        File file = new File(CPU_USAGE_FILE_PATH);
+        return new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+
+                return file.exists();
+            }
+        };
     }
 
     /**
@@ -96,6 +123,8 @@ public class CPUMonitor {
      * @throws IOException if error occur while copying the CPU usage script
      */
     private void setup() throws IOException {
+
+        log.info("Copying script file to read CPU usage...");
 
         URL inputUrl = getClass().getResource("/helper/cpu_usage.sh");
         File dest = new File(CPU_LOGGER_SH_PATH);
