@@ -63,11 +63,16 @@ public class CPUMonitor {
         log.info("Starting the CPU Monitor...");
 
         File file = new File(CPU_LOGGER_SH_PATH);
-        file.setExecutable(true);
+        boolean isScriptExecutable = file.setExecutable(true);
+
+        if (!isScriptExecutable) {
+            throw new IOException("Error setting execution permission to " + CPU_LOGGER_SH_PATH);
+        }
+
         process = new ProcessBuilder(CPU_LOGGER_SH_PATH, CARBON_PID_PATH, CPU_USAGE_FILE_PATH).start();
 
         Awaitility.await().pollInterval(10, TimeUnit.MILLISECONDS).
-                atMost(5, TimeUnit.SECONDS).
+                atMost(30, TimeUnit.SECONDS).
                 until(isRunning());
     }
 

@@ -167,6 +167,10 @@ public abstract class HTTPCoreBackendTest extends ESBIntegrationTest {
 
         for (BackendServer server : backendServerList) {
             server.shutdown();
+
+            Awaitility.await().pollInterval(100, TimeUnit.MILLISECONDS).
+                    atMost(15, TimeUnit.SECONDS).
+                    until(hasServerStopped(server));
         }
     }
 
@@ -296,6 +300,17 @@ public abstract class HTTPCoreBackendTest extends ESBIntegrationTest {
                     atMost(5, TimeUnit.SECONDS).
                     until(hasThreadStarted(server));
         }
+    }
+
+    private Callable<Boolean> hasServerStopped(BackendServer server) {
+
+        return new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+
+                return server == null || !server.isAlive();
+            }
+        };
     }
 
     private Callable<Boolean> hasThreadStarted(final Thread thread) {
