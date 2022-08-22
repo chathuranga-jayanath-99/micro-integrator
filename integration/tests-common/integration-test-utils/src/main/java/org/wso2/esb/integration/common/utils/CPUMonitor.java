@@ -63,12 +63,7 @@ public class CPUMonitor {
         log.info("Starting the CPU Monitor...");
 
         File file = new File(CPU_LOGGER_SH_PATH);
-        boolean isScriptExecutable = file.setExecutable(true);
-
-        if (!isScriptExecutable) {
-            throw new IOException("Error setting execution permission to " + CPU_LOGGER_SH_PATH);
-        }
-
+        file.setExecutable(true);
         process = new ProcessBuilder(CPU_LOGGER_SH_PATH, CARBON_PID_PATH, CPU_USAGE_FILE_PATH).start();
 
         Awaitility.await().pollInterval(10, TimeUnit.MILLISECONDS).
@@ -84,7 +79,6 @@ public class CPUMonitor {
         try (BufferedReader br = new BufferedReader(new FileReader(CPU_USAGE_FILE_PATH))) {
             String line;
             if ((line = br.readLine()) != null) {
-                log.info("CPU USage = " + line);
                 return Integer.parseInt(line);
             }
         }

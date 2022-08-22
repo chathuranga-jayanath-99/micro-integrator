@@ -10,17 +10,14 @@
     </listeners>
 
     <test name="HttpCore-Client-Tests" preserve-order="true" verbose="2">
-<!--        <packages>-->
-<!--            <package name="org.wso2.micro.integrator.http.client.test.*"/>-->
-<!--        </packages>-->
-        <classes>
-            <class name="org.wso2.micro.integrator.http.client.test.ClientSendsChunksTestCase"></class>
-        </classes>
+        <packages>
+            <package name="org.wso2.micro.integrator.http.client.test.*"/>
+        </packages>
     </test>
-<!--    <test name="HttpCore-Backend-Tests" preserve-order="true" verbose="2">-->
-<!--        <packages>-->
-<!--            <package name="org.wso2.micro.integrator.http.backend.test.*"/>-->
-<!--        </packages>-->
-<!--    </test>-->
+    <test name="HttpCore-Backend-Tests" preserve-order="true" verbose="2">
+        <packages>
+            <package name="org.wso2.micro.integrator.http.backend.test.*"/>
+        </packages>
+    </test>
 </suite>
 
