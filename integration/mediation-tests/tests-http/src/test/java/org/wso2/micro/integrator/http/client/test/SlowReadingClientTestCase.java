@@ -43,12 +43,12 @@ public class SlowReadingClientTestCase extends HTTPCoreClientTest {
     }
 
     @Override
-    protected void readHTTPResponse(BufferedReader reader, String expectedHTTPSC) throws Exception {
+    protected void readHTTPResponse(BufferedReader reader, HttpRequestWithExpectedHTTPSC httpRequest) throws Exception {
 
         String line;
         boolean responseHasExpectedHTTPSC = false;
         while ((line = reader.readLine()) != null) {
-            if (line.contains(expectedHTTPSC)) {
+            if (line.contains(httpRequest.getExpectedHTTPSC())) {
                 responseHasExpectedHTTPSC = true;
             }
             Thread.sleep(500);
@@ -57,7 +57,7 @@ public class SlowReadingClientTestCase extends HTTPCoreClientTest {
             }
         }
 
-        Assert.assertTrue(responseHasExpectedHTTPSC, "A " + expectedHTTPSC + " HTTP Status");
+        Assert.assertTrue(responseHasExpectedHTTPSC, "A " + httpRequest.getExpectedHTTPSC() + " HTTP Status");
     }
 
     @Override

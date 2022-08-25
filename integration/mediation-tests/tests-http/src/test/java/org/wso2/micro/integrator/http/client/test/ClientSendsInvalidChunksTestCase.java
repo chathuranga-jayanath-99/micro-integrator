@@ -17,11 +17,13 @@
 
 package org.wso2.micro.integrator.http.client.test;
 
+import org.testng.Assert;
 import org.testng.annotations.Test;
 import org.wso2.micro.integrator.http.utils.Constants;
 import org.wso2.micro.integrator.http.utils.HttpRequestWithExpectedHTTPSC;
 import org.wso2.micro.integrator.http.utils.RequestMethods;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.PrintStream;
@@ -64,5 +66,17 @@ public class ClientSendsInvalidChunksTestCase extends HTTPCoreClientTest {
 
         printWriter.print("0" + Constants.CRLF);
         printWriter.flush();
+    }
+
+    @Override
+    protected void readHTTPResponse(BufferedReader reader, HttpRequestWithExpectedHTTPSC httpRequest) throws Exception {
+
+        // When a entity enclosing request (POST) is sent, HTTPCore will close the client connection due to the
+        // Malformed Chunk exception. Since the body is not processed by HTTPCore for GET request, the client will be
+        // receiving a response.
+        if (httpRequest.getMethod() == RequestMethods.GET) {
+            Assert.assertTrue(reader.readLine().contains(httpRequest.getExpectedHTTPSC()),
+                    "A " + httpRequest.getExpectedHTTPSC() + " HTTP Status");
+        }
     }
 }
