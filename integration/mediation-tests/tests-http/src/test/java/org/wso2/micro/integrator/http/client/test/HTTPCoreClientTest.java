@@ -119,14 +119,14 @@ public abstract class HTTPCoreClientTest extends ESBIntegrationTest {
     /**
      * Reads the response and assert the HTTP status code.
      *
-     * @param reader         The BufferedReader returned by the socket
-     * @param expectedHTTPSC The expected HTTP status code
+     * @param reader      The BufferedReader returned by the socket
+     * @param httpRequest The mock HTTP request with the expected HTTP status code
      * @throws Exception If an error occurs while reading the response
      */
-    protected void readHTTPResponse(BufferedReader reader, String expectedHTTPSC) throws Exception {
+    protected void readHTTPResponse(BufferedReader reader, HttpRequestWithExpectedHTTPSC httpRequest) throws Exception {
 
-        Assert.assertTrue(getResponseAsString(reader).contains(expectedHTTPSC),
-                "A " + expectedHTTPSC + " HTTP Status");
+        Assert.assertTrue(getResponseAsString(reader).contains(httpRequest.getExpectedHTTPSC()),
+                "A " + httpRequest.getExpectedHTTPSC() + " HTTP Status");
     }
 
     /**
@@ -181,7 +181,7 @@ public abstract class HTTPCoreClientTest extends ESBIntegrationTest {
                 protected void readResponse(BufferedReader bufferedReader, HttpRequestWithExpectedHTTPSC httpRequest)
                         throws Exception {
 
-                    readHTTPResponse(bufferedReader, httpRequest.getExpectedHTTPSC());
+                    readHTTPResponse(bufferedReader, httpRequest);
                 }
             };
         }
@@ -197,7 +197,7 @@ public abstract class HTTPCoreClientTest extends ESBIntegrationTest {
             protected void readResponse(BufferedReader bufferedReader, HttpRequestWithExpectedHTTPSC httpRequest)
                     throws Exception {
 
-                readHTTPResponse(bufferedReader, httpRequest.getExpectedHTTPSC());
+                readHTTPResponse(bufferedReader, httpRequest);
             }
         };
     }
