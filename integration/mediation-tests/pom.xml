@@ -45,6 +45,7 @@
                 <module>tests-sample</module>
                 <module>tests-other</module>
                 <module>tests-platform</module>
+                <module>tests-http</module>
                 <module>coverage-report</module>
             </modules>
         </profile>
