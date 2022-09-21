@@ -131,17 +131,20 @@ public class ServiceCatalogTestCase extends ESBIntegrationTest {
     }
 
     @Test(groups = {"wso2.esb"},
-            description = "Test Service Catalog with a faulty CAPP", priority = 1)
+            description = "Test Service Catalog with a faulty CAPP")
     public void testServiceCatalogWithFaultyCAPP() throws InterruptedException, AutomationUtilException {
+        carbonLogReader.clearLogs();
         serverConfigurationManager.restartMicroIntegrator();
         assertTrue(Utils.checkForLog(carbonLogReader, "Faulty CAPPs detected - aborting the service-catalog " +
                 "uploader", 10), "Did not receive the expected info log");
     }
 
     @Test(groups = {"wso2.esb"},
-            description = "Test service catalog without faulty and new CAPPs (CAPPs which has metadata)", priority = 2)
+            description = "Test service catalog without faulty and new CAPPs (CAPPs which has metadata)",
+            dependsOnMethods = "testServiceCatalogWithFaultyCAPP")
     public void testServiceCatalogWithoutFaultyCAPP()
             throws IOException, URISyntaxException, AutomationUtilException, InterruptedException {
+        carbonLogReader.clearLogs();
         serverConfigurationManager.removeFromCarbonapps(FAULTY_CAPP);
         serverConfigurationManager.restartMicroIntegrator();
         assertTrue(Utils.checkForLog(carbonLogReader,
@@ -150,7 +153,8 @@ public class ServiceCatalogTestCase extends ESBIntegrationTest {
     }
 
     @Test(groups = {"wso2.esb"},
-            description = "Test service catalog by hot deploying CAapp without Metadata)", priority = 3)
+            description = "Test service catalog by hot deploying CAapp without Metadata)",
+            dependsOnMethods = "testServiceCatalogWithoutFaultyCAPP")
     public void testServiceCatalogHotDeploymentWithoutMetaData()
             throws IOException, URISyntaxException, AutomationUtilException, InterruptedException {
         carbonLogReader.clearLogs();
@@ -165,7 +169,8 @@ public class ServiceCatalogTestCase extends ESBIntegrationTest {
     }
 
     @Test(groups = {"wso2.esb"},
-            description = "Test service catalog by hot deploying CAapp with Metadata)", priority = 4)
+            description = "Test service catalog by hot deploying CAapp with Metadata)",
+            dependsOnMethods = "testServiceCatalogHotDeploymentWithoutMetaData")
     public void testServiceCatalogHotDeploymentWithMetaData()
             throws IOException, URISyntaxException, AutomationUtilException, InterruptedException {
         carbonLogReader.clearLogs();
@@ -180,9 +185,11 @@ public class ServiceCatalogTestCase extends ESBIntegrationTest {
     }
 
     @Test(groups = {"wso2.esb"},
-            description = "Test service catalog without setting env variables", priority = 5)
+            description = "Test service catalog without setting env variables",
+            dependsOnMethods = "testServiceCatalogHotDeploymentWithMetaData")
     public void testServiceCatalogMetadataWithoutEnv()
             throws IOException, AutomationUtilException, InterruptedException {
+        carbonLogReader.clearLogs();
         File metadataCAPP = new File(
                 getESBResourceLocation() + File.separator + SERVICE_CATALOG_FOLDER + File.separator +
                         CAPP_WITH_META_AND_ENV);
@@ -193,10 +200,11 @@ public class ServiceCatalogTestCase extends ESBIntegrationTest {
     }
 
     @Test(groups = {"wso2.esb"},
-            description = "Test service catalog after setting env variables", priority = 6)
+            description = "Test service catalog after setting env variables",
+            dependsOnMethods = "testServiceCatalogMetadataWithoutEnv")
     public void testServiceCatalogMetadataWithEnv()
             throws IOException, AutomationUtilException, InterruptedException {
-
+        carbonLogReader.clearLogs();
         // Set env variables for linux and mac
         File newShFile = new File(
                 getESBResourceLocation() + File.separator + SERVICE_CATALOG_FOLDER + File.separator + SH_FILE_NAME);
@@ -217,8 +225,10 @@ public class ServiceCatalogTestCase extends ESBIntegrationTest {
     }
 
     @Test(groups = {"wso2.esb"},
-            description = "Test the ZIP file created by the service catalog", priority = 7)
+            description = "Test the ZIP file created by the service catalog",
+            dependsOnMethods = "testServiceCatalogMetadataWithEnv")
     public void testServiceCatalogZipFile() throws CarbonException, FileNotFoundException {
+        carbonLogReader.clearLogs();
         File extracted = chekAndExtractPayloadZip();
         assertTrue(extracted.exists(), "Error occurred while extracting the ZIP");
         File metadataFile = new File(extracted, "healthcare_v1.0.0-SNAPSHOT");
@@ -233,9 +243,11 @@ public class ServiceCatalogTestCase extends ESBIntegrationTest {
     }
 
     @Test(groups = {"wso2.esb"},
-            description = "Test MI is uploading only newly added APIs", priority = 8)
+            description = "Test MI is uploading only newly added APIs",
+            dependsOnMethods = "testServiceCatalogZipFile")
     public void testUploadOnlyNewAPIs()
             throws CarbonException, IOException, AutomationUtilException, InterruptedException {
+        carbonLogReader.clearLogs();
         File newCAPP = new File(
                 getESBResourceLocation() + File.separator + SERVICE_CATALOG_FOLDER + File.separator + NEW_CAPP_NAME);
         serverConfigurationManager.copyToCarbonapps(newCAPP);
@@ -255,9 +267,11 @@ public class ServiceCatalogTestCase extends ESBIntegrationTest {
     }
 
     @Test(groups = {"wso2.esb"},
-            description = "Test MI is uploading only modified APIs", priority = 9)
+            description = "Test MI is uploading only modified APIs",
+            dependsOnMethods = "testUploadOnlyNewAPIs")
     public void testUploadOnlyModifiedAPIs()
             throws CarbonException, IOException, AutomationUtilException, URISyntaxException, InterruptedException {
+        carbonLogReader.clearLogs();
         // remove CAPP and add the modified one
         serverConfigurationManager.removeFromCarbonapps(NEW_CAPP_NAME);
         File newCAPP = new File(
@@ -279,8 +293,10 @@ public class ServiceCatalogTestCase extends ESBIntegrationTest {
     }
 
     @Test(groups = {"wso2.esb"},
-            description = "Test restart MI without any CAPP changes", priority = 10)
+            description = "Test restart MI without any CAPP changes",
+            dependsOnMethods = "testUploadOnlyModifiedAPIs")
     public void testMIRestart() throws IOException, AutomationUtilException, InterruptedException {
+        carbonLogReader.clearLogs();
         serverConfigurationManager.applyMIConfigurationWithRestart(new File(
                 getESBResourceLocation() + File.separator + SERVICE_CATALOG_FOLDER + File.separator + "FourthAPI" +
                         File.separator + TOML_FILE));
@@ -293,9 +309,11 @@ public class ServiceCatalogTestCase extends ESBIntegrationTest {
         assertFalse(zipFile.exists(), "Payload.zip file should not be created");
     }
 
-    @Test(groups = {"wso2.esb"}, description = "Test service catalog with proxy services", priority = 11)
+    @Test(groups = {"wso2.esb"}, description = "Test service catalog with proxy services",
+            dependsOnMethods = "testMIRestart")
     public void testServiceCatalogProxyServiceMetadata()
             throws CarbonException, IOException, AutomationUtilException, InterruptedException {
+        carbonLogReader.clearLogs();
         File metadataCAPP = new File(getESBResourceLocation() + File.separator
                 + SERVICE_CATALOG_FOLDER + File.separator + CAPP_WITH_PROXY_META);
         serverConfigurationManager.copyToCarbonapps(metadataCAPP);
