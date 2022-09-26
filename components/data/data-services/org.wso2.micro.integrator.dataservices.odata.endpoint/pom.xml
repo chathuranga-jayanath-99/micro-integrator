@@ -83,11 +83,11 @@
                         <Bundle-Name>${project.artifactId}</Bundle-Name>
                         <Export-Package>
                             !org.wso2.micro.integrator.dataservices.odata.endpoint.internal,
-                            org.wso2.micro.integrator.dataservices.odata.endpoint.*;version="${project.version}"
+                            org.wso2.micro.integrator.dataservices.odata.endpoint.*;version="${package.version}"
                         </Export-Package>
                         <Import-Package>
                             !org.wso2.micro.integrator.dataservices.odata.endpoint.*,
-                            org.wso2.micro.integrator.dataservices.core.*;version="${project.version}",
+                            org.wso2.micro.integrator.dataservices.core.*;version="${package.version}",
                             javax.servlet.http;version="${javax.servlet.imp.pkg.version}",
                             org.apache.commons.logging;version="${carbon.commons.logging.imp.pkg.version}",
                             org.apache.axis2.*; version="${imp.pkg.version.axis2}",

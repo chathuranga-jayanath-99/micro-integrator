@@ -58,8 +58,8 @@
                         <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Name>${project.artifactId}</Bundle-Name>
                         <Export-Package>
-                            org.wso2.carbon.inbound.endpoint.persistence;version="${project.version}",
-                            org.wso2.carbon.inbound.endpoint.persistence.service;version="${project.version}"
+                            org.wso2.carbon.inbound.endpoint.persistence;version="${package.version}",
+                            org.wso2.carbon.inbound.endpoint.persistence.service;version="${package.version}"
                         </Export-Package>
                         <Import-Package>
                         </Import-Package>
