@@ -67,10 +67,10 @@
                         <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Name>${project.artifactId}</Bundle-Name>
                         <Export-Package>
-                            org.wso2.micro.integrator.ndatasource.rdbms.*;version="${project.version}"
+                            org.wso2.micro.integrator.ndatasource.rdbms.*;version="${package.version}"
                         </Export-Package>
                         <Import-Package>
-                            org.wso2.micro.integrator.ndatasource.core.*;version="${project.version}",
+                            org.wso2.micro.integrator.ndatasource.core.*;version="${package.version}",
                             javax.xml.parsers; version="${javax.xml.parsers.import.pkg.version}",
                             *;resolution:=optional
                         </Import-Package>

@@ -70,11 +70,11 @@
                         </Private-Package>
                         <Export-Package>
                             !org.wso2.micro.integrator.business.messaging.hl7.message.internal.*,
-                            org.wso2.micro.integrator.business.messaging.hl7.message.*;version="${project.version}",
-                            org.wso2.micro.integrator.business.messaging.hl7.common.*;version="${project.version}",
-                            org.wso2.micro.integrator.business.messaging.hl7.transport.*;version="${project.version}",
-                            org.wso2.micro.integrator.business.messaging.hl7.store.*;version="${project.version}",
-                            org.wso2.micro.integrator.business.messaging.hl7.store.entity.*;version="${project.version}",
+                            org.wso2.micro.integrator.business.messaging.hl7.message.*;version="${package.version}",
+                            org.wso2.micro.integrator.business.messaging.hl7.common.*;version="${package.version}",
+                            org.wso2.micro.integrator.business.messaging.hl7.transport.*;version="${package.version}",
+                            org.wso2.micro.integrator.business.messaging.hl7.store.*;version="${package.version}",
+                            org.wso2.micro.integrator.business.messaging.hl7.store.entity.*;version="${package.version}",
                             org.apache.openjpa.enhance.*,
                         </Export-Package>
                         <Import-Package>

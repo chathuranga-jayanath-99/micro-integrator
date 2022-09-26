@@ -148,7 +148,7 @@
                             !org.wso2.micro.integrator.security.user.core.internal,
                             !org.wso2.micro.integrator.security.user.core.jdbc.caseinsensitive,
                             org.wso2.micro.integrator.security.user.core.*,
-                            org.wso2.micro.integrator.security.*;version="${project.version}"
+                            org.wso2.micro.integrator.security.*;version="${package.version}"
                         </Export-Package>
                         <Import-Package>
                             !javax.xml.namespace,
