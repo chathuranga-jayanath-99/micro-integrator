@@ -193,20 +193,20 @@
                         <Export-Package>
                             org.wso2.carbon.inbound.endpoint.protocol.websocket,
                             org.wso2.carbon.inbound.endpoint.protocol.http.management ;
-                            version="${project.version}",
+                            version="${package.version}",
                             org.wso2.carbon.inbound.endpoint.protocol.http.multitenancy ;
-                            version="${project.version}",
-                            org.wso2.carbon.inbound.endpoint.protocol.generic ; version="${project.version}",
-                            org.wso2.carbon.inbound.endpoint.protocol.hl7 ; version="${project.version}",
-                            org.wso2.carbon.inbound.endpoint.internal.http.api ; version="${project.version}",
-                            org.wso2.carbon.inbound.endpoint ; version="${project.version}",
-                            org.wso2.carbon.inbound.endpoint.protocol.grpc ; version="${project.version}"
+                            version="${package.version}",
+                            org.wso2.carbon.inbound.endpoint.protocol.generic ; version="${package.version}",
+                            org.wso2.carbon.inbound.endpoint.protocol.hl7 ; version="${package.version}",
+                            org.wso2.carbon.inbound.endpoint.internal.http.api ; version="${package.version}",
+                            org.wso2.carbon.inbound.endpoint ; version="${package.version}",
+                            org.wso2.carbon.inbound.endpoint.protocol.grpc ; version="${package.version}"
                         </Export-Package>
                         <Private-Package>
                             io.grpc.* ; version="${grpc.version}";-split-package:=merge-first,
                             io.grpc.netty.shaded.io.* ; version="${grpc.version}",
                             io.opencensus.*,
-                            org.wso2.carbon.inbound.endpoint.* ; version="${project.version}",
+                            org.wso2.carbon.inbound.endpoint.* ; version="${package.version}",
                             com.google.* ; version="${google.guava.version}";-split-package:=merge-first
                         </Private-Package>
                         <Import-Package>

@@ -61,8 +61,8 @@
                         <Bundle-Name>${project.artifactId}</Bundle-Name>
                         <Export-Package>
                             !org.wso2.carbon.datasource.capp.deployer.internal,
-                            org.wso2.carbon.datasource.capp.deployer;version="${project.version}",
-                            org.wso2.micro.integrator.ndatasource.capp.deployer;version="${project.version}"
+                            org.wso2.carbon.datasource.capp.deployer;version="${package.version}",
+                            org.wso2.micro.integrator.ndatasource.capp.deployer;version="${package.version}"
                         </Export-Package>
                         <Import-Package>
                             !org.wso2.carbon.datasource.capp.deployer,
@@ -70,11 +70,11 @@
                             org.apache.axis2.deployment;version="${axis2.orbit.imp.pkg.version}",
                             org.apache.axis2.engine;version="${axis2.orbit.imp.pkg.version}",
                             org.apache.commons.logging;version="${commons-logging.imp.pkg.version}",
-                            org.wso2.micro.integrator.ndatasource.common;version="${project.version}",
-                            org.wso2.micro.integrator.ndatasource.core;version="${project.version}",
-                            org.wso2.micro.integrator.ndatasource.core.utils;version="${project.version}",
+                            org.wso2.micro.integrator.ndatasource.common;version="${package.version}",
+                            org.wso2.micro.integrator.ndatasource.core;version="${package.version}",
+                            org.wso2.micro.integrator.ndatasource.core.utils;version="${package.version}",
                             org.osgi.service.component;version="${osgi.service.imp.pkg.version}",
-                            org.wso2.micro.application.deployer.*;version="${project.version}",
+                            org.wso2.micro.application.deployer.*;version="${package.version}",
                             org.osgi.framework;version="${osgi.framework.imp.pkg.version}",
                             org.w3c.dom,
                             javax.xml.bind

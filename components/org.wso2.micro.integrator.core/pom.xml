@@ -138,12 +138,12 @@
                         <Export-Package>
                             !org.wso2.micro.integrator.core.internal,
                             !org.wso2.micro.application.deployer.synapse.*,
-                            org.wso2.micro.integrator.*;version="${project.version}",
-                            org.wso2.micro.core.*;version="${project.version}",
-                            org.wso2.micro.base;version="${project.version}",
-                            org.wso2.micro.application.deployer.*;version="${project.version}",
-                            org.wso2.micro.service.mgt.*;version="${project.version}",
-                            org.wso2.micro.tomcat.jndi.*;version="${project.version}"
+                            org.wso2.micro.integrator.*;version="${package.version}",
+                            org.wso2.micro.core.*;version="${package.version}",
+                            org.wso2.micro.base;version="${package.version}",
+                            org.wso2.micro.application.deployer.*;version="${package.version}",
+                            org.wso2.micro.service.mgt.*;version="${package.version}",
+                            org.wso2.micro.tomcat.jndi.*;version="${package.version}"
                         </Export-Package>
                         <Import-Package>
                             javax.xml.parsers; version="${javax.xml.parsers.import.pkg.version}",
