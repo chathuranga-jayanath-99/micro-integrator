@@ -1,5 +1,6 @@
 [server]
 hostname = "localhost"
+hot_deployment = false
 # offset  = 10
 
 [user_store]
@@ -105,3 +106,4 @@ apim_host = "https://localhost:9654/second"
 enable = true
 username = "admin"
 password = "admin"
+executor_threads = 1
