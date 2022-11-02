@@ -58,6 +58,8 @@ import java.io.StringReader;
 import java.util.List;
 import java.util.regex.Matcher;
 
+import static org.wso2.micro.integrator.dataservices.core.dispatch.DataServiceRequest.AXIS_OPERATION_NAME;
+
 public class DataServiceCallMediator extends AbstractMediator {
 
     private String dsName;
@@ -86,10 +88,8 @@ public class DataServiceCallMediator extends AbstractMediator {
                 DataServiceCallMediatorConstants.PAYLOAD_PREFIX);
         fac = OMAbstractFactory.getOMFactory();
         try {
-            // clone the message context to append payloads to invoke dataservice
-            MessageContext cloneMessageContext = MessageHelper.cloneMessageContext(messageContext);
             // Casting the synapse message context to axis2 message context
-            org.apache.axis2.context.MessageContext axis2MessageContext = ((Axis2MessageContext) cloneMessageContext)
+            org.apache.axis2.context.MessageContext axis2MessageContext = ((Axis2MessageContext) messageContext)
                     .getAxis2MessageContext();
             // Get the Axis service name of the give dataservice name
             AxisService axisService = axis2MessageContext.getConfigurationContext().getAxisConfiguration()
@@ -203,6 +203,8 @@ public class DataServiceCallMediator extends AbstractMediator {
         }
         QName rootOpQName = new QName(rootOpName);
         axis2MessageContext.getAxisOperation().setName(rootOpQName);
+        // Setting axis2 operation name as a property since its getting changes before invocation under high load.
+        axis2MessageContext.setProperty(AXIS_OPERATION_NAME, rootOpQName.getLocalPart());
         OMElement payload = fac.createOMElement(rootOpName, omNamespace);
         addOperations(rootOperations, payload, messageContext, rootOperations.getType());
         return payload;
