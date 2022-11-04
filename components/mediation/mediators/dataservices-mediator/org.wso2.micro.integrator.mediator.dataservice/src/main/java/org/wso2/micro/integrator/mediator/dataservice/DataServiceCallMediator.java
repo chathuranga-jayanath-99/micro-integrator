@@ -88,8 +88,10 @@ public class DataServiceCallMediator extends AbstractMediator {
                 DataServiceCallMediatorConstants.PAYLOAD_PREFIX);
         fac = OMAbstractFactory.getOMFactory();
         try {
+            // clone the message context to append payloads to invoke dataservice
+            MessageContext cloneMessageContext = MessageHelper.cloneMessageContext(messageContext);
             // Casting the synapse message context to axis2 message context
-            org.apache.axis2.context.MessageContext axis2MessageContext = ((Axis2MessageContext) messageContext)
+            org.apache.axis2.context.MessageContext axis2MessageContext = ((Axis2MessageContext) cloneMessageContext)
                     .getAxis2MessageContext();
             // Get the Axis service name of the give dataservice name
             AxisService axisService = axis2MessageContext.getConfigurationContext().getAxisConfiguration()
