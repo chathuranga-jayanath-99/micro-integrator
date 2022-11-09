@@ -311,7 +311,7 @@ public class SMB2ConnectionGrowthTestCaseAfterSambaServerRestart extends ESBInte
                 } catch (Exception e) {
                     Assert.fail("Test failed since getting connections to samba server failed", e);
                 }
-                return numberOfConnections <= (3 * previousCount);
+                return numberOfConnections <= (3 * (previousCount + 1));
             }
         };
     }

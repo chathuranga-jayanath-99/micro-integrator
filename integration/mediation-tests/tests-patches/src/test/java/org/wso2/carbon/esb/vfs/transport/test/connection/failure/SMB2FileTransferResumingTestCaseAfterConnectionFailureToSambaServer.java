@@ -196,7 +196,7 @@ public class SMB2FileTransferResumingTestCaseAfterConnectionFailureToSambaServer
             log.info("The file count becomes 0 so adding file to input folder");
             //Copy source file to the input directory
             File sourceFileDirectory =  new File(getClass().getResource("/artifacts/ESB/synapseconfig/"
-                    + "vfsTransport/in_500").getPath());
+                    + "vfsTransport/in_server_restart").getPath());
             File destinationFileDirectory = inputFolder;
             copyDirectory(sourceFileDirectory, destinationFileDirectory);
             startingFileCount = Utils.getFileCount(inputFolder);

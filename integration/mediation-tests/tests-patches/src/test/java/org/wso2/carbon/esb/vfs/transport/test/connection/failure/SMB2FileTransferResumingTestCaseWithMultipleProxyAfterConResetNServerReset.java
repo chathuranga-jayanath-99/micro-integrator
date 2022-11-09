@@ -45,9 +45,10 @@ import javax.xml.stream.XMLStreamException;
 /**
  * Integration test for https://github.com/wso2/product-ei/issues/5456
  */
-public class SMB2FileTransferTestCaseWithMultipleProxyWithMultiShare extends ESBIntegrationTest {
+public class SMB2FileTransferResumingTestCaseWithMultipleProxyAfterConResetNServerReset extends ESBIntegrationTest {
 
-    private static final Log LOGGER = LogFactory.getLog(SMB2FileTransferTestCaseWithMultipleProxyWithMultiShare.class);
+    private static final Log LOGGER = LogFactory.getLog(
+            SMB2FileTransferResumingTestCaseWithMultipleProxyAfterConResetNServerReset.class);
 
     private File[] outputFolders = new File[10];
     private File[] inputFolders = new File[10];
@@ -60,19 +61,17 @@ public class SMB2FileTransferTestCaseWithMultipleProxyWithMultiShare extends ESB
     @BeforeClass(alwaysRun = true)
     public void serverSetUp() throws Exception {
 
-
+        String pathToSMB2root =Utils.getSMB2Root();
         String carbonHome = System.getProperty(ServerConstants.CARBON_HOME);
 
+        // Local folder of the SMB2 server root
+        File SMB2RootFolder = new File(pathToSMB2root);
+        Assert.assertTrue(SMB2RootFolder.exists(), "SMB2 root folder hasn't been created");
 
-
-        for (int i = 0; i < 2; i++) {
-            String pathToSMB2root =Utils.getSMB2Root().concat("_" + i);
-            // Local folder of the SMB2 server root
-            File SMB2RootFolder = new File(pathToSMB2root);
-            Assert.assertTrue(SMB2RootFolder.exists(), "SMB2 root folder hasn't been created");
-            inputFolders[i] = new File(SMB2RootFolder.getAbsolutePath() + File.separator + inputFolderName);
-            outputFolders[i] = new File(SMB2RootFolder.getAbsolutePath() + File.separator + outputFolderName);
-            originalFolders[i] = new File(SMB2RootFolder.getAbsolutePath() + File.separator + originalFolderName);
+        for (int i = 0; i < 10; i++) {
+            inputFolders[i] = new File(SMB2RootFolder.getAbsolutePath() + File.separator + inputFolderName + "_" + i);
+            outputFolders[i] = new File(SMB2RootFolder.getAbsolutePath() + File.separator + outputFolderName + "_" + i);
+            originalFolders[i] = new File(SMB2RootFolder.getAbsolutePath() + File.separator + originalFolderName + "_" + i);
 
             Utils.deleteDirectory(inputFolders[i]);
             Utils.deleteDirectory(outputFolders[i]);
@@ -83,17 +82,17 @@ public class SMB2FileTransferTestCaseWithMultipleProxyWithMultiShare extends ESB
             log.info("Creating outputFolder " + outputFolders[i].getAbsolutePath());
             outputFolders[i].mkdir();
 
-            //Copy source file to the source directory
+            //Copy source file to the input directory
             File sourceFileDirectory =  new File(getClass().getResource("/artifacts/ESB/synapseconfig/"
-                    + "vfsTransport/in").getPath());
+                    + "vfsTransport/in_server_restart").getPath());
             File destinationFileDirectory = inputFolders[i];
             copyDirectory(sourceFileDirectory, destinationFileDirectory);
 
             log.info("Creating originalFolder " + originalFolders[i].getAbsolutePath());
             originalFolders[i].mkdir();
 
-            Assert.assertTrue(inputFolders[i].exists(), "SMB2 /in folder not created");
-            Assert.assertTrue(outputFolders[i].exists(), "SMB2 /out folder not created");
+            Assert.assertTrue(inputFolders[i].exists(), "SMB2 /in_" + i +" folder not created");
+            Assert.assertTrue(outputFolders[i].exists(), "SMB2 /out_" + i +" folder not created");
 
         }
 
@@ -116,8 +115,8 @@ public class SMB2FileTransferTestCaseWithMultipleProxyWithMultiShare extends ESB
     }
 
 
-    @Test(groups = "wso2.esb", description = "SMB2 Multiple proxy file transfer test")
-    public void multipleProxyFileTransferTest() throws XMLStreamException, IOException {
+    @Test(groups = "wso2.esb", description = "SMB2 Multiple proxy file transfer test in Instability")
+    public void multipleProxyFileTransferTestInInstability() throws XMLStreamException, IOException {
 
         // Still hard coded need to be read from env variables
 
@@ -127,7 +126,7 @@ public class SMB2FileTransferTestCaseWithMultipleProxyWithMultiShare extends ESB
 
         String[] proxies = new String[10];
 
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 10; i++) {
             proxies[i] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
                     "<proxy xmlns=\"http://ws.apache.org/ns/synapse\"\n" +
                     "       name=\"Polling_Test_" + i + " \"\n" +
@@ -158,12 +157,12 @@ public class SMB2FileTransferTestCaseWithMultipleProxyWithMultiShare extends ESB
                     "   <parameter name=\"transport.PollInterval\">1</parameter>\n" +
                     "   <parameter name=\"transport.vfs.Maxfilesize\">10000000</parameter>\n" +
                     "   <parameter name=\"transport.vfs.FileURI\">smb2://" + smb2User + ":" + smb2Password + "@" + getHostname() +
-                    "/share_" + i + "/in</parameter>\n" +
+                    "/share/in_" + i + "</parameter>\n" +
                     "   <parameter name=\"transport.vfs.ContentType\">text/plain</parameter>\n" +
                     "   <parameter name=\"transport.vfs.MoveAfterProcess\">smb2://" + smb2User + ":" + smb2Password + "@" + getHostname() +
-                    "/share_" + i + "/out</parameter> \n" +
+                    "/share/out_" + i + "</parameter> \n" +
                     "    <parameter name=\"transport.vfs.MoveAfterFailure\">smb2://" + smb2User + ":" + smb2Password +
-                    "@" + getHostname() + "/share_" + i + "/original</parameter>\n" +
+                    "@" + getHostname() + "/share/original_" + i + "</parameter>\n" +
                     "    <parameter name=\"transport.vfs.ActionAfterProcess\">MOVE</parameter>\n" +
                     "    <parameter name=\"transport.vfs.ActionAfterFailure\">MOVE</parameter>\n" +
                     "   <parameter name=\"transport.vfs.ClusterAware\">false</parameter>\n" +
@@ -180,13 +179,60 @@ public class SMB2FileTransferTestCaseWithMultipleProxyWithMultiShare extends ESB
                 LOGGER.error("Error while updating the Synapse config", e);
             }
             LOGGER.info("Synapse config updated");
+
         }
 
-        for (int i = 0; i < 2; i++) {
-            // Here we can't know whether the proxy polling happened or not, hence only way is to wait and see. Since poll interval is 1,
-            // this waiting period should suffice. But it may include the time it take to deploy the service as well.
-            //check whether all 100 files are moved to "out" folder
-            Awaitility.await().atMost(300, TimeUnit.SECONDS).until(checkForOutputFile(outputFolders[i]));
+        for (int i = 0; i < 10; i++) {
+            // Here we need to wait until polling to start hence only way is to wait and see. Since poll interval
+            // is 15,this waiting period should suffice. But it may include the time it take to deploy the service as well.
+            //check whether at least 1 file is moved to "out" folder
+            Awaitility.await().atMost(180, TimeUnit.SECONDS).until(checkWhetherPollingStarted(inputFolders[i]));
+
+            // Close connections to samba server multiple times to simulate network interruption
+            try {
+
+                for (int j = 0; j < 500; j++) {
+                    Utils.closeConnectionsToSambaServer();
+                }
+                log.info("Successfully interrupted samba server connections");
+            } catch (Exception e) {
+                Assert.fail("Test failed since interrupting samba server failed", e);
+            }
+
+            try {
+                Utils.stopSambaServer();
+                log.info("Successfully stopped samba server");
+            } catch (Exception e) {
+                Assert.fail("Test failed since stopping samba server failed", e);
+            }
+
+            //Wait till samba server is stopped
+            Awaitility.await().atMost(120, TimeUnit.SECONDS).until(checkWhetherSambaServerStopped());
+
+            //File count after stopping samba server
+            int startingFileCount = Utils.getFileCount(inputFolders[i]);
+            if (startingFileCount == 0) {
+                log.info("The file count becomes 0 so adding file to input folder");
+                //Copy source file to the input directory
+                File sourceFileDirectory =  new File(getClass().getResource("/artifacts/ESB/synapseconfig/"
+                        + "vfsTransport/in_server_restart").getPath());
+                File destinationFileDirectory = inputFolders[i];
+                copyDirectory(sourceFileDirectory, destinationFileDirectory);
+                startingFileCount = Utils.getFileCount(inputFolders[i]);
+            }
+
+            try {
+                Utils.startSambaServer();
+                log.info("Successfully started samba server");
+            } catch (Exception e) {
+                Assert.fail("Test failed since starting samba server failed", e);
+            }
+
+            //Wait till samba server is starting
+            Awaitility.await().atMost(120, TimeUnit.SECONDS).until(checkWhetherSambaServerStarted());
+
+            //See whether polling has started
+            Awaitility.await().atMost(300, TimeUnit.SECONDS).until(checkWhetherPollingResumed(startingFileCount, inputFolders[i]));
         }
     }
 
@@ -217,6 +263,19 @@ public class SMB2FileTransferTestCaseWithMultipleProxyWithMultiShare extends ESB
         }
     }
 
+    /*
+     * Check whether all the files have been copied from in to out
+     * */
+    private Callable<Boolean> checkWhetherPollingStarted(final File inputFolder) {
+        return new Callable<Boolean>() {
+            @Override
+            public Boolean call() {
+                int numberOfFiles = Utils.getFileCount(inputFolder);
+                return numberOfFiles < 500;
+            }
+        };
+    }
+
 
     /**
      * Copy the given source directory to the given destination
@@ -238,6 +297,43 @@ public class SMB2FileTransferTestCaseWithMultipleProxyWithMultiShare extends ESB
             public Boolean call() {
                 File[] files = outputFolder.listFiles();
                 return files != null && files.length == 100;
+            }
+        };
+    }
+
+    /*
+     * Check whether polling is resumed
+     * */
+    private Callable<Boolean> checkWhetherPollingResumed(final int previousCount, final File inputFolder) {
+        return new Callable<Boolean>() {
+            @Override
+            public Boolean call() {
+                int numberOfFiles = Utils.getFileCount(inputFolder);
+                return numberOfFiles == 0 || numberOfFiles < previousCount;
+            }
+        };
+    }
+
+    /*
+     * Check whether samba server stopped
+     * */
+    private Callable<Boolean> checkWhetherSambaServerStopped() {
+        return new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                return !Utils.getStatusSambaServer();
+            }
+        };
+    }
+
+    /*
+     * Check whether samba server stopped
+     * */
+    private Callable<Boolean> checkWhetherSambaServerStarted() {
+        return new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                return Utils.getStatusSambaServer();
             }
         };
     }
