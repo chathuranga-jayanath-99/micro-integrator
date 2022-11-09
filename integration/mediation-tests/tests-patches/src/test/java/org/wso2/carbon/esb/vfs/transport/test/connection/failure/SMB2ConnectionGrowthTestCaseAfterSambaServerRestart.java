@@ -45,9 +45,9 @@ import javax.xml.stream.XMLStreamException;
 /**
  * Integration test for https://github.com/wso2/product-ei/issues/5456
  */
-public class SMB2SFileTransferResumingTestCaseAfterSambaServerRestart extends ESBIntegrationTest {
+public class SMB2ConnectionGrowthTestCaseAfterSambaServerRestart extends ESBIntegrationTest {
 
-    private static final Log LOGGER = LogFactory.getLog(SMB2SFileTransferResumingTestCaseAfterSambaServerRestart.class);
+    private static final Log LOGGER = LogFactory.getLog(SMB2ConnectionGrowthTestCaseAfterSambaServerRestart.class);
 
     private File inputFolder;
     private File outputFolder;
@@ -111,8 +111,9 @@ public class SMB2SFileTransferResumingTestCaseAfterSambaServerRestart extends ES
     }
 
 
-    @Test(groups = "wso2.esb", description = "SMB2 file transfer resuming test after server restarts")
-    public void fileTransferResumingTestAfterSambaServerRestart() throws XMLStreamException, IOException {
+    @Test(groups = "wso2.esb", description = "SMB2 connection growth test after server restarts")
+    public void connectionGrowthTestAfterSambaServerRestart()
+            throws XMLStreamException, IOException, InterruptedException {
 
         // Still hard coded need to be read from env variables
 
@@ -177,6 +178,15 @@ public class SMB2SFileTransferResumingTestCaseAfterSambaServerRestart extends ES
         //check whether at least 1 file is moved to "out" folder
         Awaitility.await().atMost(180, TimeUnit.SECONDS).until(checkWhetherPollingStarted(inputFolder));
 
+        //connection count before stopping samba server
+        int startingConnectionCount = 0;
+        try {
+            startingConnectionCount = Utils.getNumberOfConnectionsToSambaServer();
+            log.info("Successfully got the initial connection count to samba server: " + startingConnectionCount);
+        } catch (Exception e) {
+            Assert.fail("Test failed since getting connections to samba server failed", e);
+        }
+
         try {
             Utils.stopSambaServer();
             log.info("Successfully stopped samba server");
@@ -186,18 +196,6 @@ public class SMB2SFileTransferResumingTestCaseAfterSambaServerRestart extends ES
 
         //Wait till samba server is stopped
         Awaitility.await().atMost(120, TimeUnit.SECONDS).until(checkWhetherSambaServerStopped());
-
-        //File count after stopping samba server
-        int startingFileCount = Utils.getFileCount(inputFolder);
-        if (startingFileCount == 0) {
-            log.info("The file count becomes 0 so adding file to input folder");
-            //Copy source file to the input directory
-            File sourceFileDirectory =  new File(getClass().getResource("/artifacts/ESB/synapseconfig/"
-                    + "vfsTransport/in_500").getPath());
-            File destinationFileDirectory = inputFolder;
-            copyDirectory(sourceFileDirectory, destinationFileDirectory);
-            startingFileCount = Utils.getFileCount(inputFolder);
-        }
 
         try {
             Utils.startSambaServer();
@@ -209,8 +207,11 @@ public class SMB2SFileTransferResumingTestCaseAfterSambaServerRestart extends ES
         //Wait till samba server is starting
         Awaitility.await().atMost(120, TimeUnit.SECONDS).until(checkWhetherSambaServerStarted());
 
-        //See whether polling has started
-        Awaitility.await().atMost(240, TimeUnit.SECONDS).until(checkWhetherPollingResumed(startingFileCount));
+        // Give time to poll
+        Thread.sleep(30000);
+
+        //See whether connections increased
+        Awaitility.await().atMost(240, TimeUnit.SECONDS).until(checkWhetherConnectionsIncreased(startingConnectionCount));
 
     }
 
@@ -289,6 +290,28 @@ public class SMB2SFileTransferResumingTestCaseAfterSambaServerRestart extends ES
             public Boolean call() {
                 int numberOfFiles = Utils.getFileCount(inputFolder);
                 return numberOfFiles == 0 || numberOfFiles < previousCount;
+            }
+        };
+    }
+
+    /*
+     * Check whether connections increased
+     * */
+    private Callable<Boolean> checkWhetherConnectionsIncreased(final int previousCount) {
+
+        return new Callable<Boolean>() {
+            @Override
+            public Boolean call() {
+
+                int numberOfConnections = 0;
+                try {
+                    numberOfConnections = Utils.getNumberOfConnectionsToSambaServer();
+                    log.info("Successfully got the  connection count to samba server after resuming: " +
+                            numberOfConnections);
+                } catch (Exception e) {
+                    Assert.fail("Test failed since getting connections to samba server failed", e);
+                }
+                return numberOfConnections < (3 * previousCount);
             }
         };
     }

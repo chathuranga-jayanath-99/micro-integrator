@@ -1,20 +1,20 @@
 /*
-* Copyright (c) 2022, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
-*
-* WSO2 Inc. licenses this file to you under the Apache License,
-* Version 2.0 (the "License"); you may not use this file except
-* in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied. See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
+ * Copyright (c) 2022, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ * WSO2 Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 package org.wso2.carbon.esb.vfs.transport.test.connection.failure;
 
 import org.apache.axiom.om.OMElement;
@@ -45,9 +45,9 @@ import javax.xml.stream.XMLStreamException;
 /**
  * Integration test for https://github.com/wso2/product-ei/issues/5456
  */
-public class SMB2SFileTransferTestCase extends ESBIntegrationTest {
+public class SMB2FileTransferResumingTestCaseAfterSambaServerRestart extends ESBIntegrationTest {
 
-    private static final Log LOGGER = LogFactory.getLog(SMB2SFileTransferTestCase.class);
+    private static final Log LOGGER = LogFactory.getLog(SMB2FileTransferResumingTestCaseAfterSambaServerRestart.class);
 
     private File inputFolder;
     private File outputFolder;
@@ -85,6 +85,7 @@ public class SMB2SFileTransferTestCase extends ESBIntegrationTest {
         Assert.assertTrue(inputFolder.exists(), "SMB2 /in folder not created");
         Assert.assertTrue(outputFolder.exists(), "SMB2 /out folder not created");
 
+
         super.init();
         log.info("The used host is: " + getHostname());
         File jcifFile = new File(getClass().getResource("/artifacts/ESB/synapseconfig/vfsTransport"
@@ -94,23 +95,24 @@ public class SMB2SFileTransferTestCase extends ESBIntegrationTest {
         //copy jcifFile to lib
         copyFile(jcifFile, destinationJcif);
 
-        //Copy source file to the source directory
+        //Copy source file to the input directory
         File sourceFileDirectory =  new File(getClass().getResource("/artifacts/ESB/synapseconfig/"
-                + "vfsTransport/in").getPath());
+                + "vfsTransport/in_server_restart").getPath());
         File destinationFileDirectory = inputFolder;
         copyDirectory(sourceFileDirectory, destinationFileDirectory);
+
 
         // replace the axis2.xml enabled vfs transfer and restart the ESB server gracefully.
         serverConfigurationManager = new ServerConfigurationManager(context);
         serverConfigurationManager.applyConfiguration(
                 new File(getClass().getResource("/artifacts/ESB/synapseconfig/"
-                                                + "vfsTransport/ESBJAVA4770/axis2.xml").getPath()));
+                        + "vfsTransport/ESBJAVA4770/axis2.xml").getPath()));
         super.init();
     }
 
 
-    @Test(groups = "wso2.esb", description = "SMB2 file transfer test")
-    public void fileTransferTest() throws XMLStreamException, IOException {
+    @Test(groups = "wso2.esb", description = "SMB2 file transfer resuming test after server restarts")
+    public void fileTransferResumingTestAfterSambaServerRestart() throws XMLStreamException, IOException {
 
         // Still hard coded need to be read from env variables
 
@@ -144,7 +146,7 @@ public class SMB2SFileTransferTestCase extends ESBIntegrationTest {
                 "         <property name=\"errorMessage\" value=\"unable to handle file transfer. Rollback!\"/>\n" +
                 "      </faultSequence>\n" +
                 "   </target>\n" +
-                "   <parameter name=\"transport.PollInterval\">1</parameter>\n" +
+                "   <parameter name=\"transport.PollInterval\">20</parameter>\n" +
                 "   <parameter name=\"transport.vfs.Maxfilesize\">10000000</parameter>\n" +
                 "   <parameter name=\"transport.vfs.FileURI\">smb2://" + smb2User + ":" + smb2Password + "@" + getHostname() +
                 "/share/in</parameter>\n" +
@@ -169,10 +171,47 @@ public class SMB2SFileTransferTestCase extends ESBIntegrationTest {
             LOGGER.error("Error while updating the Synapse config", e);
         }
         LOGGER.info("Synapse config updated");
-        // Here we can't know whether the proxy polling happened or not, hence only way is to wait and see. Since poll interval is 1,
-        // this waiting period should suffice. But it may include the time it take to deploy the service as well.
-        //check whether all 100 files are moved to "out" folder
-        Awaitility.await().atMost(120, TimeUnit.SECONDS).until(checkForOutputFile(outputFolder));
+
+        // Here we need to wait until polling to start hence only way is to wait and see. Since poll interval
+        // is 15,this waiting period should suffice. But it may include the time it take to deploy the service as well.
+        //check whether at least 1 file is moved to "out" folder
+        Awaitility.await().atMost(180, TimeUnit.SECONDS).until(checkWhetherPollingStarted(inputFolder));
+
+        try {
+            Utils.stopSambaServer();
+            log.info("Successfully stopped samba server");
+        } catch (Exception e) {
+            Assert.fail("Test failed since stopping samba server failed", e);
+        }
+
+        //Wait till samba server is stopped
+        Awaitility.await().atMost(120, TimeUnit.SECONDS).until(checkWhetherSambaServerStopped());
+
+        //File count after stopping samba server
+        int startingFileCount = Utils.getFileCount(inputFolder);
+        if (startingFileCount == 0) {
+            log.info("The file count becomes 0 so adding file to input folder");
+            //Copy source file to the input directory
+            File sourceFileDirectory =  new File(getClass().getResource("/artifacts/ESB/synapseconfig/"
+                    + "vfsTransport/in_500").getPath());
+            File destinationFileDirectory = inputFolder;
+            copyDirectory(sourceFileDirectory, destinationFileDirectory);
+            startingFileCount = Utils.getFileCount(inputFolder);
+        }
+
+        try {
+            Utils.startSambaServer();
+            log.info("Successfully started samba server");
+        } catch (Exception e) {
+            Assert.fail("Test failed since starting samba server failed", e);
+        }
+
+        //Wait till samba server is starting
+        Awaitility.await().atMost(120, TimeUnit.SECONDS).until(checkWhetherSambaServerStarted());
+
+        //See whether polling has started
+        Awaitility.await().atMost(240, TimeUnit.SECONDS).until(checkWhetherPollingResumed(startingFileCount));
+
     }
 
     /**
@@ -216,14 +255,64 @@ public class SMB2SFileTransferTestCase extends ESBIntegrationTest {
     }
 
     /*
-    * Check whether all the files have been copied from in to out
-    * */
+     * Check whether all the files have been copied from in to out
+     * */
     private Callable<Boolean> checkForOutputFile(final File outputFolder) {
         return new Callable<Boolean>() {
             @Override
             public Boolean call() {
                 File[] files = outputFolder.listFiles();
                 return files != null && files.length == 100;
+            }
+        };
+    }
+
+    /*
+     * Check whether all the files have been copied from in to out
+     * */
+    private Callable<Boolean> checkWhetherPollingStarted(final File inputFolder) {
+        return new Callable<Boolean>() {
+            @Override
+            public Boolean call() {
+                int numberOfFiles = Utils.getFileCount(inputFolder);
+                return numberOfFiles < 500;
+            }
+        };
+    }
+
+    /*
+     * Check whether polling is resumed
+     * */
+    private Callable<Boolean> checkWhetherPollingResumed(final int previousCount) {
+        return new Callable<Boolean>() {
+            @Override
+            public Boolean call() {
+                int numberOfFiles = Utils.getFileCount(inputFolder);
+                return numberOfFiles == 0 || numberOfFiles < previousCount;
+            }
+        };
+    }
+
+    /*
+     * Check whether samba server stopped
+     * */
+    private Callable<Boolean> checkWhetherSambaServerStopped() {
+        return new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                return !Utils.getStatusSambaServer();
+            }
+        };
+    }
+
+    /*
+     * Check whether samba server stopped
+     * */
+    private Callable<Boolean> checkWhetherSambaServerStarted() {
+        return new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                return Utils.getStatusSambaServer();
             }
         };
     }

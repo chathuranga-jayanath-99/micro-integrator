@@ -45,10 +45,10 @@ import javax.xml.stream.XMLStreamException;
 /**
  * Integration test for https://github.com/wso2/product-ei/issues/5456
  */
-public class SMB2SFileTransferResumingTestCaseAfterConnectionFailureToSambaServer extends ESBIntegrationTest {
+public class SMB2FileTransferResumingTestCaseAfterConnectionFailureToSambaServer extends ESBIntegrationTest {
 
     private static final Log LOGGER = LogFactory.getLog(
-            SMB2SFileTransferResumingTestCaseAfterConnectionFailureToSambaServer.class);
+            SMB2FileTransferResumingTestCaseAfterConnectionFailureToSambaServer.class);
 
     private File inputFolder;
     private File outputFolder;

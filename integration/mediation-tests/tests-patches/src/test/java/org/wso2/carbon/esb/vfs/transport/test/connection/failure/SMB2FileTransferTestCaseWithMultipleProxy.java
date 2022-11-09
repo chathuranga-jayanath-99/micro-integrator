@@ -45,9 +45,9 @@ import javax.xml.stream.XMLStreamException;
 /**
  * Integration test for https://github.com/wso2/product-ei/issues/5456
  */
-public class SMB2SFileTransferTestCaseWithMultipleProxy extends ESBIntegrationTest {
+public class SMB2FileTransferTestCaseWithMultipleProxy extends ESBIntegrationTest {
 
-    private static final Log LOGGER = LogFactory.getLog(SMB2SFileTransferTestCaseWithMultipleProxy.class);
+    private static final Log LOGGER = LogFactory.getLog(SMB2FileTransferTestCaseWithMultipleProxy.class);
 
     private File[] outputFolders = new File[10];
     private File[] inputFolders = new File[10];

@@ -162,6 +162,39 @@ public class Utils {
         }
     }
 
+    /**
+     * Method to get number of connections to samba server
+     */
+    public static int getNumberOfConnectionsToSambaServer() throws Exception {
+
+        ProcessBuilder processBuilder = new ProcessBuilder();
+        // Run a shell command
+        processBuilder.command("/bin/bash", "-c", "netstat -an | grep -E \"\\:445[ \\t]+\" | grep ESTABLISHED | wc -l");
+
+        try {
+            Process process = processBuilder.start();
+            StringBuilder output = new StringBuilder();
+            BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(process.getInputStream()));
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                output.append(line);
+            }
+
+            int exitVal = process.waitFor();
+            if (exitVal == 0) {
+                log.info("Successfully get number of connections to the Samba Server: " + output);
+                return Integer.parseInt(output.toString());
+            } else {
+                throw new Exception("Getting connections to  SAMBA Server failed");
+            }
+
+        } catch (IOException | InterruptedException e) {
+            throw new Exception("Getting connections to SAMBA Server failed", e);
+        }
+    }
+
     /*
      * Get number of files in a folder
      * */
