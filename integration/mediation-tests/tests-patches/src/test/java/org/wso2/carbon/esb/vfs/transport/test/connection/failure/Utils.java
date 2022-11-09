@@ -86,6 +86,23 @@ public class Utils {
     }
 
     /**
+     * Method to order smbd to close the client connections
+     */
+    public static void closeConnectionsToSambaServer() throws Exception {
+
+        ProcessBuilder processBuilder = new ProcessBuilder();
+        // Order smbd to close the client connections to the named share
+        processBuilder.command("/bin/bash", "-c", "echo " + getPassword() + "| sudo -S smbcontrol smbd close-share share");
+        try {
+            Process process = processBuilder.start();
+            process.waitFor();
+
+        } catch (IOException | InterruptedException e) {
+            throw new Exception("Interrupting SAMBA Server Failed", e);
+        }
+    }
+
+    /**
      * Method to start samba server
      */
     public static void startSambaServer() throws Exception {
