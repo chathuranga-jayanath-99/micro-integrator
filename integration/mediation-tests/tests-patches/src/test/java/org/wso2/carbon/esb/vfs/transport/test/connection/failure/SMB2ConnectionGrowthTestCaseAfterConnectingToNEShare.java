@@ -45,9 +45,9 @@ import javax.xml.stream.XMLStreamException;
 /**
  * Integration test for https://github.com/wso2/product-ei/issues/5456
  */
-public class SMB2ConnectionGrowthTestCaseAfterSambaServerRestart extends ESBIntegrationTest {
+public class SMB2ConnectionGrowthTestCaseAfterConnectingToNEShare extends ESBIntegrationTest {
 
-    private static final Log LOGGER = LogFactory.getLog(SMB2ConnectionGrowthTestCaseAfterSambaServerRestart.class);
+    private static final Log LOGGER = LogFactory.getLog(SMB2ConnectionGrowthTestCaseAfterConnectingToNEShare.class);
 
     private File inputFolder;
     private File outputFolder;
@@ -75,14 +75,11 @@ public class SMB2ConnectionGrowthTestCaseAfterSambaServerRestart extends ESBInte
         Utils.deleteDirectory(outputFolder);
         Utils.deleteDirectory(originalFolder);
 
-        log.info("Creating inputFolder " + inputFolder.getAbsolutePath());
-        inputFolder.mkdir();
         log.info("Creating outputFolder " + outputFolder.getAbsolutePath());
         outputFolder.mkdir();
         log.info("Creating originalFolder " + originalFolder.getAbsolutePath());
         originalFolder.mkdir();
 
-        Assert.assertTrue(inputFolder.exists(), "SMB2 /in folder not created");
         Assert.assertTrue(outputFolder.exists(), "SMB2 /out folder not created");
 
 
@@ -95,13 +92,6 @@ public class SMB2ConnectionGrowthTestCaseAfterSambaServerRestart extends ESBInte
         //copy jcifFile to lib
         copyFile(jcifFile, destinationJcif);
 
-        //Copy source file to the input directory
-        File sourceFileDirectory =  new File(getClass().getResource("/artifacts/ESB/synapseconfig/"
-                + "vfsTransport/in_server_restart").getPath());
-        File destinationFileDirectory = inputFolder;
-        copyDirectory(sourceFileDirectory, destinationFileDirectory);
-
-
         // replace the axis2.xml enabled vfs transfer and restart the ESB server gracefully.
         serverConfigurationManager = new ServerConfigurationManager(context);
         serverConfigurationManager.applyConfiguration(
@@ -111,11 +101,9 @@ public class SMB2ConnectionGrowthTestCaseAfterSambaServerRestart extends ESBInte
     }
 
 
-    @Test(groups = "wso2.esb", description = "SMB2 connection growth test after server restarts")
-    public void connectionGrowthTestAfterSambaServerRestart()
+    @Test(groups = "wso2.esb", description = "SMB2 connection growth test after connecting to NE share")
+    public void connectionGrowthTestAfterConnectingToNEShare()
             throws XMLStreamException, IOException, InterruptedException {
-
-        // Still hard coded need to be read from env variables
 
         String smb2Password = Utils.getSMB2Password();
         String smb2User = Utils.getSMB2User();
@@ -147,10 +135,10 @@ public class SMB2ConnectionGrowthTestCaseAfterSambaServerRestart extends ESBInte
                 "         <property name=\"errorMessage\" value=\"unable to handle file transfer. Rollback!\"/>\n" +
                 "      </faultSequence>\n" +
                 "   </target>\n" +
-                "   <parameter name=\"transport.PollInterval\">20</parameter>\n" +
+                "   <parameter name=\"transport.PollInterval\">1</parameter>\n" +
                 "   <parameter name=\"transport.vfs.Maxfilesize\">10000000</parameter>\n" +
                 "   <parameter name=\"transport.vfs.FileURI\">smb2://" + smb2User + ":" + smb2Password + "@" + getHostname() +
-                "/share/in</parameter>\n" +
+                "/shareNE/in</parameter>\n" +
                 "   <parameter name=\"transport.vfs.ContentType\">text/plain</parameter>\n" +
                 "   <parameter name=\"transport.vfs.MoveAfterProcess\">smb2://" + smb2User + ":" + smb2Password + "@" + getHostname() +
                 "/share/out</parameter> \n" +
@@ -173,12 +161,8 @@ public class SMB2ConnectionGrowthTestCaseAfterSambaServerRestart extends ESBInte
         }
         LOGGER.info("Synapse config updated");
 
-        // Here we need to wait until polling to start hence only way is to wait and see. Since poll interval
-        // is 15,this waiting period should suffice. But it may include the time it take to deploy the service as well.
-        //check whether at least 1 file is moved to "out" folder
-        Awaitility.await().atMost(180, TimeUnit.SECONDS).until(checkWhetherPollingStarted(inputFolder));
 
-        //connection count before stopping samba server
+        //connection count before
         int startingConnectionCount = 0;
         try {
             startingConnectionCount = Utils.getNumberOfConnectionsToSambaServer();
@@ -187,31 +171,11 @@ public class SMB2ConnectionGrowthTestCaseAfterSambaServerRestart extends ESBInte
             Assert.fail("Test failed since getting connections to samba server failed", e);
         }
 
-        try {
-            Utils.stopSambaServer();
-            log.info("Successfully stopped samba server");
-        } catch (Exception e) {
-            Assert.fail("Test failed since stopping samba server failed", e);
-        }
-
-        //Wait till samba server is stopped
-        Awaitility.await().atMost(120, TimeUnit.SECONDS).until(checkWhetherSambaServerStopped());
-
-        try {
-            Utils.startSambaServer();
-            log.info("Successfully started samba server");
-        } catch (Exception e) {
-            Assert.fail("Test failed since starting samba server failed", e);
-        }
-
-        //Wait till samba server is starting
-        Awaitility.await().atMost(120, TimeUnit.SECONDS).until(checkWhetherSambaServerStarted());
-
-        // Give time to poll
+        // Give time
         Thread.sleep(30000);
 
         //See whether connections increased
-        Awaitility.await().atMost(240, TimeUnit.SECONDS).until(checkWhetherConnectionsIncreased(startingConnectionCount));
+        Awaitility.await().atMost(60, TimeUnit.SECONDS).until(checkWhetherConnectionsIncreased(startingConnectionCount));
 
     }
 
