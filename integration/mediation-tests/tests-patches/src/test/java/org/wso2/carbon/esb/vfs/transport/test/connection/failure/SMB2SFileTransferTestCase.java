@@ -122,7 +122,7 @@ public class SMB2SFileTransferTestCase extends ESBIntegrationTest {
 
         String smb2Password = Utils.getSMB2Password();
         String smb2User = Utils.getSMB2User();
-        //create VFS transport SMB2 listener proxy (need to improve with param support)
+        //create VFS transport SMB2 listener proxy
         String proxy = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
                 "<proxy xmlns=\"http://ws.apache.org/ns/synapse\"\n" +
                 "       name=\"Polling_Test\"\n" +
