@@ -133,6 +133,7 @@
        export PATH_TO_SMB2_ROOT="root folder defined in etc/samba/smb.conf file "
        export SMB2_PASSWORD="the samba password used above"
        export SMB2_USER="user which owns the root directory"
+       export PASSWORD="the user password"
        -->
     <!--test name="VFS SMB2 tests" preserve-order="true" verbose="2">
            <packages>

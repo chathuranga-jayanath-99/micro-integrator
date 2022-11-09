@@ -72,15 +72,9 @@ public class SMB2SFileTransferTestCaseWithMultipleProxy extends ESBIntegrationTe
             outputFolders[i] = new File(SMB2RootFolder.getAbsolutePath() + File.separator + outputFolderName + "_" + i);
             originalFolders[i] = new File(SMB2RootFolder.getAbsolutePath() + File.separator + originalFolderName + "_" + i);
 
-            if (inputFolders[i].exists()) {
-                inputFolders[i].delete();
-            }
-            if (outputFolders[i].exists()) {
-                outputFolders[i].delete();
-            }
-            if (originalFolders[i].exists()) {
-                originalFolders[i].delete();
-            }
+            Utils.deleteDirectory(inputFolders[i]);
+            Utils.deleteDirectory(outputFolders[i]);
+            Utils.deleteDirectory(originalFolders[i]);
 
             log.info("Creating inputFolder " + inputFolders[i].getAbsolutePath());
             inputFolders[i].mkdir();
@@ -247,8 +241,9 @@ public class SMB2SFileTransferTestCaseWithMultipleProxy extends ESBIntegrationTe
     }
 
     @AfterClass(alwaysRun = true)
-    public void stopSFTPServer() throws Exception {
+    public void stopServer() throws Exception {
         super.cleanup();
         serverConfigurationManager.restoreToLastConfiguration();
+        Utils.startSambaServer();
     }
 }
