@@ -92,6 +92,7 @@ public abstract class ESBIntegrationTest {
     protected StockQuoteClient axis2Client;
     protected ContextUrls contextUrls = new ContextUrls();
     protected String sessionCookie;
+    protected String hostName = null;
     protected OMElement synapseConfiguration = null;
     protected ESBTestCaseUtils esbUtils;
     protected AutomationContext context;
@@ -138,6 +139,7 @@ public abstract class ESBIntegrationTest {
         esbUtils = new ESBTestCaseUtils();
         tenantInfo = context.getContextTenant();
         userInfo = tenantInfo.getContextUser();
+        hostName = UrlGenerationUtil.getManagerHost(context.getInstance());
     }
 
     protected void init(TestUserMode userMode) throws Exception {

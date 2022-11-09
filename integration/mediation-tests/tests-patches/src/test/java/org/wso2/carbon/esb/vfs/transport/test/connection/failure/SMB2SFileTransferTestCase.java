@@ -92,6 +92,7 @@ public class SMB2SFileTransferTestCase extends ESBIntegrationTest {
         Assert.assertTrue(outputFolder.exists(), "SMB2 /out folder not created");
 
         super.init();
+        log.info("The used host is: " + getHostname());
         File jcifFile = new File(getClass().getResource("/artifacts/ESB/synapseconfig/vfsTransport"
                 + "/jcifs-1.3.17.jar").getPath());
         File destinationJcif = Paths.get(carbonHome,"lib","jcifs-1.3.17.jar").toFile();
@@ -116,7 +117,6 @@ public class SMB2SFileTransferTestCase extends ESBIntegrationTest {
 
     @Test(groups = "wso2.esb", description = "SMB2 file transfer test")
     public void fileTransferTest() throws XMLStreamException, IOException {
-
 
         // Still hard coded need to be read from env variables
 
@@ -152,11 +152,13 @@ public class SMB2SFileTransferTestCase extends ESBIntegrationTest {
                 "   </target>\n" +
                 "   <parameter name=\"transport.PollInterval\">1</parameter>\n" +
                 "   <parameter name=\"transport.vfs.Maxfilesize\">10000000</parameter>\n" +
-                "   <parameter name=\"transport.vfs.FileURI\">smb2://" + smb2User + ":" + smb2Password + "@localhost/share/in</parameter>\n" +
+                "   <parameter name=\"transport.vfs.FileURI\">smb2://" + smb2User + ":" + smb2Password + "@" + getHostname() +
+                "/share/in</parameter>\n" +
                 "   <parameter name=\"transport.vfs.ContentType\">text/plain</parameter>\n" +
-                "   <parameter name=\"transport.vfs.MoveAfterProcess\">smb2://" + smb2User + ":" + smb2Password + "@localhost" +
+                "   <parameter name=\"transport.vfs.MoveAfterProcess\">smb2://" + smb2User + ":" + smb2Password + "@" + getHostname() +
                 "/share/out</parameter> \n" +
-                "    <parameter name=\"transport.vfs.MoveAfterFailure\">smb2://" + smb2User + ":" + smb2Password + "@localhost/share/original</parameter>\n" +
+                "    <parameter name=\"transport.vfs.MoveAfterFailure\">smb2://" + smb2User + ":" + smb2Password +
+                "@" + getHostname() + "/share/original</parameter>\n" +
                 "    <parameter name=\"transport.vfs.ActionAfterProcess\">MOVE</parameter>\n" +
                 "    <parameter name=\"transport.vfs.ActionAfterFailure\">MOVE</parameter>\n" +
                 "   <parameter name=\"transport.vfs.ClusterAware\">false</parameter>\n" +
