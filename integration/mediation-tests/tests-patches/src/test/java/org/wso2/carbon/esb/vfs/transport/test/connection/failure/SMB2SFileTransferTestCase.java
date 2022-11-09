@@ -58,7 +58,7 @@ public class SMB2SFileTransferTestCase extends ESBIntegrationTest {
     private String originalFolderName = "original";
 
     @BeforeClass(alwaysRun = true)
-    public void checkRootFolder() throws Exception {
+    public void serverSetUp() throws Exception {
 
         String pathToSMB2root =Utils.getSMB2Root();
         String carbonHome = System.getProperty(ServerConstants.CARBON_HOME);
@@ -181,9 +181,6 @@ public class SMB2SFileTransferTestCase extends ESBIntegrationTest {
         Awaitility.await().atMost(120, TimeUnit.SECONDS).until(checkForOutputFile(outputFolder));
     }
 
-    /*
-    * This is needed when other test cases are added since we need to copy files in after class method
-    * */
     /**
      * Copy the given source file to the given destination
      *
