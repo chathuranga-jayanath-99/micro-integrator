@@ -1,20 +1,20 @@
 /*
-* Copyright (c) 2022, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
-*
-* WSO2 Inc. licenses this file to you under the Apache License,
-* Version 2.0 (the "License"); you may not use this file except
-* in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied. See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
+ * Copyright (c) 2022, WSO2 LLC. (https://www.wso2.com) All Rights Reserved.
+ *
+ * WSO2 Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 package org.wso2.carbon.esb.vfs.transport.test.connection.failure;
 
 import org.apache.axiom.om.OMElement;
@@ -98,7 +98,7 @@ public class SMB2FileTransferTestCaseWithMultipleProxyWhenPollingDirRemoved exte
         super.init();
         log.info("The used host is: " + getHostname());
         File jcifFile = new File(getClass().getResource("/artifacts/ESB/synapseconfig/vfsTransport"
-                                                       + "/jcifs-1.3.17.jar").getPath());
+                + "/jcifs-1.3.17.jar").getPath());
         File destinationJcif = Paths.get(carbonHome,"lib","jcifs-1.3.17.jar").toFile();
 
         //copy jcifFile to lib
@@ -109,7 +109,7 @@ public class SMB2FileTransferTestCaseWithMultipleProxyWhenPollingDirRemoved exte
         serverConfigurationManager = new ServerConfigurationManager(context);
         serverConfigurationManager.applyConfiguration(
                 new File(getClass().getResource("/artifacts/ESB/synapseconfig/"
-                                                + "vfsTransport/ESBJAVA4770/axis2.xml").getPath()));
+                        + "vfsTransport/ESBJAVA4770/axis2.xml").getPath()));
         super.init();
     }
 
@@ -172,12 +172,13 @@ public class SMB2FileTransferTestCaseWithMultipleProxyWhenPollingDirRemoved exte
 
             OMElement proxyOM = AXIOMUtil.stringToOM(proxies[i]);
 
-            //add the listener proxy to ESB server
+            //create VFS transport listener proxy
             try {
-                addProxyService(proxyOM);
+                org.wso2.esb.integration.common.utils.Utils.deploySynapseConfiguration(proxyOM, "Polling_Test", "proxy-services", true);
             } catch (Exception e) {
-                LOGGER.error("Error while updating the Synapse config", e);
+                log.error("Error while updating the Synapse config", e);
             }
+            Thread.sleep(30000);
             LOGGER.info("Synapse config updated");
         }
 
@@ -266,8 +267,8 @@ public class SMB2FileTransferTestCaseWithMultipleProxyWhenPollingDirRemoved exte
     }
 
     /*
-    * Check whether all the files have been copied from in to out
-    * */
+     * Check whether all the files have been copied from in to out
+     * */
     private Callable<Boolean> checkForOutputFile(final File outputFolder) {
         return new Callable<Boolean>() {
             @Override

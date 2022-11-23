@@ -1,5 +1,5 @@
 /*
- *Copyright (c) 2022, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *Copyright (c) 2022, WSO2 LLC. (https://www.wso2.com) All Rights Reserved.
  *
  *WSO2 Inc. licenses this file to you under the Apache License,
  *Version 2.0 (the "License"); you may not use this file except
@@ -151,11 +151,7 @@ public class Utils {
             int exitVal = process.waitFor();
             if (exitVal == 0 || exitVal == 3) {
                 log.info("Successfully get the the Samba Server Status: " + output);
-                if (output.toString().contains("(running)")) {
-                    return true;
-                } else {
-                    return false;
-                }
+                return output.toString().contains("(running)");
             } else {
                 throw new Exception("Getting SAMBA Server Status failed");
             }

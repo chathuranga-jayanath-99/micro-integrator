@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2022, WSO2 LLC. (https://www.wso2.com) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -116,7 +116,7 @@ public class SMB2FileTransferResumingTestCaseWithMultipleProxyAfterConResetNServ
 
 
     @Test(groups = "wso2.esb", description = "SMB2 Multiple proxy file transfer test in Instability")
-    public void multipleProxyFileTransferTestInInstability() throws XMLStreamException, IOException {
+    public void multipleProxyFileTransferTestInInstability() throws XMLStreamException, IOException, InterruptedException {
 
         // Still hard coded need to be read from env variables
 
@@ -172,12 +172,13 @@ public class SMB2FileTransferResumingTestCaseWithMultipleProxyAfterConResetNServ
 
             OMElement proxyOM = AXIOMUtil.stringToOM(proxies[i]);
 
-            //add the listener proxy to ESB server
+            //create VFS transport listener proxy
             try {
-                addProxyService(proxyOM);
+                org.wso2.esb.integration.common.utils.Utils.deploySynapseConfiguration(proxyOM, "Polling_Test", "proxy-services", true);
             } catch (Exception e) {
-                LOGGER.error("Error while updating the Synapse config", e);
+                log.error("Error while updating the Synapse config", e);
             }
+            Thread.sleep(30000);
             LOGGER.info("Synapse config updated");
 
         }

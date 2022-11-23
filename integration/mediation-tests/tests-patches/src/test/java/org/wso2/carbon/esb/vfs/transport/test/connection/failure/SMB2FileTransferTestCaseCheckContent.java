@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2022, WSO2 LLC. (https://www.wso2.com) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -119,7 +119,7 @@ public class SMB2FileTransferTestCaseCheckContent extends ESBIntegrationTest {
 
 
     @Test(groups = "wso2.esb", description = "SMB2 file transfer test Check For Content")
-    public void fileTransferTestCheckForContent() throws XMLStreamException, IOException {
+    public void fileTransferTestCheckForContent() throws XMLStreamException, IOException, InterruptedException {
 
         // Still hard coded need to be read from env variables
 
@@ -171,12 +171,13 @@ public class SMB2FileTransferTestCaseCheckContent extends ESBIntegrationTest {
 
         OMElement proxyOM = AXIOMUtil.stringToOM(proxy);
 
-        //add the listener proxy to ESB server
+        //create VFS transport listener proxy
         try {
-            addProxyService(proxyOM);
+            org.wso2.esb.integration.common.utils.Utils.deploySynapseConfiguration(proxyOM, "Polling_Test", "proxy-services", true);
         } catch (Exception e) {
-            LOGGER.error("Error while updating the Synapse config", e);
+            log.error("Error while updating the Synapse config", e);
         }
+        Thread.sleep(30000);
         LOGGER.info("Synapse config updated");
         // Here we can't know whether the proxy polling happened or not, hence only way is to wait and see. Since poll interval is 1,
         // this waiting period should suffice. But it may include the time it take to deploy the service as well.
