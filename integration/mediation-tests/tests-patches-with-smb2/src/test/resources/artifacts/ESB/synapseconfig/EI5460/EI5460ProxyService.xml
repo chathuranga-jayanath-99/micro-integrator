@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://ws.apache.org/ns/synapse">
+    <registry provider="org.wso2.carbon.mediation.registry.WSO2Registry"/>
+    <proxy name="EI5460ProxyService" startOnLoad="true" transports="http https">
+        <target>
+            <inSequence>
+                <property expression="$body//Message/Response/FromInfo/ServiceProvider/ServiceProviderName" name="ServiceProviderName" scope="default" type="STRING"/>
+                <property expression="$body//Message/Response/ToInfo/ServiceProvider/ServiceProviderID" name="ServiceProviderNameVal" scope="default" type="STRING"/>
+                <property expression="$body//Message/Response/ToInfo/ServiceProvider/ServiceID" name="ServiceProviderIDVal" scope="default" type="STRING"/>
+                <xslt key="gov:/XSLT/EI5460_XSLT.xslt">
+                    <property expression="$ctx:ServiceProviderName" name="ServiceProviderNameVal"/>
+                    <property expression="$ctx:ServiceProviderNameVal" name="ServiceProviderIDVal"/>
+                    <property expression="$ctx:ServiceProviderIDVal" name="ServiceIDVal"/>
+                </xslt>
+                <property name="WRITE_XML_DECLARATION" scope="axis2" type="STRING" value="true"/>
+                <property name="CHARACTER_SET_ENCODING" scope="axis2" type="STRING" value="ISO-8859-1"/>
+                <respond/>
+            </inSequence>
+            <outSequence/>
+            <faultSequence/>
+        </target>
+    </proxy>
+    <sequence name="fault">
+        <log level="full"/>
+    </sequence>
+    <sequence name="main">
+        <log/>
+        <drop/>
+    </sequence>
+</definitions>
