@@ -214,7 +214,7 @@ fi
 jdk_17=`$JAVA_HOME/bin/java -version 2>&1 | grep "1.[7|8]"`
 if [ "$jdk_17" = "" ]; then
    echo " Starting WSO2 Carbon (in unsupported JDK)"
-   echo " [ERROR] CARBON is supported only on JDK 1.7, 1.8, 9, 10 and 11"
+   echo " [ERROR] CARBON is supported only on JDK 1.7 and 1.8"
 fi
 
 CARBON_XBOOTCLASSPATH=""
@@ -307,7 +307,7 @@ do
     -Dcarbon.patches.dir.path="$CARBON_HOME/patches" \
     -Dcarbon.servicepacks.dir.path="$CARBON_HOME/servicepacks" \
     -Dcarbon.internal.lib.dir.path="$CARBON_HOME/wso2/lib" \
-    -Dei.extendedURIBasedDispatcher=org.wso2.carbon.integrator.core.handler.IntegratorStatefulHandler \
+    -Dei.extendedURIBasedDispatcher=org.wso2.micro.integrator.core.handlers.IntegratorStatefulHandler \
     -Djava.util.logging.config.file="$CARBON_HOME/conf/etc/logging-bridge.properties" \
     -Dcomponents.repo="$CARBON_HOME/wso2/components/plugins" \
     -Dconf.location="$CARBON_HOME/conf"\
