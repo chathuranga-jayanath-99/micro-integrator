@@ -142,7 +142,7 @@ public class Utils {
 
         ProcessBuilder processBuilder = new ProcessBuilder();
         // Run a shell command
-        processBuilder.command("/bin/bash", "-c", "systemctl status smbd.service");
+        processBuilder.command("/bin/bash", "-c", "service smbd status");
 
         try {
             Process process = processBuilder.start();
