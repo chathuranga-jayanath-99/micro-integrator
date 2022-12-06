@@ -66,6 +66,13 @@ public class Utils {
     }
 
     /**
+     * Method to return hostname
+     */
+    public static String getHostName() {
+        return System.getenv("HOSTNAME");
+    }
+
+    /**
      * Method to stop samba server and return status
      */
     public static void stopSambaServer() throws Exception {

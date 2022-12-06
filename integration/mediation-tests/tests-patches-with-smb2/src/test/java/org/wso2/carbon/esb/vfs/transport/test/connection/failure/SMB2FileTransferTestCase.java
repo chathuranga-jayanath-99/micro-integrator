@@ -146,13 +146,13 @@ public class SMB2FileTransferTestCase extends ESBIntegrationTest {
                 "   </target>\n" +
                 "   <parameter name=\"transport.PollInterval\">1</parameter>\n" +
                 "   <parameter name=\"transport.vfs.Maxfilesize\">10000000</parameter>\n" +
-                "   <parameter name=\"transport.vfs.FileURI\">smb2://" + smb2User + ":" + smb2Password + "@" + getHostname() +
+                "   <parameter name=\"transport.vfs.FileURI\">smb2://" + smb2User + ":" + smb2Password + "@" + Utils.getHostName() +
                 "/share/in</parameter>\n" +
                 "   <parameter name=\"transport.vfs.ContentType\">text/plain</parameter>\n" +
-                "   <parameter name=\"transport.vfs.MoveAfterProcess\">smb2://" + smb2User + ":" + smb2Password + "@" + getHostname() +
+                "   <parameter name=\"transport.vfs.MoveAfterProcess\">smb2://" + smb2User + ":" + smb2Password + "@" + Utils.getHostName() +
                 "/share/out</parameter> \n" +
                 "    <parameter name=\"transport.vfs.MoveAfterFailure\">smb2://" + smb2User + ":" + smb2Password +
-                "@" + getHostname() + "/share/original</parameter>\n" +
+                "@" + Utils.getHostName() + "/share/original</parameter>\n" +
                 "    <parameter name=\"transport.vfs.ActionAfterProcess\">MOVE</parameter>\n" +
                 "    <parameter name=\"transport.vfs.ActionAfterFailure\">MOVE</parameter>\n" +
                 "   <parameter name=\"transport.vfs.ClusterAware\">false</parameter>\n" +
