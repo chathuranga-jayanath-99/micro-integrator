@@ -62,7 +62,7 @@ public class SMB2FileTransferTestCase extends ESBIntegrationTest {
 
         String pathToSMB2root =Utils.getSMB2Root();
         String carbonHome = System.getProperty(ServerConstants.CARBON_HOME);
-        log.info("******************* printenv" + Utils.getHostName());
+        log.info("******************* HOSTNAME" + Utils.getHostName());
 
         // Local folder of the SMB2 server root
         File SMB2RootFolder = new File(pathToSMB2root);
