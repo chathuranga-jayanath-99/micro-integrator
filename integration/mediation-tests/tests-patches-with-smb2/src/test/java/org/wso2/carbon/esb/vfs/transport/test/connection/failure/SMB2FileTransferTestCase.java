@@ -66,6 +66,8 @@ public class SMB2FileTransferTestCase extends ESBIntegrationTest {
         log.info("PrintingSMB2_root************" + Utils.getSMB2Root());
         log.info("Printingsmb2passwd************" + Utils.getPassword());
         log.info("Printingsmb2user************" + Utils.getSMB2User());
+        log.info("RetrieveFromLinux root password************" + Utils.getSMB2UserFromEnv());
+        log.info("RetrieveFromLinux env variables************" + Utils.getEnvVariables());
 
         // Local folder of the SMB2 server root
         File SMB2RootFolder = new File(pathToSMB2root);
