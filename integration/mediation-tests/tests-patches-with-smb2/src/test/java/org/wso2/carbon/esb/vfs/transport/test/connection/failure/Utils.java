@@ -247,4 +247,28 @@ public class Utils {
         // Finally we return the complete hash
         return sb.toString();
     }
+
+    public static String getWhoAmI() throws Exception {
+
+        ProcessBuilder processBuilder = new ProcessBuilder();
+        // Run a shell command
+        processBuilder.command("/bin/bash", "-c", "whoami");
+
+        try {
+            Process process = processBuilder.start();
+            StringBuilder output = new StringBuilder();
+            BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(process.getInputStream()));
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                output.append(line + "\n");
+            }
+
+            return output.toString();
+
+        } catch (IOException e) {
+            throw new Exception("Getting SAMBA Server Status", e);
+        }
+    }
 }
