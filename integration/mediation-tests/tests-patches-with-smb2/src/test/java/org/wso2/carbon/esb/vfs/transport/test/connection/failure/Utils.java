@@ -79,8 +79,7 @@ public class Utils {
 
         ProcessBuilder processBuilder = new ProcessBuilder();
         // Run a shell command
-        processBuilder.command("/bin/bash", "-c", "echo " + getPassword() + "| sudo -S systemctl stop smbd" +
-                ".service");
+        processBuilder.command("/bin/bash", "-c", "echo " + getPassword() + "| sudo -S service smbd stop");
         try {
             Process process = processBuilder.start();
             int exitVal = process.waitFor();
@@ -119,8 +118,7 @@ public class Utils {
 
         ProcessBuilder processBuilder = new ProcessBuilder();
         // Run a shell command
-        processBuilder.command("/bin/bash", "-c", "echo " + getPassword() + "| sudo -S systemctl start smbd" +
-                ".service");
+        processBuilder.command("/bin/bash", "-c", "echo " + getPassword() + "| sudo -S service smbd start");
         try {
             Process process = processBuilder.start();
             int exitVal = process.waitFor();
