@@ -41,7 +41,7 @@ public class Utils {
      * Method to return smb2 root from env variables
      */
     public static String getSMB2Root() throws Exception {
-        return getEnvVariablesFromLinuxCommand(SMB2_ROOT);
+        return System.getenv(SMB2_ROOT);
     }
 
     /**
@@ -246,101 +246,5 @@ public class Utils {
 
         // Finally we return the complete hash
         return sb.toString();
-    }
-
-    public static String getWhoAmI() throws Exception {
-
-        ProcessBuilder processBuilder = new ProcessBuilder();
-        // Run a shell command
-        processBuilder.command("/bin/bash", "-c", "whoami");
-
-        try {
-            Process process = processBuilder.start();
-            StringBuilder output = new StringBuilder();
-            BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream()));
-
-            String line;
-            while ((line = reader.readLine()) != null) {
-                output.append(line + "\n");
-            }
-
-            return output.toString();
-
-        } catch (IOException e) {
-            throw new Exception("Getting SAMBA Server Status", e);
-        }
-    }
-
-    public static String getEnvVariables() throws Exception {
-
-        ProcessBuilder processBuilder = new ProcessBuilder();
-        // Run a shell command
-        processBuilder.command("/bin/bash", "-c", "printenv");
-
-        try {
-            Process process = processBuilder.start();
-            StringBuilder output = new StringBuilder();
-            BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream()));
-
-            String line;
-            while ((line = reader.readLine()) != null) {
-                output.append(line + "\n");
-            }
-
-            return output.toString();
-
-        } catch (IOException e) {
-            throw new Exception("Getting SAMBA Server Status", e);
-        }
-    }
-
-    public static String getSMB2UserFromEnv() throws Exception {
-
-        ProcessBuilder processBuilder = new ProcessBuilder();
-        // Run a shell command
-        processBuilder.command("/bin/bash", "-c", "printenv PATH_TO_SMB2_ROOT");
-
-        try {
-            Process process = processBuilder.start();
-            StringBuilder output = new StringBuilder();
-            BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream()));
-
-            String line;
-            while ((line = reader.readLine()) != null) {
-                output.append(line + "\n");
-            }
-
-            return output.toString();
-
-        } catch (IOException e) {
-            throw new Exception("Getting SAMBA Server Status", e);
-        }
-    }
-
-    public static String getEnvVariablesFromLinuxCommand(String envVariable) throws Exception {
-
-        ProcessBuilder processBuilder = new ProcessBuilder();
-        // Run a shell command
-        processBuilder.command("/bin/bash", "-c", "printenv " + envVariable);
-
-        try {
-            Process process = processBuilder.start();
-            StringBuilder output = new StringBuilder();
-            BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream()));
-
-            String line;
-            while ((line = reader.readLine()) != null) {
-                output.append(line + "\n");
-            }
-
-            return output.toString();
-
-        } catch (IOException e) {
-            throw new Exception("Getting SAMBA Server Status", e);
-        }
     }
 }
