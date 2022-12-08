@@ -69,7 +69,7 @@ public class Utils {
      * Method to return hostname
      */
     public static String getHostName() {
-        return System.getenv("HOSTNAME");
+        return System.getenv("SMB2_HOSTNAME");
     }
 
     /**
