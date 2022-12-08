@@ -45,7 +45,7 @@
        -->
     <test name="VFS SMB2 tests" preserve-order="true" verbose="2">
            <classes>
-               <class name="org.wso2.carbon.esb.vfs.transport.test.connection.failure.SMB2FileTransferTestCaseCheckContent"/>
+               <class name="org.wso2.carbon.esb.vfs.transport.test.connection.failure.SMB2FileTransferTestCase"/>
            </classes>
     </test>
 </suite>
