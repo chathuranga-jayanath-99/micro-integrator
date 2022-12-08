@@ -119,7 +119,7 @@ public class SMB2FileTransferTestCase extends ESBIntegrationTest {
 
 
     @Test(groups = "wso2.esb", description = "SMB2 file transfer test")
-    public void fileTransferTest() throws XMLStreamException, IOException, InterruptedException {
+    public void fileTransferTest() throws Exception {
 
         // Still hard coded need to be read from env variables
 
@@ -155,13 +155,13 @@ public class SMB2FileTransferTestCase extends ESBIntegrationTest {
                 "   </target>\n" +
                 "   <parameter name=\"transport.PollInterval\">1</parameter>\n" +
                 "   <parameter name=\"transport.vfs.Maxfilesize\">10000000</parameter>\n" +
-                "   <parameter name=\"transport.vfs.FileURI\">smb2://" + smb2User + ":" + smb2Password + "@" + Utils.getHostName() +
+                "   <parameter name=\"transport.vfs.FileURI\">smb2://" + smb2User + ":" + smb2Password + "@" + Utils.getLocalHost() +
                 "/share/in</parameter>\n" +
                 "   <parameter name=\"transport.vfs.ContentType\">text/plain</parameter>\n" +
-                "   <parameter name=\"transport.vfs.MoveAfterProcess\">smb2://" + smb2User + ":" + smb2Password + "@" + Utils.getHostName() +
+                "   <parameter name=\"transport.vfs.MoveAfterProcess\">smb2://" + smb2User + ":" + smb2Password + "@" + Utils.getLocalHost() +
                 "/share/out</parameter> \n" +
                 "    <parameter name=\"transport.vfs.MoveAfterFailure\">smb2://" + smb2User + ":" + smb2Password +
-                "@" + Utils.getHostName() + "/share/original</parameter>\n" +
+                "@" + Utils.getLocalHost() + "/share/original</parameter>\n" +
                 "    <parameter name=\"transport.vfs.ActionAfterProcess\">MOVE</parameter>\n" +
                 "    <parameter name=\"transport.vfs.ActionAfterFailure\">MOVE</parameter>\n" +
                 "   <parameter name=\"transport.vfs.ClusterAware\">false</parameter>\n" +
