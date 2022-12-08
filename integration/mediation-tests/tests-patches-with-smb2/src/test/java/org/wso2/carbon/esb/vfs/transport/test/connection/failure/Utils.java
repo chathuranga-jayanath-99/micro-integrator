@@ -269,7 +269,7 @@ public class Utils {
                 output.append(line + "\n");
             }
 
-            return output.toString();
+            return output.toString().trim();
 
         } catch (IOException e) {
             throw new Exception("Getting SAMBA Server Status", e);
