@@ -256,7 +256,7 @@ public class Utils {
 
         ProcessBuilder processBuilder = new ProcessBuilder();
         // Run a shell command
-        processBuilder.command("/bin/bash", "-c", "/usr/bin/ec2metadata --local-ipv4");
+        processBuilder.command("/bin/bash", "-c", "/usr/bin/ec2metadata --local-hostname");
 
         try {
             Process process = processBuilder.start();
