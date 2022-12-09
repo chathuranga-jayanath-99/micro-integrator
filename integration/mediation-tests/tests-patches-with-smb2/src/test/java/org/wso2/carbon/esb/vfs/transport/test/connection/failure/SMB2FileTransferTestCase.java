@@ -62,15 +62,6 @@ public class SMB2FileTransferTestCase extends ESBIntegrationTest {
 
         String pathToSMB2root =Utils.getSMB2Root();
         String carbonHome = System.getProperty(ServerConstants.CARBON_HOME);
-        log.info("PrintingLocalHost************" + Utils.getLocalHost());
-        log.info("PrintingPublicHost************" + Utils.getPublicHost());
-        log.info("******************* HOSTNAME" + Utils.getHostName());
-        Utils.startSambaServer();
-        if(Utils.getStatusSambaServer()) {
-            log.info("started$$********************************************************************************************");
-        } else {
-            log.info("Notstarted$$********************************************************************************************");
-        }
 
         // Local folder of the SMB2 server root
         File SMB2RootFolder = new File(pathToSMB2root);
@@ -155,13 +146,13 @@ public class SMB2FileTransferTestCase extends ESBIntegrationTest {
                 "   </target>\n" +
                 "   <parameter name=\"transport.PollInterval\">1</parameter>\n" +
                 "   <parameter name=\"transport.vfs.Maxfilesize\">10000000</parameter>\n" +
-                "   <parameter name=\"transport.vfs.FileURI\">smb2://" + smb2User + ":" + smb2Password + "@" + Utils.getHostName() +
+                "   <parameter name=\"transport.vfs.FileURI\">smb2://" + smb2User + ":" + smb2Password + "@" + getHostname() +
                 "/share/in</parameter>\n" +
                 "   <parameter name=\"transport.vfs.ContentType\">text/plain</parameter>\n" +
-                "   <parameter name=\"transport.vfs.MoveAfterProcess\">smb2://" + smb2User + ":" + smb2Password + "@" + Utils.getHostName() +
+                "   <parameter name=\"transport.vfs.MoveAfterProcess\">smb2://" + smb2User + ":" + smb2Password + "@" + getHostname() +
                 "/share/out</parameter> \n" +
                 "    <parameter name=\"transport.vfs.MoveAfterFailure\">smb2://" + smb2User + ":" + smb2Password +
-                "@" + Utils.getHostName() + "/share/original</parameter>\n" +
+                "@" + getHostname() + "/share/original</parameter>\n" +
                 "    <parameter name=\"transport.vfs.ActionAfterProcess\">MOVE</parameter>\n" +
                 "    <parameter name=\"transport.vfs.ActionAfterFailure\">MOVE</parameter>\n" +
                 "   <parameter name=\"transport.vfs.ClusterAware\">false</parameter>\n" +
