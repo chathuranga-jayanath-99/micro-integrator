@@ -149,7 +149,11 @@ public class Utils {
             int exitVal = process.waitFor();
             if (exitVal == 0 || exitVal == 3) {
                 log.info("Successfully get the the Samba Server Status: " + output);
-                return output.toString().contains("running");
+                if (output.toString().contains("not running")) {
+                    return false;
+                } else {
+                    return true;
+                }
             } else {
                 throw new Exception("Getting SAMBA Server Status failed");
             }
