@@ -46,6 +46,9 @@
     <test name="VFS SMB2 tests" preserve-order="true" verbose="2">
            <classes>
                <class name="org.wso2.carbon.esb.vfs.transport.test.connection.failure.SMB2FileTransferResumingTestCaseWithMultipleProxyAfterConResetNServerReset"/>
+               <class name="org.wso2.carbon.esb.vfs.transport.test.connection.failure.SMB2ConnectionGrowthTestCaseAfterSambaServerRestart"/>
+               <class name="org.wso2.carbon.esb.vfs.transport.test.connection.failure.SMB2FileTransferResumingTestCaseAfterSambaServerRestart2Steps"/>
+               <class name="org.wso2.carbon.esb.vfs.transport.test.connection.failure.SMB2FileTransferResumingTestCaseAfterSambaServerRestart"/>
                <class name="org.wso2.carbon.esb.vfs.transport.test.connection.failure.SMB2FileTransferResumingTestCaseAfterConnectionFailureToSambaServer"/>
            </classes>
     </test>
