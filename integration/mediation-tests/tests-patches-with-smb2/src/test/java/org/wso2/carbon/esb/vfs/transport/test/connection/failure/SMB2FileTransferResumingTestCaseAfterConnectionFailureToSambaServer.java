@@ -105,9 +105,10 @@ public class SMB2FileTransferResumingTestCaseAfterConnectionFailureToSambaServer
 
         // replace the axis2.xml enabled vfs transfer and restart the ESB server gracefully.
         serverConfigurationManager = new ServerConfigurationManager(context);
-        serverConfigurationManager.applyMIConfiguration(new File(
-                getClass().getResource("/artifacts/ESB/synapseconfig/" + "vfsTransport/ESBJAVA4770/deployment.toml")
-                        .getPath()));
+        serverConfigurationManager.applyConfiguration(
+                new File(getClass().getResource("/artifacts/ESB/synapseconfig/"
+                        + "vfsTransport/ESBJAVA4770/axis2.xml").getPath()));
+        super.init();
     }
 
 
