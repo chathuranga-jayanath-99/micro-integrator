@@ -21,6 +21,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.synapse.MessageContext;
 import org.wso2.micro.core.util.CarbonException;
+import org.wso2.micro.core.util.StringUtils;
 import org.wso2.micro.integrator.management.apis.Constants;
 import org.wso2.micro.integrator.management.apis.ManagementApiUndefinedException;
 import org.wso2.micro.integrator.security.user.api.UserStoreException;
@@ -60,8 +61,13 @@ public class JWTTokenSecurityHandler extends AuthenticationHandlerAdapter {
 
     @Override
     protected Boolean authenticate(MessageContext messageContext, String authHeaderToken) {
-
-        if ((Constants.REST_API_CONTEXT + Constants.PREFIX_LOGIN).contentEquals(messageContext.getTo().getAddress())) {
+        String url = Constants.REST_API_CONTEXT + Constants.PREFIX_LOGIN;
+        // Select the management API version from system property
+        String mgtAPIVersion = System.getProperty(Constants.MGT_API_VERSION);
+        if (!StringUtils.isEmpty(mgtAPIVersion)) {
+            url = Constants.REST_API_CONTEXT + "/" + mgtAPIVersion + Constants.PREFIX_LOGIN;
+        }
+        if (url.contentEquals(messageContext.getTo().getAddress())) {
             //Login request is basic auth
             if (useCarbonUserStore) {
                 //Uses carbon user store

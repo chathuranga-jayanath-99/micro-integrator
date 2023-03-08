@@ -98,14 +98,14 @@ public class UsersResource extends UserResource {
                 }
                 default: {
                     response = Utils.createJsonError("Unsupported HTTP method, " + httpMethod + ". Only GET and "
-                                                     + "POST methods are supported",
-                                                     axis2MessageContext, BAD_REQUEST);
+                                    + "POST methods are supported",
+                            axis2MessageContext, BAD_REQUEST);
                     break;
                 }
             }
         } catch (UserStoreException e) {
             response = Utils.createJsonError("Error initializing the user store. Please try again later", e,
-                                             axis2MessageContext, INTERNAL_SERVER_ERROR);
+                    axis2MessageContext, INTERNAL_SERVER_ERROR);
         } catch (IOException e) {
             response = Utils.createJsonError("Error processing the request", e, axis2MessageContext, BAD_REQUEST);
         } catch (ResourceNotFoundException e) {
@@ -151,7 +151,6 @@ public class UsersResource extends UserResource {
         return users;
     }
 
-    @Override
     protected JSONObject handleGet(MessageContext messageContext) throws UserStoreException {
         return setResponseBody(getUserResults(messageContext));
     }

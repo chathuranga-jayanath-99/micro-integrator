@@ -73,7 +73,7 @@ public class HeartBeatComponent {
 
     private static final Log log = LogFactory.getLog(HeartBeatComponent.class);
     private static final Map<String, Object> configs = ConfigParser.getParsedConfigs();
-
+    public static final String MGT_API_VERSION = "management.api.version";
     private static final String CHANGE_NOTIFICATION = "changeNotification";
     private static final String DEPLOYED_ARTIFACTS = "deployedArtifacts";
     private static final String UNDEPLOYED_ARTIFACTS = "undeployedArtifacts";
@@ -132,9 +132,14 @@ public class HeartBeatComponent {
 
     private static String getMgtApiUrl() {
         String serviceIp = System.getProperty("carbon.local.ip");
+        // get the management API version from the system property
+        String mgtAPIVersion = System.getProperty(MGT_API_VERSION);
         String httpApiPort = Integer.toString(ConfigurationLoader.getInternalInboundHttpsPort());
         String mgtApiUrl = HTTPS_PREFIX.concat(serviceIp).concat(COLON).concat(httpApiPort).concat(FORWARD_SLASH)
                                        .concat(MANAGEMENT).concat(FORWARD_SLASH);
+        if (!StringUtils.isEmpty(mgtAPIVersion)) {
+            mgtApiUrl = mgtApiUrl.concat(mgtAPIVersion).concat(FORWARD_SLASH);
+        }
 
         Object mgtApiServiceName = configs.get(Constants.DASHBOARD_CONFIG_MANAGEMENT_HOSTNAME);
         if (null != mgtApiServiceName) {

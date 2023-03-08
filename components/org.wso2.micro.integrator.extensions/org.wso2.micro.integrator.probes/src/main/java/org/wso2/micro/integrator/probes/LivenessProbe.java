@@ -30,6 +30,7 @@ import java.util.List;
 public class LivenessProbe implements InternalAPI {
 
     private String name;
+    private String version;
     private List<InternalAPIHandler> handlerList = null;
     private CORSConfiguration apiCORSConfiguration = null;
 
@@ -71,5 +72,15 @@ public class LivenessProbe implements InternalAPI {
     @Override
     public CORSConfiguration getCORSConfiguration() {
         return apiCORSConfiguration;
+    }
+
+    @Override
+    public String getVersion() {
+        return version;
+    }
+
+    @Override
+    public void setVersion(String version) {
+        this.version = version;
     }
 }
