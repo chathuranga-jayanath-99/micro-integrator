@@ -62,12 +62,14 @@ public class JWTTokenSecurityHandler extends AuthenticationHandlerAdapter {
     @Override
     protected Boolean authenticate(MessageContext messageContext, String authHeaderToken) {
         String url = Constants.REST_API_CONTEXT + Constants.PREFIX_LOGIN;
+        String urlWithVersion = url;
+        String toAddress = messageContext.getTo().getAddress();
         // Select the management API version from system property
         String mgtAPIVersion = System.getProperty(Constants.MGT_API_VERSION);
         if (!StringUtils.isEmpty(mgtAPIVersion)) {
-            url = Constants.REST_API_CONTEXT + "/" + mgtAPIVersion + Constants.PREFIX_LOGIN;
+            urlWithVersion = Constants.REST_API_CONTEXT + "/" + mgtAPIVersion + Constants.PREFIX_LOGIN;
         }
-        if (url.contentEquals(messageContext.getTo().getAddress())) {
+        if (url.contentEquals(toAddress) || urlWithVersion.contentEquals(toAddress)) {
             //Login request is basic auth
             if (useCarbonUserStore) {
                 //Uses carbon user store
