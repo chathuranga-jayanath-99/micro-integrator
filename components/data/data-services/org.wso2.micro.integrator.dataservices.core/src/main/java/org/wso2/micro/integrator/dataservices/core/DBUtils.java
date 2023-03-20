@@ -60,6 +60,7 @@ import org.wso2.micro.integrator.dataservices.core.engine.ExternalParamCollectio
 import org.wso2.micro.integrator.dataservices.core.engine.InternalParam;
 import org.wso2.micro.integrator.dataservices.core.engine.ParamValue;
 import org.wso2.micro.integrator.dataservices.core.internal.DataServicesDSComponent;
+import org.wso2.micro.integrator.dataservices.core.odata.ODataConstants;
 import org.wso2.micro.integrator.ndatasource.core.utils.DataSourceUtils;
 import org.wso2.securevault.SecretResolver;
 import org.wso2.securevault.SecretResolverFactory;
@@ -705,6 +706,9 @@ public class DBUtils {
     public static Time getTime(String value) throws DataServiceFault, ParseException {
         if (value == null || value.isEmpty()){
             throw new DataServiceFault("Empty string or null value was found as time.");
+        }
+        if (value.split(ODataConstants.TIME_SEPARATOR).length <= 2) {
+            value += ODataConstants.TIME_SEPARATOR + ODataConstants.DOUBLE_ZERO;
         }
         return new Time(ConverterUtil.convertToTime(value).getAsCalendar().getTimeInMillis());
     }

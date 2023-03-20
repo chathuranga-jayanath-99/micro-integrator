@@ -75,4 +75,7 @@ public class ODataConstants {
     public static final int LESS_THAN = -1;
     public static final int GREATER_THAN = 1;
     public static final String E_TAG = "E_TAG";
+    public static final String ODATA_TYPE_TIMEOFDAY = "TimeOfDay";
+    public static final String DOUBLE_ZERO = "00";
+    public static final String TIME_SEPARATOR = ":";
 }

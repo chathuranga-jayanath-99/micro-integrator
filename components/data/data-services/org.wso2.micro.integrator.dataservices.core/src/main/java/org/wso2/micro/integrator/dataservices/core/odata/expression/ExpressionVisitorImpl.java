@@ -215,4 +215,10 @@ public class ExpressionVisitorImpl implements ExpressionVisitor<VisitorOperand> 
         throw new ODataApplicationException("Not implemented", HttpStatusCode.NOT_IMPLEMENTED.getStatusCode(),
                                             Locale.ROOT);
     }
+
+    @Override
+    public VisitorOperand visitBinaryOperator(BinaryOperatorKind binaryOperatorKind, VisitorOperand visitorOperand,
+                                              List<VisitorOperand> list) throws ODataApplicationException {
+        return throwNotImplemented();
+    }
 }
