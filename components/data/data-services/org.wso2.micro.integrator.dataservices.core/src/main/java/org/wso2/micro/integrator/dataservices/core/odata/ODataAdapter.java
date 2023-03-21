@@ -2062,4 +2062,8 @@ public class ODataAdapter implements ServiceHandler {
             this.dataHandler.commitTransaction();
         }
     }
+
+    @Override
+    public void apply(DataRequest dataRequest, ODataResponse oDataResponse) {
+    }
 }
