@@ -59,9 +59,11 @@
     </test>
 
     <test name="FastXSLT-mediator-Test" preserve-order="true" verbose="2">
-        <packages>
-            <package name="org.wso2.carbon.esb.mediator.test.fastXslt"/>
-        </packages>
+        <classes>
+            <class name="org.wso2.carbon.esb.mediator.test.fastXslt.DynamicKeyFastXsltTransformationTestCase"/>
+            <class name="org.wso2.carbon.esb.mediator.test.fastXslt.CallTemplateIntegrationSample750FastXSLTTestCase"/>
+<!--            <class name="org.wso2.carbon.esb.mediator.test.fastXslt.FastXSLTTransformFileFromLocalFileUsingSample8TestCase"/>-->
+        </classes>
     </test>
 
     <test name="Loopback-mediator-Test" preserve-order="true" verbose="2">
