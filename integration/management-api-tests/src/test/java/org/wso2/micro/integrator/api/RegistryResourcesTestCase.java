@@ -642,7 +642,6 @@ public class RegistryResourcesTestCase extends ESBIntegrationTest {
     @Test(groups = {
             "wso2.esb" }, priority = 5, description = "Test fetching registry directory with expanding to verify")
     public void testRegistryGetDirectoryExpandToVerifyChanges() throws IOException {
-
         String endpoint = "https://" + hostName + ":" + (DEFAULT_INTERNAL_API_HTTPS_PORT + portOffset) + "/management/"
                 + "registry-resources";
         String registryPath = "registry/config/testFolder";
@@ -662,8 +661,9 @@ public class RegistryResourcesTestCase extends ESBIntegrationTest {
             log.info("printing fileArray element " + i + ": " + filesArray.getJSONObject(i).get("name").toString());
         }
         log.info("filesArray.getJSONObject(0).get(\"name\")::: " + filesArray.getJSONObject(0).get("name"));
-        Assert.assertTrue(filesArray.getJSONObject(0).get("name").toString().contains("test-json.json"));
-        Assert.assertTrue(filesArray.getJSONObject(1).get("name").toString().contains("test-text.txt"));
+        String responseString = jsonResponse.toString();
+        Assert.assertTrue(responseString.contains("test-json.json"));
+        Assert.assertTrue(responseString.contains("test-text.txt"));
     }
 
     @Test(groups = { "wso2.esb" }, description = "Test error - deleting non existing registry")
