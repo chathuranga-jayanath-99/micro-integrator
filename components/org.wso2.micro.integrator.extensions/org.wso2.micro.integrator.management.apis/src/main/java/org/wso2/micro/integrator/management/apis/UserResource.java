@@ -238,6 +238,10 @@ public class UserResource implements MiApiResource {
         JSONObject jsonBody = new JSONObject();
         jsonBody.put(USER_ID, user);
         jsonBody.put(STATUS, "Password updated");
+        JSONObject info = new JSONObject();
+        info.put(USER_ID, user);
+        AuditLogger.logAuditMessage(performedBy, Constants.AUDIT_LOG_TYPE_USER, Constants.AUDIT_LOG_ACTION_UPDATED,
+                info);
         return jsonBody;
     }
 
