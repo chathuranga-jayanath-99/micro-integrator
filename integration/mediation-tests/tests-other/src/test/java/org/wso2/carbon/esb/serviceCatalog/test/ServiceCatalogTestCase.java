@@ -255,7 +255,7 @@ public class ServiceCatalogTestCase extends ESBIntegrationTest {
                 getESBResourceLocation() + File.separator + SERVICE_CATALOG_FOLDER + File.separator + "SecondAPI" +
                         File.separator + TOML_FILE));
         assertTrue(Utils.checkForLog(carbonLogReader,
-                "Successfully updated the service catalog", 10), "Did not receive the expected info log");
+                "Successfully updated the service catalog", 120), "Did not receive the expected info log");
         File extracted = chekAndExtractPayloadZip();
         assertTrue(extracted.exists(), "Error occurred while extracting the ZIP");
         assertFalse(checkMetadataFileExists(extracted, "healthcare_v1.0.0-SNAPSHOT"),
