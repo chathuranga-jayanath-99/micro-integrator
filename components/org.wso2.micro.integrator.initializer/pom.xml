@@ -123,7 +123,7 @@
                             org.wso2.micro.integrator.initializer.*;version="${project.version}"
                         </Export-Package>
                         <Import-Package>
-                            org.wso2.micro.integrator.core.*;version="${project.version}",
+                            org.wso2.micro.integrator.core.*;version="[4.2.0,${project.version}]",
                             *;resolution:=optional
                         </Import-Package>
                         <DynamicImport-Package>*</DynamicImport-Package>
