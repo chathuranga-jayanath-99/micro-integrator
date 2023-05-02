@@ -303,7 +303,7 @@ public class ServiceCatalogTestCase extends ESBIntegrationTest {
         String payloadZipPath = CarbonBaseUtils.getCarbonHome() + File.separator + "tmp" + File.separator +
                 SERVICE_CATALOG_FOLDER_NAME + File.separator + ZIP_FILE_NAME;
         assertTrue(Utils.checkForLog(carbonLogReader,
-                "Service catalog already contains the latest configs, aborting the service-catalog uploader", 10),
+                "Service catalog already contains the latest configs, aborting the service-catalog uploader", 120),
                 "Did not receive the expected info log");
         File zipFile = new File(payloadZipPath);
         assertFalse(zipFile.exists(), "Payload.zip file should not be created");

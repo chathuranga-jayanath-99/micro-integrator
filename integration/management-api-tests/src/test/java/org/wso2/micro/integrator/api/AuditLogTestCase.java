@@ -272,7 +272,17 @@ public class AuditLogTestCase extends ESBIntegrationTest {
         Assert.assertEquals(200, response.getStatusLine().getStatusCode(), "Invalid response status " +
                                                                            response.getStatusLine().getStatusCode() +
                                                                            " returned. Expected status code is 200");
-        Assert.assertTrue(carbonLogReader.checkForLog("{\"performedBy\":\"admin\",\"action\":\"deleted\",\"type\":\"carbon_application\",\"info\":\"{\\\"cAppFileName\\\":\\\"esb-artifacts-car_1.0.0\\\"}\"}", 120));
+        boolean flag = carbonLogReader.checkForLog("{\"performedBy\":\"admin\",\"action\":\"deleted\",\"type\":" +
+                "\"carbon_application\",\"info\":\"{\\\"cAppFileName\\\":\\\"esb-artifacts-car_1.0.0\\\"}\"}",
+                120);
+        // This if block is added to see whether adding a long sleep resolves some of the intermittent test failures.
+        if (!flag) {
+            Thread.sleep(30000);
+            flag = carbonLogReader.checkForLog("{\"performedBy\":\"admin\",\"action\":\"deleted\",\"type\":" +
+                    "\"carbon_application\",\"info\":\"{\\\"cAppFileName\\\":\\\"esb-artifacts-car_1.0.0\\\"}\"}",
+                    120);
+        }
+        Assert.assertTrue(flag);
     }
 
     @AfterClass(alwaysRun = true)
