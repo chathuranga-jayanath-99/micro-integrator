@@ -26,7 +26,7 @@
     <groupId>org.wso2.ei</groupId>
     <artifactId>wso2-micro-integrator-parent</artifactId>
     <packaging>pom</packaging>
-    <version>4.2.0.1-SNAPSHOT</version>
+    <version>4.2.0.4-SNAPSHOT</version>
     <name>WSO2 Micro Integrator</name>
     <url>http://wso2.com/products/enterprise-integrator/</url>
     <description>WSO2 Micro Integrator</description>
@@ -1456,7 +1456,8 @@
         <developerConnection>scm:git:https://github.com/wso2-support/micro-integrator.git</developerConnection>
         <connection>scm:git:https://github.com/wso2-support/micro-integrator.git</connection>
         
-    </scm>
+      <tag>HEAD</tag>
+  </scm>
 
     <profiles>
         <profile>
@@ -1869,6 +1870,7 @@
         <jsoup.version>1.15.3</jsoup.version>
         <grpc-context.orbit.version>1.27.2.wso2v1</grpc-context.orbit.version>
         <opencensus.orbit.version>0.30.0.wso2v1</opencensus.orbit.version>
+        <org.wso2.micro.integrator.core.version>[4.2.0,4.3.0)</org.wso2.micro.integrator.core.version>
     <project.scm.id>wso2-scm-server</project.scm.id></properties>
 
     <repositories>

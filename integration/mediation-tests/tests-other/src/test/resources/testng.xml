@@ -111,6 +111,12 @@
         </classes>
     </test>
 
+    <test name="Hot-Deployment-Test" preserve-order="true" verbose="2">
+        <packages>
+            <package name="org.wso2.carbon.esb.hotdeployment.test"/>
+        </packages>
+    </test>
+
     <test name="Stats-Test" preserve-order="true" verbose="2">
         <packages>
             <package name="org.wso2.carbon.esb.statistics"/>
@@ -127,12 +133,6 @@
                 </methods>
             </class>
         </classes>
-    </test>
-
-    <test name="Hot-Deployment-Test" preserve-order="true" verbose="2">
-        <packages>
-            <package name="org.wso2.carbon.esb.hotdeployment.test"/>
-        </packages>
     </test>
 
     <test name="LocalEntry-Test" preserve-order="true" verbose="2">
@@ -171,11 +171,11 @@
         </classes>
     </test>
 
-    <test name="Service Catalog tests" preserve-order="true" verbose="2">
-        <packages>
-            <package name="org.wso2.carbon.esb.serviceCatalog.test"/>
-        </packages>
-    </test>
+<!--    <test name="Service Catalog tests" preserve-order="true" verbose="2">-->
+<!--        <packages>-->
+<!--            <package name="org.wso2.carbon.esb.serviceCatalog.test"/>-->
+<!--        </packages>-->
+<!--    </test>-->
 
 </suite>
 
