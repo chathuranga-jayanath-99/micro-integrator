@@ -24,7 +24,6 @@ import org.apache.axis2.engine.AxisConfiguration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.synapse.registry.Registry;
-import org.wso2.carbon.utils.FileUtil;
 import org.wso2.micro.application.deployer.AppDeployerConstants;
 import org.wso2.micro.application.deployer.AppDeployerUtils;
 import org.wso2.micro.application.deployer.CarbonApplication;
@@ -234,12 +233,7 @@ public class FileRegistryResourceDeployer implements AppDeploymentHandler {
                 Path subFilePath =subFileInfo.file.toPath();
                 String subFileRelativePath = directoryRegistryPath + File.separator + file.toPath().relativize(subFilePath);
                 String mediaType = subFileInfo.mediaType;
-                String content = "";
-                try {
-                    content = FileUtil.readFileToString(subFilePath.toString());
-                } catch (IOException e) {
-                    log.error("Error while reading file content. File path: " + subFilePath.toString());
-                }
+                String content = readResourceContent(new File(subFilePath.toString()));
                 ((MicroIntegratorRegistry)lightweightRegistry).addNewNonEmptyResource(
                         subFileRelativePath, false, mediaType, content,
                         collection.getProperties());
