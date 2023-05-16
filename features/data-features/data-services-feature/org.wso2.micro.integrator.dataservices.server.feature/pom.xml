@@ -18,7 +18,7 @@
     <parent>
         <groupId>org.wso2.ei</groupId>
         <artifactId>data-services-feature</artifactId>
-        <version>4.2.0.4-SNAPSHOT</version>
+        <version>4.2.0.1-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -90,7 +90,7 @@
                                 <bundleDef>org.wso2.orbit.org.apache.olingo:odata-server</bundleDef>
                                 <bundleDef>de.undercouch:bson4jackson:${bson4jackson.orbit.version}</bundleDef>
                             </bundles>
-                            <importFeatures />
+                            <importFeatures/>
                         </configuration>
                     </execution>
                 </executions>
