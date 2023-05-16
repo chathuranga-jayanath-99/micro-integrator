@@ -18,6 +18,7 @@
 
 package org.wso2.micro.integrator.usermgt;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpResponse;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -26,7 +27,6 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import org.wso2.esb.integration.common.utils.ESBIntegrationTest;
 import org.wso2.esb.integration.common.utils.clients.SimpleHttpClient;
-import org.wso2.micro.core.util.StringUtils;
 
 import java.io.IOException;
 import java.util.Arrays;
