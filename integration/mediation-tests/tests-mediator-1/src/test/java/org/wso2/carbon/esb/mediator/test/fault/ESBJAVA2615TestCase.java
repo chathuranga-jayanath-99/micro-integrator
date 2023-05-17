@@ -4,6 +4,7 @@ import org.apache.axis2.AxisFault;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.StringRequestEntity;
+import org.apache.commons.httpclient.params.HttpMethodParams;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -13,6 +14,7 @@ import org.wso2.esb.integration.common.utils.ESBIntegrationTest;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.SocketTimeoutException;
 
 public class ESBJAVA2615TestCase extends ESBIntegrationTest {
 
@@ -51,11 +53,22 @@ public class ESBJAVA2615TestCase extends ESBIntegrationTest {
         try {
             HttpClient httpclient = new HttpClient();
             PostMethod post = new PostMethod(proxyLocation);
+            int timeout = 5 * 1000;
+            post.getParams().setParameter(HttpMethodParams.SO_TIMEOUT, timeout);
 
             post.setRequestEntity(new StringRequestEntity(xml));
             post.setRequestHeader("Content-type", "text/xml; charset=ISO-8859-1");
             post.setRequestHeader("SOAPAction", "urn:mediate");
-            httpclient.executeMethod(post);
+            try {
+                httpclient.executeMethod(post);
+            } catch (SocketTimeoutException e) {
+                // The test utilizes a simulated defective backend. The specific backend intentionally returns an
+                // invalid protocol version in its response. Consequently, the endpoint will be marked as suspended by
+                // MI and an attempt to reconnect will be made after a delay of 30 seconds. Given that we have
+                // configured our httpClient with a timeout of 5 seconds,
+                // it is expected to encounter a SocketTimeoutException.
+                return "";
+            }
 
             InputStream in = post.getResponseBodyAsStream();
 
