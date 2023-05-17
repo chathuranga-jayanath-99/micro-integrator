@@ -62,7 +62,11 @@ public class ESBJAVA2615TestCase extends ESBIntegrationTest {
             try {
                 httpclient.executeMethod(post);
             } catch (SocketTimeoutException e) {
-                // This is an expected exception
+                // The test utilizes a simulated defective backend. The specific backend intentionally returns an
+                // invalid protocol version in its response. Consequently, the endpoint will be marked as suspended by
+                // MI and an attempt to reconnect will be made after a delay of 30 seconds. Given that we have
+                // configured our httpClient with a timeout of 5 seconds,
+                // it is expected to encounter a SocketTimeoutException.
                 return "";
             }
 
