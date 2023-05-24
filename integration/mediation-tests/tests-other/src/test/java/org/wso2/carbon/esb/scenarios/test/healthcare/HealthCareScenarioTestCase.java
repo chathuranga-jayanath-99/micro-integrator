@@ -25,11 +25,6 @@ public class HealthCareScenarioTestCase extends ESBIntegrationTest {
     @BeforeClass(alwaysRun = true)
     public void init() throws Exception {
         super.init();
-        axis2Server1 = new SampleAxis2Server("test_axis2_server_9009.xml");
-        axis2Server1.start();
-        axis2Server1.deployService("geows");
-        axis2Server1.deployService("hcfacilitylocator");
-        axis2Server1.deployService("hcinformationservice");
     }
 
     @SetEnvironment(executionEnvironments = { ExecutionEnvironment.STANDALONE })
@@ -77,7 +72,6 @@ public class HealthCareScenarioTestCase extends ESBIntegrationTest {
     @AfterClass(alwaysRun = true)
     public void destroy() throws Exception {
         a2Client = null;
-        axis2Server1.stop();
         super.cleanup();
     }
 }
