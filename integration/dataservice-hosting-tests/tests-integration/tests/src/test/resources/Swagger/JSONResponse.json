@@ -9,8 +9,7 @@
       "parameters": [
         {
           "schema": {
-            "type": "string",
-            "example": null
+            "type": "string"
           },
           "in": "path",
           "name": "productCode",
@@ -18,8 +17,7 @@
         },
         {
           "schema": {
-            "type": "string",
-            "example": null
+            "type": "string"
           },
           "in": "query",
           "name": "productName",
@@ -41,33 +39,25 @@
                   "type": "object",
                   "properties": {
                     "productLine": {
-                      "type": "string",
-                      "example": null
+                      "type": "string"
                     },
                     "quantityInStock": {
                       "format": "int32",
-                      "type": "integer",
-                      "example": null
+                      "type": "integer"
                     },
                     "buyPrice": {
-                      "type": "number",
-                      "example": null
+                      "type": "number"
                     },
                     "productCode": {
-                      "type": "string",
-                      "example": null
+                      "type": "string"
                     },
                     "productName": {
-                      "type": "string",
-                      "example": null
+                      "type": "string"
                     }
-                  },
-                  "example": null
+                  }
                 }
-              },
-              "example": null
-            },
-            "example": null
+              }
+            }
           }
         },
         "required": false
@@ -90,33 +80,25 @@
                   "type": "object",
                   "properties": {
                     "productLine": {
-                      "type": "string",
-                      "example": null
+                      "type": "string"
                     },
                     "quantityInStock": {
                       "format": "int32",
-                      "type": "integer",
-                      "example": null
+                      "type": "integer"
                     },
                     "buyPrice": {
-                      "type": "number",
-                      "example": null
+                      "type": "number"
                     },
                     "productCode": {
-                      "type": "string",
-                      "example": null
+                      "type": "string"
                     },
                     "productName": {
-                      "type": "string",
-                      "example": null
+                      "type": "string"
                     }
-                  },
-                  "example": null
+                  }
                 }
-              },
-              "example": null
-            },
-            "example": null
+              }
+            }
           }
         },
         "required": false
@@ -138,8 +120,7 @@
       "parameters": [
         {
           "schema": {
-            "type": "string",
-            "example": null
+            "type": "string"
           },
           "in": "path",
           "name": "productCode",
@@ -156,8 +137,7 @@
       "parameters": [
         {
           "schema": {
-            "type": "string",
-            "example": null
+            "type": "string"
           },
           "in": "path",
           "name": "productCode",
@@ -176,8 +156,7 @@
       "parameters": [
         {
           "schema": {
-            "type": "string",
-            "example": null
+            "type": "string"
           },
           "in": "path",
           "name": "productCode",
@@ -185,8 +164,7 @@
         },
         {
           "schema": {
-            "type": "string",
-            "example": null
+            "type": "string"
           },
           "in": "path",
           "name": "productName",
