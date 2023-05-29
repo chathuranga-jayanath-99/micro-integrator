@@ -1644,7 +1644,7 @@
         <carbon.registry.imp.pkg.version>0.0.0</carbon.registry.imp.pkg.version> <!-- todo remove this and use {carbon.kernel.imp.pkg.version} after registry bundles are corrected to export correct versions-->
 
         <mongo-java-driver.orbit.version>3.5.0</mongo-java-driver.orbit.version>
-        <mongo-java-driver.orbit.imp.pkg.version>[3.4.1,4.0.0)</mongo-java-driver.orbit.imp.pkg.version> <!--todo change this to appropriate version range ([2.11.4.wso2v1,2.12.0)) after osgi bundle is corrected - rajith-->
+        <mongo-java-driver.orbit.imp.pkg.version>[3.4.1,5.0.0)</mongo-java-driver.orbit.imp.pkg.version> <!--todo change this to appropriate version range ([2.11.4.wso2v1,2.12.0)) after osgi bundle is corrected - rajith-->
 
         <jongo.orbit.version>1.4.0.wso2v1</jongo.orbit.version>
         <jongo.orbit.imp.pkg.version>[1.4,1.5)</jongo.orbit.imp.pkg.version>
