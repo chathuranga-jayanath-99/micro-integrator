@@ -828,7 +828,7 @@ public class DataServiceDocLitWrappedSchemaGenerator {
     private static void addElementToComplexTypeAll(CommonParams cparams,
                                                         XmlSchemaComplexType complexType, String complexTypeNS,
                                                         XmlSchemaElement element, boolean elementRef,
-												   		boolean isArrayElement, boolean optional) {
+                                                        boolean isArrayElement, boolean optional) {
         XmlSchemaParticle particle = complexType.getParticle();
         XmlSchemaAll sequence;
         if (particle instanceof XmlSchemaAll) {
