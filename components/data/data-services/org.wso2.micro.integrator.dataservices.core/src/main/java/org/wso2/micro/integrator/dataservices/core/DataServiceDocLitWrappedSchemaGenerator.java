@@ -464,19 +464,23 @@ public class DataServiceDocLitWrappedSchemaGenerator {
 					elementGroup.getNamespace(), elementGroup.getName());
 			if (tmpElement != null) {
 				if (elementGroup.getArrayName() == null) {
-                    addToElement(cparams, activeElement, tmpElement, true, false, elementGroup.isOptional());
+                    addToElement(cparams, activeElement, tmpElement, true, false,
+							elementGroup.isOptional());
                 } else {
-                    addToElement(cparams, activeElement, tmpElement, true, true, elementGroup.isOptional());
+                    addToElement(cparams, activeElement, tmpElement, true, true,
+							elementGroup.isOptional());
                 }
                 /* element group already exists, nothing else to do here .. */
                 return;
 			}
 			if (elementGroup.getArrayName() != null) {
                 activeElement = createAndAddToElement(cparams, activeElement,
-                    elementGroup.getName(), elementGroup.getNamespace(), true, true, elementGroup.isOptional());
+                    elementGroup.getName(), elementGroup.getNamespace(), true, true,
+						elementGroup.isOptional());
             } else {
                activeElement = createAndAddToElement(cparams, activeElement,
-                    elementGroup.getName(), elementGroup.getNamespace(), true, false, elementGroup.isOptional());
+                    elementGroup.getName(), elementGroup.getNamespace(), true, false,
+					   elementGroup.isOptional());
             }
 			/* Setting boundaries for array elements */
             if (elementGroup.getArrayName() != null) {
@@ -823,8 +827,8 @@ public class DataServiceDocLitWrappedSchemaGenerator {
      */
     private static void addElementToComplexTypeAll(CommonParams cparams,
                                                         XmlSchemaComplexType complexType, String complexTypeNS,
-                                                        XmlSchemaElement element, boolean elementRef, boolean isArrayElement,
-                                                        boolean optional) {
+                                                        XmlSchemaElement element, boolean elementRef,
+                                                        boolean isArrayElement, boolean optional) {
         XmlSchemaParticle particle = complexType.getParticle();
         XmlSchemaAll sequence;
         if (particle instanceof XmlSchemaAll) {
