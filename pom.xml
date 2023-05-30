@@ -1871,6 +1871,7 @@
         <grpc-context.orbit.version>1.27.2.wso2v1</grpc-context.orbit.version>
         <opencensus.orbit.version>0.30.0.wso2v1</opencensus.orbit.version>
         <org.wso2.micro.integrator.core.version>[4.2.0,4.3.0)</org.wso2.micro.integrator.core.version>
+        <package.version>4.2.0</package.version>
     <project.scm.id>wso2-scm-server</project.scm.id></properties>
 
     <repositories>
