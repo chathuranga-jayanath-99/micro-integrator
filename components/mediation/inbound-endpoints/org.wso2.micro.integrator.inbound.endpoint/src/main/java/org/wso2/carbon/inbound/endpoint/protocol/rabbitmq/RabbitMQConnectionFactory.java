@@ -214,6 +214,9 @@ public class RabbitMQConnectionFactory {
         Connection connection = null;
         try {
             connection = RabbitMQUtils.createConnection(connectionFactory, addresses);
+            if (connection == null) {
+                throw new IOException("[" + name + "] Error occurred while creating connection.");
+            }
             log.info("[" + name + "] Successfully connected to RabbitMQ Broker");
         } catch (IOException e) {
             log.error("[" + name + "] Error creating connection to RabbitMQ Broker. " +
