@@ -215,10 +215,10 @@ public class RabbitMQConnectionFactory {
         try {
             connection = RabbitMQUtils.createConnection(connectionFactory, addresses);
             if (connection == null) {
-                throw new IOException("[" + name + "] Error occurred while creating connection.");
+                throw new RabbitMQException("[" + name + "] Could not connect to RabbitMQ Broker.");
             }
             log.info("[" + name + "] Successfully connected to RabbitMQ Broker");
-        } catch (IOException e) {
+        } catch (IOException | RabbitMQException e) {
             log.error("[" + name + "] Error creating connection to RabbitMQ Broker. " +
                       "Reattempting to connect.", e);
             connection = retry();
