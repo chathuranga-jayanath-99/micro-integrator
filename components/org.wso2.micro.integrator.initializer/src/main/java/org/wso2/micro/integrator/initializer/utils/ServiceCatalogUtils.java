@@ -755,20 +755,41 @@ public class ServiceCatalogUtils {
             try {
                 FileUtils.forceDelete(serviceCatalogFolder);
             } catch (IOException e) {
-                log.error("Error occurred while removing temporary directories", e);
+                log.error("Error occurred while removing service catalog folder: " + serviceCatalogFolder.getPath(), e);
             }
         }
-        boolean created = serviceCatalogFolder.mkdir();
-        if (!created) {
-            log.error("Could not create temporary directories required for service catalog");
+
+        boolean created;
+        try {
+            created = serviceCatalogFolder.mkdir();
+            if (!created) {
+                log.error("Could not create temporary directories required for service catalog in: "
+                        + serviceCatalogFolder.getPath());
+                return false;
+            }
+        } catch (Exception e) {
+            log.error("Could not create temporary directories required for service catalog due to an error: "
+                    + e.getMessage(), e);
             return false;
         }
 
         File tempDir = new File(folderPath, TEMP_FOLDER_NAME);
         if (tempDir.exists()) {
-            tempDir.delete();
+            try {
+                tempDir.delete();
+            } catch (Exception e) {
+                log.error("Error occurred while removing temporary directory in " + tempDir.getPath(), e);
+                return false;
+            }
         }
-        created = tempDir.mkdir();
+
+        try {
+            created = tempDir.mkdir();
+        } catch (Exception e) {
+            log.error("Could not create temporary directory in " + tempDir.getPath() + " due to an error: "
+                    + e.getMessage(), e);
+            return false;
+        }
         if (!created) {
             log.error("Could not create temporary directories required for service catalog");
         }
@@ -913,7 +934,7 @@ public class ServiceCatalogUtils {
                 log.warn("Invalid Service Catalog Executor Thread count. Setting to default " + def);
                 return def;
             }
-            return threads ;
+            return threads;
         }
         if (log.isDebugEnabled()) {
             log.debug("Service Catalog Executor Thread count is not defined. Setting to default " + def);

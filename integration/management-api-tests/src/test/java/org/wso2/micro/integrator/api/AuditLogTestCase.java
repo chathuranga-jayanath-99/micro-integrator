@@ -265,22 +265,35 @@ public class AuditLogTestCase extends ESBIntegrationTest {
             Awaitility.await().pollInterval(50, TimeUnit.MILLISECONDS).atMost(DEFAULT_TIMEOUT, TimeUnit.SECONDS).
                     until(isManagementApiAvailable());
         }
+        // Deploy hello-worldCompositeExporter_1.0.0.car to test cAppRemoval
+        File file = new File(TestConfigurationProvider.getResourceLocation(ESBTestConstant.ESB_PRODUCT_GROUP)
+                + "/capp/hello-worldCompositeExporter_1.0.0.car");
+        deployCarbonApplication(file, getHeaderMap());
+
+        Assert.assertTrue(carbonLogReader.checkForLog("{\"performedBy\":\"admin\",\"action\":\"created\"," +
+                "\"type\":\"carbon_application\",\"info\":" +
+                "\"{\\\"cAppFileName\\\":\\\"hello-worldCompositeExporter_1.0.0.car\\\"}\"}", 120));
+
         String endpoint = "https://" + hostName + ":" + (DEFAULT_INTERNAL_API_HTTPS_PORT + portOffset) + "/management/"
-                          + "applications/esb-artifacts-car_1.0.0";
+                          + "applications/hello-worldCompositeExporter_1.0.0";
+
+
         SimpleHttpClient client = new SimpleHttpClient();
         HttpResponse response = client.doDelete(endpoint, getHeaderMap());
         Assert.assertEquals(200, response.getStatusLine().getStatusCode(), "Invalid response status " +
                                                                            response.getStatusLine().getStatusCode() +
                                                                            " returned. Expected status code is 200");
+
         boolean flag = carbonLogReader.checkForLog("{\"performedBy\":\"admin\",\"action\":\"deleted\",\"type\":" +
-                "\"carbon_application\",\"info\":\"{\\\"cAppFileName\\\":\\\"esb-artifacts-car_1.0.0\\\"}\"}",
+                        "\"carbon_application\",\"info\":" +
+                        "\"{\\\"cAppFileName\\\":\\\"hello-worldCompositeExporter_1.0.0\\\"}\"}",
                 120);
         // This if block is added to see whether adding a long sleep resolves some of the intermittent test failures.
         if (!flag) {
             Thread.sleep(30000);
             flag = carbonLogReader.checkForLog("{\"performedBy\":\"admin\",\"action\":\"deleted\",\"type\":" +
-                    "\"carbon_application\",\"info\":\"{\\\"cAppFileName\\\":\\\"esb-artifacts-car_1.0.0\\\"}\"}",
-                    120);
+                    "\"carbon_application\",\"info\":" +
+                            "\"{\\\"cAppFileName\\\":\\\"hello-worldCompositeExporter_1.0.0\\\"}\"}", 120);
         }
         Assert.assertTrue(flag);
     }
