@@ -64,10 +64,10 @@ public class SwaggerGenerator {
      */
     protected void updateResponse(CarbonHttpResponse response, String responseString, String contentType)
             throws AxisFault {
-        String UpdatesResponseString = getOpenAPIJsonString(responseString, contentType);
+        String updatesResponseString = getOpenAPIJsonString(responseString, contentType);
         try {
-            assert UpdatesResponseString != null;
-            byte[] responseStringBytes = UpdatesResponseString.getBytes(SwaggerConstants.DEFAULT_ENCODING);
+            assert updatesResponseString != null;
+            byte[] responseStringBytes = updatesResponseString.getBytes(SwaggerConstants.DEFAULT_ENCODING);
             ((BlobOutputStream) response.getOutputStream()).getBlob()
                     .readFrom(new ByteArrayInputStream(responseStringBytes), responseStringBytes.length);
         } catch (StreamCopyException streamCopyException) {
@@ -108,15 +108,12 @@ public class SwaggerGenerator {
             if (contentType.contains(SwaggerConstants.CONTENT_TYPE_JSON)) {
                 return updatedResponseString;
             }
-            else {
-                JsonNode jsonNodeTree = new ObjectMapper().readTree(updatedResponseString);
-                return Yaml.mapper().writeValueAsString(jsonNodeTree);
-            }
+            JsonNode jsonNodeTree = new ObjectMapper().readTree(updatedResponseString);
+            return Yaml.mapper().writeValueAsString(jsonNodeTree);
         } catch (JsonProcessingException e) {
             log.error("Error while generating Swagger JSON from model", e);
             return null;
         }
-
     }
 
     /**
