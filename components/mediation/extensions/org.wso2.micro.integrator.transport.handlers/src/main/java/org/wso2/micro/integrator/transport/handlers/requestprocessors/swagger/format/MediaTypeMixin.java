@@ -18,17 +18,21 @@
 package org.wso2.micro.integrator.transport.handlers.requestprocessors.swagger.format;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 public abstract class MediaTypeMixin {
     public MediaTypeMixin() {
 
     }
 
-    @JsonIgnore
-    public abstract void setExample(Object example);
-
-    @JsonIgnore
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public abstract Object getExample();
+
+    public void setExample(Object example) {
+        if (example != null) {
+            setExampleSetFlag(true);
+        }
+    }
 
     @JsonIgnore
     public abstract void setExampleSetFlag(boolean exampleSetFlag);
