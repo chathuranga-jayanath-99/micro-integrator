@@ -19,7 +19,7 @@
     <parent>
         <artifactId>tasks</artifactId>
         <groupId>org.wso2.ei</groupId>
-        <version>4.2.0.14</version>
+        <version>4.2.0.15-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
