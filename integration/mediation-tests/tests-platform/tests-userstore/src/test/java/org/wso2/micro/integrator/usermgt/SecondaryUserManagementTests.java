@@ -26,7 +26,6 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import org.wso2.esb.integration.common.utils.ESBIntegrationTest;
 import org.wso2.esb.integration.common.utils.clients.SimpleHttpClient;
-import org.wso2.micro.core.util.StringUtils;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -257,7 +256,7 @@ public class SecondaryUserManagementTests extends ESBIntegrationTest {
         headers.put("Accept", "application/json");
 
         String endpoint = userResource + "/" + user;
-        if (!StringUtils.isEmpty(domain)) {
+        if (!(domain == null || domain.length() == 0)) {
             endpoint = endpoint.concat("?domain=" + domain);
         }
         return client.doGet(endpoint, headers);
@@ -314,7 +313,7 @@ public class SecondaryUserManagementTests extends ESBIntegrationTest {
 
         JSONObject payloadJson = new JSONObject(payload);
 
-        if (!StringUtils.isEmpty(domain) && !domain.equalsIgnoreCase(PRIMARY_DOMAIN)) {
+        if (!(domain == null || domain.length() == 0) && !domain.equalsIgnoreCase(PRIMARY_DOMAIN)) {
             user = domain.concat("/" + user);
         }
 
