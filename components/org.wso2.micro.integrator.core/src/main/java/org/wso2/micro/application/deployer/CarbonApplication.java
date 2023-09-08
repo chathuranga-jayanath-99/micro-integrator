@@ -31,7 +31,6 @@ public class CarbonApplication {
     private String appFilePath;
     private String appVersion;
     private boolean deploymentCompleted;
-    private String mainSequence;
 
     private ApplicationConfiguration appConfig;
 
@@ -100,14 +99,6 @@ public class CarbonApplication {
 
     public void setDeploymentCompleted(boolean deploymentCompleted) {
         this.deploymentCompleted = deploymentCompleted;
-    }
-
-    public String getMainSequence() {
-        return mainSequence;
-    }
-
-    public void setMainSequence(String mainSequence) {
-        this.mainSequence = mainSequence;
     }
 }
 
