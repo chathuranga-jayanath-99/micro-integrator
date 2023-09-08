@@ -28,8 +28,6 @@ public class Artifact {
     public static final String NAME = "name";
     public static final String TYPE = "type";
     public static final String VERSION = "version";
-
-    public static final String MAIN_SEQUENCE = "mainSequence";
     public static final String ARTIFACT_XML = "artifact.xml";
     public static final String REG_INFO_XML = "registry-info.xml";
 
@@ -49,7 +47,6 @@ public class Artifact {
     private String extractedPath;
     private String runtimeObjectName;
     private String deploymentStatus;
-    private String mainSequence;
 
     private List<Dependency> dependencies;
     private List<Artifact> subArtifacts;
@@ -156,14 +153,6 @@ public class Artifact {
 
     public void setDeploymentStatus(String deploymentStatus) {
         this.deploymentStatus = deploymentStatus;
-    }
-
-    public String getMainSequence() {
-        return mainSequence;
-    }
-
-    public void setMainSequence(String mainSequence) {
-        this.mainSequence = mainSequence;
     }
 
     public static class Dependency {

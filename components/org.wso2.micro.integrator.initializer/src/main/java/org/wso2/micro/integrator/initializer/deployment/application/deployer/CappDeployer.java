@@ -279,10 +279,6 @@ public class CappDeployer extends AbstractDeployer {
         if (appVersion != null && !("").equals(appVersion)) {
             carbonApplication.setAppVersion(appVersion);
         }
-        String mainSeq = appConfig.getMainSequence();
-        if (mainSeq != null && !("").equals(mainSeq)) {
-            carbonApplication.setMainSequence(mainSeq);
-        }
         return carbonApplication;
     }
 
@@ -343,15 +339,6 @@ public class CappDeployer extends AbstractDeployer {
      */
     public static List<CarbonApplication> getCarbonApps() {
         return Collections.unmodifiableList(cAppMap);
-    }
-
-    public static CarbonApplication getCarbonAppByName(String cAppName) {
-        for (CarbonApplication capp : cAppMap) {
-            if (cAppName.equals(capp.getAppName())) {
-                return capp;
-            }
-        }
-        return null;
     }
 
     /**
