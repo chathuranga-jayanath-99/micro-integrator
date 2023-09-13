@@ -319,7 +319,7 @@ public class SMB2FileTransferResumingTestCaseAfterSambaServerRestart2Steps exten
     @AfterClass(alwaysRun = true)
     public void stopServer() throws Exception {
         super.cleanup();
-        serverConfigurationManager.restoreToLastConfiguration();
+        serverConfigurationManager.restoreToLastMIConfiguration(false);
         Utils.startSambaServer();
     }
 }

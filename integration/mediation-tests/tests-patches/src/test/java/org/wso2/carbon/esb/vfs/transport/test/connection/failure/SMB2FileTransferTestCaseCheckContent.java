@@ -273,7 +273,7 @@ public class SMB2FileTransferTestCaseCheckContent extends ESBIntegrationTest {
     @AfterClass(alwaysRun = true)
     public void stopServer() throws Exception {
         super.cleanup();
-        serverConfigurationManager.restoreToLastConfiguration();
+        serverConfigurationManager.restoreToLastMIConfiguration(false);
         Utils.startSambaServer();
     }
 
