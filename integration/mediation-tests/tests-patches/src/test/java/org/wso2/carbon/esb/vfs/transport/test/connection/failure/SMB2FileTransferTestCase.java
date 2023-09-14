@@ -232,7 +232,7 @@ public class SMB2FileTransferTestCase extends ESBIntegrationTest {
     @AfterClass(alwaysRun = true)
     public void stopServer() throws Exception {
         super.cleanup();
-        serverConfigurationManager.restoreToLastMIConfiguration(false);
+        serverConfigurationManager.stopAndRestoreToLastMIConfiguration();
         Utils.startSambaServer();
     }
 }

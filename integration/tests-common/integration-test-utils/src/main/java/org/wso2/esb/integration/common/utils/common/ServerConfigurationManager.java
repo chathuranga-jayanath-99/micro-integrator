@@ -244,34 +244,32 @@ public class ServerConfigurationManager {
     }
 
     /**
-     * restore to a last configuration and restart the server if required.
-     *
-     * @param isServerStartupRequired whether server startup is needed
+     * restore to a last configuration and restart the server
      */
-    public void restoreToLastMIConfiguration(boolean isServerStartupRequired) throws IOException, AutomationUtilException {
+    public void restoreToLastMIConfiguration() throws IOException, AutomationUtilException {
+        // shut down the server before applying configs to avoid file lock issues.
+        stopAndRestoreToLastMIConfiguration();
+
+        CarbonServerExtension.startServer();
+    }
+
+    /**
+     * Stop the server and restore to the last configuration.
+     */
+    public void stopAndRestoreToLastMIConfiguration() throws IOException {
 
         // shut down the server before applying configs to avoid file lock issues.
         CarbonServerExtension.shutdownServer();
 
         for (ConfigData data : configData) {
             Files.move(data.getBackupConfig().toPath(), data.getOriginalConfig().toPath(),
-                       StandardCopyOption.REPLACE_EXISTING);
+                    StandardCopyOption.REPLACE_EXISTING);
 
             if (data.getBackupConfig().exists()) {
                 throw new IOException(
                         "File rename from " + data.getBackupConfig() + "to " + data.getOriginalConfig() + "fails");
             }
         }
-        if (isServerStartupRequired) {
-            CarbonServerExtension.startServer();
-        }
-    }
-
-    /**
-     * restore to a last configuration and restart the server.
-     */
-    public void restoreToLastMIConfiguration() throws IOException, AutomationUtilException {
-        restoreToLastMIConfiguration(true);
     }
 
     /**

@@ -308,7 +308,7 @@ public class SMB2ConnectionGrowthTestCaseAfterConnectingToNEShare extends ESBInt
     @AfterClass(alwaysRun = true)
     public void stopServer() throws Exception {
         super.cleanup();
-        serverConfigurationManager.restoreToLastMIConfiguration(false);
+        serverConfigurationManager.stopAndRestoreToLastMIConfiguration();
         Utils.startSambaServer();
     }
 }
