@@ -342,7 +342,7 @@ public class SMB2FileTransferResumingTestCaseWithMultipleProxyAfterConResetNServ
     @AfterClass(alwaysRun = true)
     public void stopServer() throws Exception {
         super.cleanup();
-        serverConfigurationManager.restoreToLastConfiguration();
+        serverConfigurationManager.stopAndRestoreToLastMIConfiguration();
         Utils.startSambaServer();
     }
 }

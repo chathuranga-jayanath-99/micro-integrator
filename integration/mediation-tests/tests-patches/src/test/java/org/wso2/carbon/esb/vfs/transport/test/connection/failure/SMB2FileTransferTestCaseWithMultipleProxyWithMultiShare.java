@@ -246,7 +246,7 @@ public class SMB2FileTransferTestCaseWithMultipleProxyWithMultiShare extends ESB
     @AfterClass(alwaysRun = true)
     public void stopServer() throws Exception {
         super.cleanup();
-        serverConfigurationManager.restoreToLastConfiguration();
+        serverConfigurationManager.stopAndRestoreToLastMIConfiguration();
         Utils.startSambaServer();
     }
 }
