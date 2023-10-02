@@ -554,9 +554,9 @@
                 <scope>provided</scope>
             </dependency>
             <dependency>
-                <groupId>org.wso2.orbit.org.yaml</groupId>
+                <groupId>org.yaml</groupId>
                 <artifactId>snakeyaml</artifactId>
-                <version>${orbit.version.snakeyaml}</version>
+                <version>${snakeyaml.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.minidev</groupId>
@@ -1658,7 +1658,6 @@
         <org.wso2.orbit.sun.xml.ws.version>2.3.2.wso2v1</org.wso2.orbit.sun.xml.ws.version>
         <apache.felix.scr.ds.annotations.version>1.2.4</apache.felix.scr.ds.annotations.version>
         <org.wso2.carbon.caching.core.version>4.2.0</org.wso2.carbon.caching.core.version>
-        <orbit.version.snakeyaml>2.2.0.wso2v1</orbit.version.snakeyaml>
         <json.smart.version>2.4.7</json.smart.version>
         <google.guava.version>31.0.1-jre</google.guava.version>
         <ca.uhn.hapi.wso2.version>2.1.0.wso2v1</ca.uhn.hapi.wso2.version>
@@ -1679,7 +1678,7 @@
         <javax.xml.parsers.import.pkg.version>[0.0.0, 1.0.0)</javax.xml.parsers.import.pkg.version>
         <imp.pkg.version.javax.servlet>[2.6.0, 3.0.0)</imp.pkg.version.javax.servlet>
         <import.package.version.commons.logging>[1.2.0,2.0.0)</import.package.version.commons.logging>
-        <orbit.snakeyaml.import.version.range>[1.16.0.wso2v1,3.0.0)</orbit.snakeyaml.import.version.range>
+        <snakeyaml.import.version.range>[2.0.0,3.0.0)</snakeyaml.import.version.range>
         <axiom.osgi.version.range>[1.2.11, 1.3.0)</axiom.osgi.version.range>
         <imp.package.version.osgi.services>[1.2.0,2.0.0)</imp.package.version.osgi.services>
 
