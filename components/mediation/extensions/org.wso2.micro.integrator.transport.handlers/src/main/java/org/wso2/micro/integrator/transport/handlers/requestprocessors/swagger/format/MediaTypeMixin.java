@@ -19,6 +19,9 @@ package org.wso2.micro.integrator.transport.handlers.requestprocessors.swagger.f
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.swagger.v3.oas.models.parameters.Parameter;
+
+import java.util.Set;
 
 public abstract class MediaTypeMixin {
     public MediaTypeMixin() {
@@ -29,12 +32,35 @@ public abstract class MediaTypeMixin {
     public abstract Object getExample();
 
     public void setExample(Object example) {
-        setExampleSetFlag(example != null);
+        if (example != null) {
+            setExampleSetFlag(true);
+        }
     }
+
+    @JsonIgnore
+    abstract boolean getExampleSetFlag();
 
     @JsonIgnore
     public abstract void setExampleSetFlag(boolean exampleSetFlag);
 
+    public abstract String getType();
+
     @JsonIgnore
-    abstract boolean getExampleSetFlag();
+    public abstract Set<String> getTypes();
+
+    @JsonIgnore
+    public boolean shouldIgnoreTypes() {
+        return getType() != null;
+    }
+
+    @JsonIgnore
+    public boolean shouldSerializeTypes() {
+        return getTypes() != null && !shouldIgnoreTypes();
+    }
+
+    @JsonIgnore
+    public abstract Parameter.StyleEnum getStyle();
+
+    @JsonIgnore
+    public abstract void setStyle(Parameter.StyleEnum style);
 }
