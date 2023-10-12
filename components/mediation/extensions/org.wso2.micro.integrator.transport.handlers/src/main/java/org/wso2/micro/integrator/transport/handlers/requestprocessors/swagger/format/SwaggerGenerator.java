@@ -66,7 +66,11 @@ public class SwaggerGenerator {
             AxisFault {
         String updatesResponseString = getOpenAPIJsonString(responseString, contentType);
         try {
-            assert updatesResponseString != null;
+            if (updatesResponseString == null) {
+                // Parsing to OpenAPI model failed. Return the original response.
+                // This can happen when user save a custom swagger in registry.
+                updatesResponseString = responseString;
+            }
             byte[] responseStringBytes = updatesResponseString.getBytes(SwaggerConstants.DEFAULT_ENCODING);
             ((BlobOutputStream) response.getOutputStream()).getBlob()
                     .readFrom(new ByteArrayInputStream(responseStringBytes), responseStringBytes.length);
