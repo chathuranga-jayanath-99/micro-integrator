@@ -56,7 +56,8 @@
             <class name="org.wso2.carbon.esb.mediators.callout.CARBON15119DuplicateSOAPActionHeader"/>
             <class name="org.wso2.carbon.esb.mediators.callout.ESBJAVA_4118_SOAPHeaderHandlingTest"/>
             <class name="org.wso2.carbon.esb.mediators.callout.ESBJAVA_4239_HTTP_SC_HandlingTests"/>
-            <class name="org.wso2.carbon.esb.mediators.callout.ESBJAVA_4239_AccessHTTPSCAfterCallout"/>
+            <!--            Temporarily commenting this testcase out due to Mocky unavailability -->
+            <!--            <class name="org.wso2.carbon.esb.mediators.callout.ESBJAVA_4239_AccessHTTPSCAfterCallout"/>-->
             <class name="org.wso2.carbon.esb.mediators.payloadFactory.ESBJAVA3573PayloadFormatWithBeginHtmlTagArgument"/>
             <class name="org.wso2.carbon.esb.mediators.payloadFactory.JSONPayloadXMLSpecialCharEscapeTest"/>
             <class name="org.wso2.carbon.esb.mediators.clone.ESBJAVA4913HandleExceptionTest"/>
