@@ -1256,21 +1256,6 @@
                 <version>${swagger.parser.orbit.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.swagger</groupId>
-                <artifactId>swagger-core</artifactId>
-                <version>${swagger.core.v2.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.swagger</groupId>
-                <artifactId>swagger-models</artifactId>
-                <version>${swagger.core.v2.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.swagger</groupId>
-                <artifactId>swagger-annotations</artifactId>
-                <version>${swagger.core.v2.version}</version>
-            </dependency>
-            <dependency>
                 <groupId>com.fasterxml.jackson.dataformat</groupId>
                 <artifactId>jackson-dataformat-yaml</artifactId>
                 <version>${fasterxml.jackson.version}</version>
@@ -1463,7 +1448,7 @@
         <carbon.kernel.imp.pkg.version>[4.5.0,5.0.0)</carbon.kernel.imp.pkg.version>
         <version.jaxb.api>2.4.0-b180830.0359</version.jaxb.api>
 
-        <synapse.version>2.1.7-wso2v271.33</synapse.version>
+        <synapse.version>2.1.7-wso2v271.41</synapse.version>
         <imp.pkg.version.synapse>[2.1.7, 2.1.8)</imp.pkg.version.synapse>
         <carbon.mediation.version>4.7.131.7</carbon.mediation.version>
         <carbon.crypto.version>1.1.3</carbon.crypto.version>
@@ -1578,7 +1563,7 @@
         <apache.felix.scr.ds.annotations.version>1.2.4</apache.felix.scr.ds.annotations.version>
         <org.wso2.carbon.caching.core.version>4.2.0</org.wso2.carbon.caching.core.version>
         <json.smart.version>2.4.7</json.smart.version>
-        <google.guava.version>31.0.1-jre</google.guava.version>
+        <google.guava.version>32.1.3-jre</google.guava.version>
         <ca.uhn.hapi.wso2.version>2.1.0.wso2v1</ca.uhn.hapi.wso2.version>
         <junit.version>4.8.2</junit.version>
         <netty.version>4.1.73.Final</netty.version>
@@ -1775,8 +1760,7 @@
         <prometheus.version>0.8.1</prometheus.version>
         <version.equinox.platform>3.14.0</version.equinox.platform>
         <!-- OAS3 Versions -->
-        <swagger.parser.orbit.version>2.0.30.wso2v1</swagger.parser.orbit.version>
-        <swagger.core.v2.version>1.6.5</swagger.core.v2.version>
+        <swagger.parser.orbit.version>2.0.30.wso2v2</swagger.parser.orbit.version>
         <snakeyaml.version>2.2</snakeyaml.version>
         <javax.validation.version>1.1.0.Final</javax.validation.version>
         <version.disruptor>3.4.2</version.disruptor>
