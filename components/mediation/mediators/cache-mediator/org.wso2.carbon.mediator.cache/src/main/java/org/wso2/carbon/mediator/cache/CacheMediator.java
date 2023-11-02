@@ -996,3 +996,4 @@ public class CacheMediator extends AbstractMediator implements ManagedLifecycle,
         isPreviousCacheImplementation = previousCacheImplementation;
     }
 }
+
