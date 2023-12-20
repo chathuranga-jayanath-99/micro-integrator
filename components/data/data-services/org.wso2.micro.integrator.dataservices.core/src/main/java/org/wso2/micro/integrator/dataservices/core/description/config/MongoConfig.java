@@ -24,6 +24,7 @@ import com.mongodb.MongoCredential;
 import com.mongodb.ReadPreference;
 import com.mongodb.ServerAddress;
 import com.mongodb.WriteConcern;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.jongo.Jongo;
@@ -144,10 +145,8 @@ public class MongoConfig extends Config {
                     Integer.parseInt(threadsAllowedToBlockForConnectionMultiplier));
         }
 
-        String sslEnabled = (properties.get(DBConstants.MongoDB.SSL_ENABLED));
-        if (Boolean.parseBoolean(sslEnabled)) {
-            builder.sslEnabled(true);
-        }
+        String sslEnabled = properties.get(DBConstants.MongoDB.SSL_ENABLED);
+        builder.sslEnabled(Boolean.parseBoolean(sslEnabled));
         return builder.build();
     }
 
@@ -175,7 +174,7 @@ public class MongoConfig extends Config {
         String username = properties.get(DBConstants.MongoDB.USERNAME);
         String password = properties.get(DBConstants.MongoDB.PASSWORD);
         String authSource = properties.get(DBConstants.MongoDB.AUTH_SOURCE);
-        if (authSource == null || authSource.isEmpty()) {
+        if (StringUtils.isEmpty(authSource)) {
             // For MONGODB-CR, SCRAM-SHA-1, and SCRAM-SHA-256, PLAIN the default auth source is the database tyring to connect
             // refer: https://docs.mongodb.com/ruby-driver/master/reference/authentication/
             // since database is mandatory, we will not address the case where DB is not defined.
