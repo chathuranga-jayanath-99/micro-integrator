@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2020, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2023, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -24,12 +24,13 @@ import org.apache.synapse.config.SynapseConfiguration;
  * Resource for a retrieving and deleting a single user with the userId provided.
  * <p>
  * Handles resources in the form "management/users/{userId}"
+ * Supports API version 1.1 (URL encoded userIDs)
  */
-public class UserResource extends UserResourceBase implements MiApiResource {
+public class UserResourceV1_1 extends UserResourceBase implements MiApiResource {
 
     @Override
     public boolean invoke(MessageContext messageContext, org.apache.axis2.context.MessageContext axis2MessageContext,
                           SynapseConfiguration synapseConfiguration) {
-        return super.invoke(messageContext, axis2MessageContext, synapseConfiguration, false);
+        return super.invoke(messageContext, axis2MessageContext, synapseConfiguration, true);
     }
 }

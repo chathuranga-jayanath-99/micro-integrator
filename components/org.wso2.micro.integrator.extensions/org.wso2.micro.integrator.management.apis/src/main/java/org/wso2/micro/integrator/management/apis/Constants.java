@@ -24,6 +24,7 @@ import javax.xml.namespace.QName;
 
 public class Constants {
     //Constants for the API resource prefixes
+    public static final String MGT_API_VERSION = "management.api.version";
     public static final String REST_API_CONTEXT = "/management";
     public static final String PREFIX_APIS = "/apis";
     public static final String PREFIX_CARBON_APPS = "/applications";
