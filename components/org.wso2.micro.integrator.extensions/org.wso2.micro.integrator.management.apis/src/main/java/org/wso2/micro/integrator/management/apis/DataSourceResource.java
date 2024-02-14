@@ -70,6 +70,7 @@ public class DataSourceResource implements MiApiResource {
     private static final String VALIDATION_TIMEOUT = "validationQueryTimeout";
     private static final String DATA_SOURCE_CLASS_NAME = "dataSourceClassName";
     private static final String DATA_SOURCE_PROPS = "dataSourceProps";
+    private static final String PASSWORD = "password";
 
     public DataSourceResource() {
 
@@ -232,7 +233,9 @@ public class DataSourceResource implements MiApiResource {
         datasourceInformation.put(DATA_SOURCE_PROPS, dataSourceProps);
         dataSourceProps.put(DATA_SOURCE_CLASS_NAME, rdbmsConfiguration.getDataSourceClassName());
         for (DataSourceProperty dataSourceProp : rdbmsConfiguration.getDataSourceProps()) {
-            dataSourceProps.put(dataSourceProp.getName(), dataSourceProp.getValue());
+            if (!PASSWORD.equals(dataSourceProp.getName())) {
+                dataSourceProps.put(dataSourceProp.getName(), dataSourceProp.getValue());
+            }
         }
     }
 
