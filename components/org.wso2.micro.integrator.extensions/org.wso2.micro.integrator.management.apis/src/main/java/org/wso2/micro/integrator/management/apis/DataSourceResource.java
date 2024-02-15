@@ -199,7 +199,8 @@ public class DataSourceResource implements MiApiResource {
                 DataSource dataSourceObject = (DataSource) dataSource.getDSObject();
                 PoolConfiguration pool = dataSourceObject.getPoolProperties();
 
-                if (isExternalDataSource(pool)) {
+                // Check if the datasource is an external datasource
+                if (pool.getDataSource() != null) {
                     populateExternalDataSourceInfo(dataSourceDefinition, datasourceInformation);
                 } else {
                     datasourceInformation.put(DRIVER, pool.getDriverClassName());
@@ -237,10 +238,5 @@ public class DataSourceResource implements MiApiResource {
                 dataSourceProps.put(dataSourceProp.getName(), dataSourceProp.getValue());
             }
         }
-    }
-
-    private boolean isExternalDataSource(PoolConfiguration pool) {
-
-        return pool.getDataSource() != null;
     }
 }
