@@ -18,9 +18,11 @@
 
 package org.wso2.micro.integrator.management.apis.security.handler;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.synapse.MessageContext;
+import org.apache.synapse.core.axis2.Axis2MessageContext;
 import org.apache.synapse.rest.RESTConstants;
 import org.wso2.carbon.inbound.endpoint.internal.http.api.InternalAPIHandler;
 import org.wso2.micro.core.util.CarbonException;
@@ -79,19 +81,27 @@ public abstract class SecurityHandlerAdapter implements InternalAPIHandler {
     protected boolean needsHandling(MessageContext messageContext) {
 
         String resourcePath = messageContext.getTo().getAddress();
+        String resourceHttpMethod = String.valueOf(((Axis2MessageContext) messageContext).getAxis2MessageContext()
+                .getProperty(Constants.HTTP_METHOD_PROPERTY));
         if (Constants.REST_API_CONTEXT.equals(resourcePath)) {
             LOG.debug("Authentication is skipped for management api root context.");
             return false;
         }
         if (!resources.isEmpty()) {
-            return isMatchingResource(resourcePath, resources);
+            return isMatchingResource(resourcePath, resources, resourceHttpMethod);
         }
-        return isMatchingResource(resourcePath, defaultResources);
+        return isMatchingResource(resourcePath, defaultResources, resourceHttpMethod);
     }
 
-    private boolean isMatchingResource(String resourcePath, List<String> defaultResources) {
+    private boolean isMatchingResource(String resourcePath, List<String> defaultResources, String resourceHttpMethod) {
         for (String resource : defaultResources) {
             if (resourcePath.startsWith(context.concat(resource))) {
+                // PATCH type requests are being skipped for the /users resource to allow users to update passwords.
+                if (resourcePath.startsWith(context.concat(Constants.PREFIX_USERS)) &&
+                        !StringUtils.isBlank(resourceHttpMethod) &&
+                        resourceHttpMethod.equals(Constants.HTTP_METHOD_PATCH)) {
+                    return false;
+                }
                 return true;
             }
         }

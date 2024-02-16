@@ -198,16 +198,13 @@ public class UserResourceBase {
         if (LOG.isDebugEnabled()) {
             LOG.debug("Request received to update user credentials: " + user);
         }
-        String performedBy = Utils.getStringPropertyFromMessageContext(messageContext, USERNAME_PROPERTY);
-        if (Objects.isNull(performedBy)) {
-            LOG.warn(
-                    "Update a user without authenticating/authorizing the request sender. Adding "
-                            + "authentication and authorization handlers is recommended.");
-        }
+
         if (!JsonUtil.hasAJsonPayload(axis2MessageContext)) {
             return Utils.createJsonErrorObject("JSON payload is missing");
         }
         JsonObject payload = Utils.getJsonPayload(axis2MessageContext);
+
+        String performedBy = Utils.getStringPropertyFromMessageContext(messageContext, USERNAME_PROPERTY);
 
         if (payload.has(NEW_PASSWORD) && payload.has(CONFIRM_PASSWORD)) {
             String newPassword = payload.get(NEW_PASSWORD).getAsString();
@@ -215,38 +212,51 @@ public class UserResourceBase {
             String oldPassword = payload.get(OLD_PASSWORD).getAsString();
             if (newPassword.equals(confirmPassword)) {
                 UserStoreManager userStoreManager = Utils.getUserStore(domain);
-                String[] roles = userStoreManager.getRoleListOfUser(user);
                 try {
                     synchronized (this) {
-                        if (user.equals(performedBy)) {
+                        if (StringUtils.isEmpty(performedBy)) {
+                            LOG.warn(
+                                    "Updating a user without authenticating/authorizing the request sender. Adding "
+                                            + "authentication and authorization handlers is recommended.");
                             if (oldPassword == null) {
-                                throw new NullPointerException("The old password cannot be null");
+                                throw new UserStoreException("The current user password cannot be null.");
                             }
                             userStoreManager.updateCredential(user, newPassword, oldPassword);
-                        } else if (ADMIN.equals(performedBy)) {
-                            userStoreManager.updateCredentialByAdmin(user, newPassword);
-                        } else if (!Arrays.asList(roles).contains(ADMIN)) {
-                            userStoreManager.updateCredentialByAdmin(user, newPassword);
                         } else {
-                            throw new UserStoreException(
-                                    "Only super admin user can update the credentials of other admins");
+                            String[] userRoles = userStoreManager.getRoleListOfUser(user);
+                            String[] performerRoles = userStoreManager.getRoleListOfUser(user);
+                            if (user.equals(performedBy)) {
+                                if (oldPassword == null) {
+                                    throw new UserStoreException("The current user password cannot be null.");
+                                }
+                                userStoreManager.updateCredential(user, newPassword, oldPassword);
+                            } else if (ADMIN.equals(performedBy)) {
+                                userStoreManager.updateCredentialByAdmin(user, newPassword);
+                            } else if (Arrays.asList(performerRoles).contains(ADMIN) &&
+                                    !Arrays.asList(userRoles).contains(ADMIN)) {
+                                userStoreManager.updateCredentialByAdmin(user, newPassword);
+                            } else if (Arrays.asList(performerRoles).contains(ADMIN) &&
+                                    Arrays.asList(userRoles).contains(ADMIN)) {
+                                throw new UserStoreException(
+                                        "Only a super admin user can update the credentials of another admin.");
+                            } else {
+                                throw new UserStoreException("Only your own credentials can be updated by a user.");
+                            }
                         }
                     }
                 } catch (UserStoreException e) {
-                    throw new UserStoreException("Error occurred while updating the credentials of the user : " + user,
-                            e);
+                    throw new UserStoreException("Failed to update user password. Please check the current " +
+                            "password entered and retry.", e);
                 }
             } else {
-                throw new IOException(NEW_PASSWORD + " and " + CONFIRM_PASSWORD + " does not matches " + "payload.");
+                throw new UserStoreException("New password and re-typed password does not match.");
             }
         } else {
-            throw new IOException(
-                    "Missing one or more of the fields, '" + NEW_PASSWORD + "', '" + CONFIRM_PASSWORD + "' in the "
-                            + "payload.");
+            throw new UserStoreException("New password or re-typed password is missing in the payload.");
         }
         JSONObject jsonBody = new JSONObject();
         jsonBody.put(USER_ID, user);
-        jsonBody.put(STATUS, "Password updated");
+        jsonBody.put(STATUS, "User password updated successfully.");
         JSONObject info = new JSONObject();
         info.put(USER_ID, user);
         AuditLogger.logAuditMessage(performedBy, Constants.AUDIT_LOG_TYPE_USER, Constants.AUDIT_LOG_ACTION_UPDATED,
