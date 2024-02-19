@@ -217,7 +217,7 @@ public class UserResourceBase {
                 try {
                     synchronized (this) {
                         String[] userRoles = userStoreManager.getRoleListOfUser(user);
-                        String[] performerRoles = userStoreManager.getRoleListOfUser(user);
+                        String[] performerRoles = userStoreManager.getRoleListOfUser(performedBy);
                         if (user.equals(performedBy)) {
                             if (oldPassword == null) {
                                 throw new UserStoreException("The current user password cannot be null.");
