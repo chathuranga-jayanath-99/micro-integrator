@@ -19,15 +19,7 @@
 package org.wso2.micro.integrator.management.apis.security.handler;
 
 import org.apache.axis2.addressing.EndpointReference;
-import org.apache.axis2.context.ConfigurationContext;
-import org.apache.axis2.context.OperationContext;
-import org.apache.axis2.context.ServiceContext;
-import org.apache.axis2.description.InOutAxisOperation;
-import org.apache.axis2.engine.AxisConfiguration;
 import org.apache.synapse.MessageContext;
-import org.apache.synapse.config.SynapseConfiguration;
-import org.apache.synapse.core.axis2.Axis2MessageContext;
-import org.apache.synapse.core.axis2.Axis2SynapseEnvironment;
 import org.junit.Assert;
 import org.junit.Test;
 import java.util.ArrayList;
@@ -45,7 +37,7 @@ public class SecurityHandlerAdapterTest {
     public void testHandledWithNoResource() {
 
         //set message context
-        MessageContext messageContext = createTestMessageContext();
+        MessageContext messageContext = new TestMessageContext();
         EndpointReference endpointReference = new EndpointReference();
         endpointReference.setAddress("/sectest/resource1");
         messageContext.setTo(endpointReference);
@@ -74,7 +66,7 @@ public class SecurityHandlerAdapterTest {
     public void testHandledWithCustomResources() {
 
         //Create test message context
-        MessageContext messageContext = createTestMessageContext();
+        MessageContext messageContext = new TestMessageContext();
         EndpointReference endpointReference = new EndpointReference();
         messageContext.setTo(endpointReference);
 
@@ -124,7 +116,7 @@ public class SecurityHandlerAdapterTest {
     public void testHandledWithAllResources() {
 
         //Create test message context
-        MessageContext messageContext = createTestMessageContext();
+        MessageContext messageContext = new TestMessageContext();
         EndpointReference endpointReference = new EndpointReference();
         messageContext.setTo(endpointReference);
 
@@ -138,17 +130,5 @@ public class SecurityHandlerAdapterTest {
         internalAPIHandler.invoke(messageContext);
         Assert.assertTrue("Handler should be engaged since all resources are defined, but it was not engaged.",
                           internalAPIHandler.isHandleTriggered());
-    }
-
-    private MessageContext createTestMessageContext() {
-
-        Axis2SynapseEnvironment synapseEnvironment = new Axis2SynapseEnvironment(new SynapseConfiguration());
-        org.apache.axis2.context.MessageContext axis2MessageContext = new org.apache.axis2.context.MessageContext();
-        axis2MessageContext.setConfigurationContext(new ConfigurationContext(new AxisConfiguration()));
-        ServiceContext serviceContext = new ServiceContext();
-        OperationContext operationContext = new OperationContext(new InOutAxisOperation(), serviceContext);
-        axis2MessageContext.setServiceContext(serviceContext);
-        axis2MessageContext.setOperationContext(operationContext);
-        return new Axis2MessageContext(axis2MessageContext, new SynapseConfiguration(), synapseEnvironment);
     }
 }

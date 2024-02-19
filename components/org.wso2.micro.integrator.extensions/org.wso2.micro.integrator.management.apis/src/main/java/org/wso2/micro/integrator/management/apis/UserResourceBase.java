@@ -112,8 +112,7 @@ public class UserResourceBase {
                 }
             }
         } catch (UserStoreException e) {
-            response = Utils.createJsonError("Error initializing the user store. Please try again later", e,
-                    axis2MessageContext, INTERNAL_SERVER_ERROR);
+            response = Utils.createJsonError("Please try again. ", e, axis2MessageContext, INTERNAL_SERVER_ERROR);
         } catch (IOException e) {
             response = Utils.createJsonError("Error processing the request. ", e, axis2MessageContext, BAD_REQUEST);
         } catch (ResourceNotFoundException e) {
@@ -198,13 +197,16 @@ public class UserResourceBase {
         if (LOG.isDebugEnabled()) {
             LOG.debug("Request received to update user credentials: " + user);
         }
-
+        String performedBy = Utils.getStringPropertyFromMessageContext(messageContext, USERNAME_PROPERTY);
+        if (Objects.isNull(performedBy)) {
+            LOG.warn(
+                    "Update a user without authenticating/authorizing the request sender. Adding "
+                            + "authentication and authorization handlers is recommended.");
+        }
         if (!JsonUtil.hasAJsonPayload(axis2MessageContext)) {
             return Utils.createJsonErrorObject("JSON payload is missing");
         }
         JsonObject payload = Utils.getJsonPayload(axis2MessageContext);
-
-        String performedBy = Utils.getStringPropertyFromMessageContext(messageContext, USERNAME_PROPERTY);
 
         if (payload.has(NEW_PASSWORD) && payload.has(CONFIRM_PASSWORD)) {
             String newPassword = payload.get(NEW_PASSWORD).getAsString();
@@ -214,34 +216,24 @@ public class UserResourceBase {
                 UserStoreManager userStoreManager = Utils.getUserStore(domain);
                 try {
                     synchronized (this) {
-                        if (StringUtils.isEmpty(performedBy)) {
-                            LOG.warn(
-                                    "Updating a user without authenticating/authorizing the request sender. Adding "
-                                            + "authentication and authorization handlers is recommended.");
+                        String[] userRoles = userStoreManager.getRoleListOfUser(user);
+                        String[] performerRoles = userStoreManager.getRoleListOfUser(user);
+                        if (user.equals(performedBy)) {
                             if (oldPassword == null) {
                                 throw new UserStoreException("The current user password cannot be null.");
                             }
                             userStoreManager.updateCredential(user, newPassword, oldPassword);
+                        } else if (ADMIN.equals(performedBy)) {
+                            userStoreManager.updateCredentialByAdmin(user, newPassword);
+                        } else if (Arrays.asList(performerRoles).contains(ADMIN) &&
+                                !Arrays.asList(userRoles).contains(ADMIN)) {
+                            userStoreManager.updateCredentialByAdmin(user, newPassword);
+                        } else if (Arrays.asList(performerRoles).contains(ADMIN) &&
+                                Arrays.asList(userRoles).contains(ADMIN)) {
+                            throw new UserStoreException(
+                                    "Only a super admin user can update the credentials of another admin.");
                         } else {
-                            String[] userRoles = userStoreManager.getRoleListOfUser(user);
-                            String[] performerRoles = userStoreManager.getRoleListOfUser(user);
-                            if (user.equals(performedBy)) {
-                                if (oldPassword == null) {
-                                    throw new UserStoreException("The current user password cannot be null.");
-                                }
-                                userStoreManager.updateCredential(user, newPassword, oldPassword);
-                            } else if (ADMIN.equals(performedBy)) {
-                                userStoreManager.updateCredentialByAdmin(user, newPassword);
-                            } else if (Arrays.asList(performerRoles).contains(ADMIN) &&
-                                    !Arrays.asList(userRoles).contains(ADMIN)) {
-                                userStoreManager.updateCredentialByAdmin(user, newPassword);
-                            } else if (Arrays.asList(performerRoles).contains(ADMIN) &&
-                                    Arrays.asList(userRoles).contains(ADMIN)) {
-                                throw new UserStoreException(
-                                        "Only a super admin user can update the credentials of another admin.");
-                            } else {
-                                throw new UserStoreException("Only your own credentials can be updated by a user.");
-                            }
+                            throw new UserStoreException("Only your own credentials can be updated by a user.");
                         }
                     }
                 } catch (UserStoreException e) {
