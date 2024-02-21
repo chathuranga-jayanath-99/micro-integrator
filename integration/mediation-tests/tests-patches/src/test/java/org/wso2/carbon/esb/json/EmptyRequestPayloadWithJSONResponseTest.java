@@ -58,9 +58,4 @@ public class EmptyRequestPayloadWithJSONResponseTest extends ESBIntegrationTest 
         Assert.assertEquals(response.getData(), expectedResponse,
                 "JSON payload response does not come as it is when empty payload is sent as request");
     }
-
-    @AfterClass(alwaysRun = true)
-    public void destroy() throws Exception {
-
-    }
 }
