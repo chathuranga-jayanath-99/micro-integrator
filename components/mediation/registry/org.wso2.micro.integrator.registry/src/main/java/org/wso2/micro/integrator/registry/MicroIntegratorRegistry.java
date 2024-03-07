@@ -66,6 +66,7 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 
 import static org.wso2.micro.integrator.registry.MicroIntegratorRegistryConstants.CHILD_FILES_LIST_KEY;
+import static org.wso2.micro.integrator.registry.MicroIntegratorRegistryConstants.COLLECTION_PROPERTY_EXTENTION;
 import static org.wso2.micro.integrator.registry.MicroIntegratorRegistryConstants.CONFIGURATION_REGISTRY_PATH;
 import static org.wso2.micro.integrator.registry.MicroIntegratorRegistryConstants.CONFIG_DIRECTORY_NAME;
 import static org.wso2.micro.integrator.registry.MicroIntegratorRegistryConstants.CONFIG_REGISTRY_PREFIX;
@@ -390,20 +391,13 @@ public class MicroIntegratorRegistry extends AbstractRegistry {
         originalURL = originalURL.trim();
         // here, a URL object is created in order to remove the protocol from the file path
         boolean isDirectory = new File(new URL(originalURL).getFile()).isDirectory();
-        if (!isDirectory) {
-            // if the url is a file, the property file is expected to be present as a sibling
-            if (originalURL.endsWith(URL_SEPARATOR)) {
-                originalURL = originalURL.substring(0, originalURL.length() - 1);
-            }
-            return originalURL + MicroIntegratorRegistryConstants.PROPERTY_EXTENTION;
-        }
-        // if the url is a folder, the property file is expected to be present as a child
-        String[] pathSegments = originalURL.split(URL_SEPARATOR);
-        String folderName = pathSegments[pathSegments.length - 1];
         if (originalURL.endsWith(URL_SEPARATOR)) {
-            return originalURL + folderName + MicroIntegratorRegistryConstants.PROPERTY_EXTENTION;
+            originalURL = originalURL.substring(0, originalURL.length() - 1);
         }
-        return originalURL + URL_SEPARATOR + folderName + MicroIntegratorRegistryConstants.PROPERTY_EXTENTION;
+        if (isDirectory) {
+            return originalURL + COLLECTION_PROPERTY_EXTENTION;
+        }
+        return originalURL + PROPERTY_EXTENTION;
     }
 
     @Override
@@ -632,7 +626,7 @@ public class MicroIntegratorRegistry extends AbstractRegistry {
                         handleException("Unable to create collection: " + collection.getPath());
                     }
                     if (properties != null && !properties.isEmpty()) {
-                        writeProperties(parentFile, getResourceName(targetPath), properties);
+                        writeProperties(parentFile, getResourceName(targetPath), properties, true);
                     }
                 } else {
                     String fileName = getResourceName(targetPath);
@@ -742,6 +736,11 @@ public class MicroIntegratorRegistry extends AbstractRegistry {
                     }
                 } else if (resource.isDirectory()) {
                     deleteDirectory(resource);
+                    // the properties also need to be removed when removing the resource
+                    File resourceProperties = new File(new URI(resourcePath + COLLECTION_PROPERTY_EXTENTION));
+                    if (resourceProperties.exists()) {
+                        deleteFile(resourceProperties);
+                    }
                 }
             } else {
                 if (log.isDebugEnabled()) {
@@ -952,7 +951,25 @@ public class MicroIntegratorRegistry extends AbstractRegistry {
      */
     private void writeProperties(File parent, String resourceFileName, Properties properties) {
 
-        File resourcePropertiesFile = new File(parent, resourceFileName + PROPERTY_EXTENTION);
+        writeProperties(parent, resourceFileName, properties, false);
+    }
+
+    /**
+     * Create a new properties file for the registry resource.
+     *
+     * @param parent            destination location of the properties file
+     * @param resourceFileName  name of the registry resource
+     * @param properties        list of properties
+     * @param isCollection      whether the resource is a collection or not
+     */
+    private void writeProperties(File parent, String resourceFileName, Properties properties, boolean isCollection) {
+
+        File resourcePropertiesFile;
+        if (isCollection) {
+            resourcePropertiesFile = new File(parent, resourceFileName + COLLECTION_PROPERTY_EXTENTION);
+        } else {
+            resourcePropertiesFile = new File(parent, resourceFileName + PROPERTY_EXTENTION);
+        }
 
         try (BufferedWriter propertiesWriter = new BufferedWriter(new FileWriter(resourcePropertiesFile))) {
             properties.store(propertiesWriter, null);
