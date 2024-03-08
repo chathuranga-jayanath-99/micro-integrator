@@ -908,7 +908,7 @@ public class MicroIntegratorRegistry extends AbstractRegistry {
                 writeMetadata(parent, newFileName, metadata);
             }
             if (resourceProperties != null) {
-                writeProperties(parent, newFileName, resourceProperties);
+                writeProperties(parent, newFileName, resourceProperties, false);
             }
             if (log.isDebugEnabled()) {
                 log.debug("Successfully content written to file : " + parent.getPath() + URL_SEPARATOR + newFileName);
@@ -940,18 +940,6 @@ public class MicroIntegratorRegistry extends AbstractRegistry {
         } catch (IOException e) {
             handleException("Couldn't write to metadata file: " + newMetadataFile.getPath(), e);
         }
-    }
-
-    /**
-     * Create a new properties file for the registry resource.
-     *
-     * @param parent            destination location of the properties file
-     * @param resourceFileName  name of the registry resource
-     * @param properties        list of properties
-     */
-    private void writeProperties(File parent, String resourceFileName, Properties properties) {
-
-        writeProperties(parent, resourceFileName, properties, false);
     }
 
     /**
@@ -1337,7 +1325,7 @@ public class MicroIntegratorRegistry extends AbstractRegistry {
                             childArray.put(nodeJSONObject);
                         }
                     } else if (childNode.endsWith(PROPERTY_EXTENTION)) {
-                        String propertyOwner = childNode.replace(PROPERTY_EXTENTION, "");
+                        String propertyOwner = findResourceOfProperty(childNode);
                         if (propertyOwner.toLowerCase().contains(searchKey)) {
                             if (!Arrays.asList(childNodes).contains(propertyOwner)) {
                                 JSONObject nodeJSONObject = new JSONObject();
@@ -1502,7 +1490,7 @@ public class MicroIntegratorRegistry extends AbstractRegistry {
                         childJSONObject.put(METADATA_KEY_MEDIA_TYPE, mediaType);
                         childArray.put(childJSONObject);
                     } else if (childNode.endsWith(PROPERTY_EXTENTION)) {
-                        String propertyOwner = childNode.replace(PROPERTY_EXTENTION, "");
+                        String propertyOwner = findResourceOfProperty(childNode);
                         if (!Arrays.asList(childNodes).contains(propertyOwner)) {
                             JSONObject childJSONObject = new JSONObject();
                             File childFile = new File(node, propertyOwner);
@@ -1554,7 +1542,12 @@ public class MicroIntegratorRegistry extends AbstractRegistry {
             String parent = getParentPath(targetPath,  false);
             File parentFile = new File(new URI(parent));
             String fileName = getResourceName(targetPath);
-            writeProperties(parentFile, fileName, properties);
+            if (parentFile.isDirectory()) {
+                writeProperties(parentFile, fileName, properties, true);
+            } else {
+                writeProperties(parentFile, fileName, properties, false);
+            }
+
         } else {
             log.warn("Updating remote registry is NOT SUPPORTED. Unable to update: " + path);
         }
@@ -1613,6 +1606,20 @@ public class MicroIntegratorRegistry extends AbstractRegistry {
         } catch (IOException e) {
             handleException("Couldn't write to registry resource: "
                     + parent.getPath() + URL_SEPARATOR + newFileName, e);
+        }
+    }
+
+    /**
+     * Returns the Registry resource path which is related to the properties path.
+     *
+     * @param propertyPath Property resource path
+     * @return             Registry resource path
+     */
+    private String findResourceOfProperty(String propertyPath) {
+        if (propertyPath.endsWith(COLLECTION_PROPERTY_EXTENTION)) {
+            return propertyPath.substring(0, propertyPath.length() - COLLECTION_PROPERTY_EXTENTION.length());
+        } else {
+            return propertyPath.substring(0, propertyPath.length() - PROPERTY_EXTENTION.length());
         }
     }
 }
