@@ -1542,7 +1542,7 @@ public class MicroIntegratorRegistry extends AbstractRegistry {
             String parent = getParentPath(targetPath,  false);
             File parentFile = new File(new URI(parent));
             String fileName = getResourceName(targetPath);
-            if (parentFile.isDirectory()) {
+            if (new File(new URI(targetPath)).isDirectory()) {
                 writeProperties(parentFile, fileName, properties, true);
             } else {
                 writeProperties(parentFile, fileName, properties, false);
