@@ -20,7 +20,7 @@
     <parent>
         <artifactId>mediation</artifactId>
         <groupId>org.wso2.ei</groupId>
-        <version>4.2.0.56</version>
+        <version>4.2.0.57-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
