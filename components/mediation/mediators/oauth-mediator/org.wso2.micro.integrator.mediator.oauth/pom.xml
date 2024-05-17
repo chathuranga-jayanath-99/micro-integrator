@@ -16,7 +16,7 @@
     <parent>
         <artifactId>mediators</artifactId>
         <groupId>org.wso2.ei</groupId>
-        <version>4.1.0.110-SNAPSHOT</version>
+        <version>4.1.0.110</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
