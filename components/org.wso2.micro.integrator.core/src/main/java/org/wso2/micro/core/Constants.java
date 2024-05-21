@@ -40,7 +40,7 @@ public class Constants {
     public static final String SERVER_PRIMARY_KEYSTORE_KEY_ALIAS = "Security.KeyStore.KeyAlias";
     public static final String SERVER_PRIVATE_KEY_PASSWORD = "Security.KeyStore.KeyPassword";
     public static final String SERVER_PRIMARY_KEYSTORE_TYPE = "Security.KeyStore.Type";
-    public static final String SERVER_PRIVATE_STORE_CONFIG = "privatestore";
+    public static final String SERVER_PRIVATE_STORE_CONFIG = "keystore.secondary";
     public static final String SERVER_PRIVATE_KEYSTORE_TYPE = "type";
     public static final String SERVER_PRIVATE_KEYSTORE_FILE = "file_name";
     public static final String SERVER_PRIVATE_KEYSTORE_PASSWORD = "password";

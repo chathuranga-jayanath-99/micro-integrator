@@ -56,8 +56,6 @@ public class KeyStoreManager {
     private KeyStore primaryKeyStore = null;
     private KeyStore registryKeyStore = null;
     private KeyStore internalKeyStore = null;
-    private static SecretResolver secretResolver;
-
     private static final ConcurrentMap<String, KeyStore> keyStoreMap = new ConcurrentHashMap<>();
     private static final Lock lock = new ReentrantLock();
 
@@ -131,16 +129,9 @@ public class KeyStoreManager {
             return null;
         }
 
-        // Find the last occurrence of the '/' character
-        int lastIndexOfSlash = path.lastIndexOf('/');
-
-        // If '/' is found, return the substring from the character after the last '/' to the end of the string
-        // If '/' is not found, the entire path is the file name
-        if (lastIndexOfSlash != -1) {
-            return path.substring(lastIndexOfSlash + 1);
-        } else {
-            return path; // This case handles when there is no '/' in the path
-        }
+        // Normalize the path to handle different path separators
+        Path normalizedPath = Paths.get(path).normalize();
+        return normalizedPath.getFileName().toString();
     }
 
     /**
@@ -262,9 +253,11 @@ public class KeyStoreManager {
                                     .getAbsolutePath();
                     KeyStore store = KeyStore
                             .getInstance(keyStoreDetails.get(Constants.SERVER_PRIVATE_KEYSTORE_TYPE));
-                    String encryptedPassword = keyStoreDetails.get(Constants.SERVER_PRIVATE_KEYSTORE_PASSWORD);
-                    String alias = MiscellaneousUtil.getProtectedToken(encryptedPassword);
-                    String password = configurationService.getResolvedValue(alias);
+                    String password = keyStoreDetails.get(Constants.SERVER_PRIVATE_KEYSTORE_PASSWORD);
+                    String alias = MiscellaneousUtil.getProtectedToken(password);
+                    if (!StringUtils.isEmpty(alias)) {
+                        password = configurationService.getResolvedValue(alias);
+                    }
                     FileInputStream in = null;
                     try {
                         in = new FileInputStream(file);
@@ -292,7 +285,6 @@ public class KeyStoreManager {
      * @param keyStoreName The file name to search for.
      * @param configList    The list of maps containing key-value pairs.
      * @return The map containing details of the private key store if found, or null otherwise.
-     * @throws IllegalArgumentException If the input file name or configList is null or empty.
      */
     public static Map<String, String> getPrivateKeyStoreDetails(String keyStoreName,
                                                                 List<Map<String, String>> configList) {
