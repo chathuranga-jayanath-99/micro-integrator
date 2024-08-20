@@ -29,6 +29,7 @@ import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.wso2.carbon.inbound.endpoint.EndpointListenerLoader;
 import org.wso2.carbon.securevault.SecretCallbackHandlerService;
 import org.wso2.micro.application.deployer.handler.DefaultAppDeployer;
 import org.wso2.micro.core.CarbonAxisConfigurator;
@@ -77,6 +78,9 @@ public class AppDeployerServiceComponent {
             log.info("Dashboard is configured. Initiating heartbeat component.");
             HeartBeatComponent.invokeHeartbeatExecutorService();
         }
+
+        // Start Inbound Endpoint Listeners
+        EndpointListenerLoader.loadListeners();
 
         // Finalize server startup
         startupFinalizer = new StartupFinalizer(configCtx, ctxt.getBundleContext());

@@ -45,7 +45,6 @@ import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
-import org.wso2.carbon.inbound.endpoint.EndpointListenerLoader;
 import org.wso2.carbon.securevault.SecretCallbackHandlerService;
 import org.wso2.micro.core.Constants;
 import org.wso2.micro.core.ServerShutdownHandler;
@@ -216,8 +215,6 @@ public class ServiceBusInitializer {
             bndCtx.registerService(SynapseRegistrationsService.class.getName(), synRegistrationsSvc, null);
             /*configCtxSvc.getServerConfigContext().setProperty(ConfigurationManager.CONFIGURATION_MANAGER,
                     configurationManager);*/
-            // Start Inbound Endpoint Listeners
-            EndpointListenerLoader.loadListeners();
         } catch (Exception e) {
             handleFatal("Couldn't initialize the ESB...", e);
         } catch (Throwable t) {
