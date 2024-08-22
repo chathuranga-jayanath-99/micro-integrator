@@ -79,9 +79,6 @@ public class AppDeployerServiceComponent {
             HeartBeatComponent.invokeHeartbeatExecutorService();
         }
 
-        // Start Inbound Endpoint Listeners
-        EndpointListenerLoader.loadListeners();
-
         // Finalize server startup
         startupFinalizer = new StartupFinalizer(configCtx, ctxt.getBundleContext());
         startupFinalizer.finalizeStartup();
