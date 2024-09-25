@@ -52,6 +52,23 @@ public class AuthorizationHandler extends AuthorizationHandlerAdapter {
         defaultResources.add(Constants.PREFIX_USERS);
         defaultResources.add(Constants.PREFIX_ROLES);
         defaultResources.add(Constants.PREFIX_CONFIGS);
+
+        // If the makeNonAdminUserReadOnly property is configured as true, AuthorizationHandlerAdapter will be executed.
+        boolean isNonAdminUsersReadOnly = SecurityUtils.isNonAdminUsersReadOnly();
+        if (isNonAdminUsersReadOnly) {
+            defaultResources.add(Constants.PREFIX_APIS);
+            defaultResources.add(Constants.PREFIX_CARBON_APPS);
+            defaultResources.add(Constants.PREFIX_CONNECTORS);
+            defaultResources.add(Constants.PREFIX_ENDPOINTS);
+            defaultResources.add(Constants.PREFIX_EXTERNAL_VAULTS);
+            defaultResources.add(Constants.PREFIX_INBOUND_ENDPOINTS);
+            defaultResources.add(Constants.PREFIX_LOGGING);
+            defaultResources.add(Constants.PREFIX_MESSAGE_PROCESSORS);
+            defaultResources.add(Constants.PREFIX_SERVER_DATA);
+            defaultResources.add(Constants.PREFIX_PROXY_SERVICES);
+            defaultResources.add(Constants.PREFIX_SEQUENCES);
+            defaultResources.add(Constants.PREFIX_TEMPLATES);
+        }
     }
 
     @Override

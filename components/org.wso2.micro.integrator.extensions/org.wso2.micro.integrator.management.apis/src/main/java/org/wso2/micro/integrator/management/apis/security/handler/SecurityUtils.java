@@ -120,4 +120,13 @@ public class SecurityUtils {
             return MicroIntegratorSecurityUtils.isAdmin(username);
         }
     }
+
+    /**
+     * Checks if non-admin users are treated as read-only users based on the configuration.
+     *
+     * @return {@code true} if non-admin users are read-only according to the config, {@code false} otherwise.
+     */
+    public static boolean isNonAdminUsersReadOnly() {
+        return (Boolean) ConfigParser.getParsedConfigs().getOrDefault(Constants.MAKE_NON_ADMIN_USERS_READ_ONLY, false);
+    }
 }
