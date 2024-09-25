@@ -129,4 +129,27 @@ public class SecurityUtils {
     public static boolean isNonAdminUsersReadOnly() {
         return (Boolean) ConfigParser.getParsedConfigs().getOrDefault(Constants.MAKE_NON_ADMIN_USERS_READ_ONLY, false);
     }
+
+    /**
+     * Determines if the specified user has permission to edit.
+     *
+     * Admin users always have edit permissions. For non-admin users, the edit permission depends
+     * on the configuration: if make_non_admin_users_read_only == true, they cannot edit; otherwise, they can.
+     *
+     * @param userName the name of the user to check for edit permissions
+     * @return {@code true} if the user has edit permissions, {@code false} otherwise
+     * @throws UserStoreException if there is an error accessing the user store
+     */
+    public static boolean canUserEdit(String userName) throws UserStoreException {
+        if (SecurityUtils.isAdmin(userName)) {
+            // All the admin users can edit
+            return true;
+        } else if (!SecurityUtils.isNonAdminUsersReadOnly()) {
+            // If non-admin users are not read-only, they can edit
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
 }

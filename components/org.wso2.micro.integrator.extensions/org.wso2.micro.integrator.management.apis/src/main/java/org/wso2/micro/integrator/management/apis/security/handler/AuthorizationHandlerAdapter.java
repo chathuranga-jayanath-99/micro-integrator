@@ -27,7 +27,6 @@ import org.wso2.micro.core.util.CarbonException;
 import org.wso2.micro.integrator.management.apis.Constants;
 import org.wso2.micro.integrator.management.apis.ManagementApiUndefinedException;
 import org.wso2.micro.integrator.management.apis.Utils;
-import org.wso2.micro.integrator.security.user.api.UserStoreException;
 
 import javax.xml.stream.XMLStreamException;
 import java.io.IOException;
@@ -58,20 +57,6 @@ public abstract class AuthorizationHandlerAdapter extends SecurityHandlerAdapter
         if (resourcePath.startsWith(context.concat(Constants.PREFIX_USERS)) &&
                 StringUtils.isNotBlank(resourceHttpMethod) && resourceHttpMethod.equals(Constants.HTTP_METHOD_PATCH)) {
             return true;
-        }
-
-        boolean isNonAdminUsersReadOnly = SecurityUtils.isNonAdminUsersReadOnly();
-
-        // If the makeNonAdminUserReadOnly config is set to true,
-        // non-admin users are allowed to only view the resources except for users, roles and configs
-        if (isNonAdminUsersReadOnly) {
-            if ("GET".equals(resourceHttpMethod) && !(
-                    resourcePath.startsWith(Constants.REST_API_CONTEXT + Constants.PREFIX_USERS) ||
-                    resourcePath.startsWith(Constants.REST_API_CONTEXT + Constants.PREFIX_ROLES) ||
-                    resourcePath.startsWith(Constants.REST_API_CONTEXT + Constants.PREFIX_CONFIGS)
-            )) {
-                return true;
-            }
         }
 
         if (Objects.nonNull(userName)) {
