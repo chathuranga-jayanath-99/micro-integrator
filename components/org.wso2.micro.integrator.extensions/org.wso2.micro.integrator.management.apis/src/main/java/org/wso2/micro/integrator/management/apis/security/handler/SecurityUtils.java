@@ -141,15 +141,6 @@ public class SecurityUtils {
      * @throws UserStoreException if there is an error accessing the user store
      */
     public static boolean canUserEdit(String userName) throws UserStoreException {
-        if (SecurityUtils.isAdmin(userName)) {
-            // All the admin users can edit
-            return true;
-        } else if (!SecurityUtils.isNonAdminUsersReadOnly()) {
-            // If non-admin users are not read-only, they can edit
-            return true;
-        }
-        else {
-            return false;
-        }
+        return SecurityUtils.isAdmin(userName) || !SecurityUtils.isNonAdminUsersReadOnly();
     }
 }
