@@ -126,7 +126,7 @@ public class SecurityUtils {
      *
      * @return {@code true} if non-admin users are read-only according to the config, {@code false} otherwise.
      */
-    public static boolean isNonAdminUsersReadOnly() {
+    private static boolean isNonAdminUsersReadOnly() {
         return (Boolean) ConfigParser.getParsedConfigs().getOrDefault(Constants.MAKE_NON_ADMIN_USERS_READ_ONLY, false);
     }
 
@@ -141,6 +141,6 @@ public class SecurityUtils {
      * @throws UserStoreException if there is an error accessing the user store
      */
     public static boolean canUserEdit(String userName) throws UserStoreException {
-        return SecurityUtils.isAdmin(userName) || !SecurityUtils.isNonAdminUsersReadOnly();
+        return isAdmin(userName) || !isNonAdminUsersReadOnly();
     }
 }

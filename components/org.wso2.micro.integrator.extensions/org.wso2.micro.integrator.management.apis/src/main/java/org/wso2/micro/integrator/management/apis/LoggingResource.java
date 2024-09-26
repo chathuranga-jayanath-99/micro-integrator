@@ -178,10 +178,11 @@ public class LoggingResource extends APIResource {
                     }
                 } else {
                     Utils.sendForbiddenFaultResponse(axis2MessageContext);
+                    jsonBody = createJsonError("User is not Authorized to edit", "", axis2MessageContext);
                 }
             } catch (UserStoreException e) {
                 log.error("Error occurred while retrieving the user data", e);
-                Utils.setJsonPayLoad(axis2MessageContext, Utils.createJsonErrorObject("Error occurred while retrieving the user data"));
+                jsonBody = createJsonError("Error occurred while retrieving the user data", e, axis2MessageContext);
             }
         }
         Utils.setJsonPayLoad(axis2MessageContext, jsonBody);

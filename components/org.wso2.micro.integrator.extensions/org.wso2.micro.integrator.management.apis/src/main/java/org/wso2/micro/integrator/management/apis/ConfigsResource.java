@@ -66,7 +66,7 @@ public class ConfigsResource implements MiApiResource {
         if (LOG.isDebugEnabled()) {
             LOG.debug("Handling" + httpMethod + "request");
         }
-        JSONObject response = null;
+        JSONObject response;
         try {
             switch (httpMethod) {
                 case Constants.HTTP_GET: {
@@ -74,17 +74,12 @@ public class ConfigsResource implements MiApiResource {
                     break;
                 }
                 case Constants.HTTP_PUT: {
-                    try {
-                        if (SecurityUtils.canUserEdit(messageContext.getProperty(USERNAME_PROPERTY).toString())) {
-                            response = handlePut(axis2MessageContext);
-                        } else {
-                            Utils.sendForbiddenFaultResponse(axis2MessageContext);
-                        }
-                    } catch (UserStoreException e) {
-                        LOG.error("Error occurred while retrieving the user data", e);
-                        Utils.setJsonPayLoad(axis2MessageContext, Utils.createJsonErrorObject("Error occurred while retrieving the user data"));
+                    if (SecurityUtils.canUserEdit(messageContext.getProperty(USERNAME_PROPERTY).toString())) {
+                        response = handlePut(axis2MessageContext);
+                    } else {
+                        Utils.sendForbiddenFaultResponse(axis2MessageContext);
+                        response = Utils.createJsonError("", axis2MessageContext, Constants.FORBIDDEN);
                     }
-
                     break;
                 }
                 default: {
@@ -99,6 +94,10 @@ public class ConfigsResource implements MiApiResource {
         } catch (IOException e) {
             LOG.error("Error when parsing JSON payload", e);
             response = Utils.createJsonErrorObject("Error while parsing JSON payload");
+        } catch (UserStoreException e) {
+            LOG.error("Error occurred while retrieving the user data", e);
+            response = Utils.createJsonError("Error occurred while retrieving the user data",
+                    axis2MessageContext, Constants.FORBIDDEN);
         }
         Utils.setJsonPayLoad(axis2MessageContext, response);
         return true;
