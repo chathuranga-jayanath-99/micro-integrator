@@ -43,7 +43,6 @@ import org.wso2.micro.application.deployer.config.Artifact;
 import org.wso2.micro.core.util.AuditLogger;
 import org.wso2.micro.integrator.initializer.deployment.application.deployer.CappDeployer;
 import org.wso2.micro.integrator.management.apis.security.handler.SecurityUtils;
-import org.wso2.micro.integrator.security.user.api.UserStoreException;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -72,7 +71,6 @@ import static org.wso2.micro.integrator.management.apis.Constants.BAD_REQUEST;
 import static org.wso2.micro.integrator.management.apis.Constants.LIST;
 import static org.wso2.micro.integrator.management.apis.Constants.NOT_FOUND;
 import static org.wso2.micro.integrator.management.apis.Constants.SEARCH_KEY;
-import static org.wso2.micro.integrator.management.apis.Constants.USERNAME_PROPERTY;
 
 public class CarbonAppResource extends APIResource {
 
@@ -133,29 +131,11 @@ public class CarbonAppResource extends APIResource {
                 break;
             }
             case Constants.HTTP_POST: {
-                try {
-                    if (SecurityUtils.canUserEdit(messageContext.getProperty(USERNAME_PROPERTY).toString())) {
-                        handlePost(performedBy, axis2MessageContext);
-                    } else {
-                        Utils.sendForbiddenFaultResponse(axis2MessageContext);
-                    }
-                } catch (UserStoreException e) {
-                    log.error("Error occurred while retrieving the user data", e);
-                    Utils.setJsonPayLoad(axis2MessageContext,Utils.createJsonErrorObject("Error occurred while retrieving the user data"));
-                }
+                handlePost(performedBy, axis2MessageContext);
                 break;
             }
             case Constants.HTTP_DELETE: {
-                try {
-                    if (SecurityUtils.canUserEdit(messageContext.getProperty(USERNAME_PROPERTY).toString())) {
-                        handleDelete(performedBy, messageContext, axis2MessageContext);
-                    } else {
-                        Utils.sendForbiddenFaultResponse(axis2MessageContext);
-                    }
-                } catch (UserStoreException e) {
-                    log.error("Error occurred while retrieving the user data", e);
-                    Utils.setJsonPayLoad(axis2MessageContext,Utils.createJsonErrorObject("Error occurred while retrieving the user data"));
-                }
+                handleDelete(performedBy, messageContext, axis2MessageContext);
                 break;
             }
             default: {

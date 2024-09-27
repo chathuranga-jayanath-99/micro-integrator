@@ -25,10 +25,8 @@ import org.apache.synapse.MessageContext;
 import org.apache.synapse.core.axis2.Axis2MessageContext;
 import org.json.JSONObject;
 import org.wso2.carbon.inbound.endpoint.internal.http.api.APIResource;
-import org.wso2.micro.integrator.management.apis.security.handler.SecurityUtils;
 import org.wso2.micro.integrator.mediation.security.vault.external.ExternalVaultException;
 import org.wso2.micro.integrator.mediation.security.vault.external.hashicorp.HashiCorpVaultLookupHandlerImpl;
-import org.wso2.micro.integrator.security.user.api.UserStoreException;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -36,7 +34,6 @@ import java.util.Set;
 
 import static org.wso2.micro.integrator.management.apis.Constants.BAD_REQUEST;
 import static org.wso2.micro.integrator.management.apis.Constants.NOT_FOUND;
-import static org.wso2.micro.integrator.management.apis.Constants.USERNAME_PROPERTY;
 
 public class ExternalVaultResource extends APIResource {
 
@@ -67,16 +64,7 @@ public class ExternalVaultResource extends APIResource {
 
         if ("hashicorp".equalsIgnoreCase(pathParam)) {
             if (Utils.isDoingPOST(axis2MessageContext)) {
-                try {
-                    if (SecurityUtils.canUserEdit(messageContext.getProperty(USERNAME_PROPERTY).toString())) {
-                        handleHashiCorpPost(axis2MessageContext);
-                    } else {
-                        Utils.sendForbiddenFaultResponse(axis2MessageContext);
-                    }
-                } catch (UserStoreException e) {
-                    LOG.error("Error occurred while retrieving the user data", e);
-                    Utils.setJsonPayLoad(axis2MessageContext, Utils.createJsonErrorObject("Error occurred while retrieving the user data"));
-                }
+                handleHashiCorpPost(axis2MessageContext);
             } else {
                 JSONObject response = Utils.createJsonError("No such method for management/external-vault/"
                         + pathParam, axis2MessageContext, NOT_FOUND);
