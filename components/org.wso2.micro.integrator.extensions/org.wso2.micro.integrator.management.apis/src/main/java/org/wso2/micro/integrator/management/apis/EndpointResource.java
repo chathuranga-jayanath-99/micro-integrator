@@ -95,8 +95,9 @@ public class EndpointResource implements MiApiResource {
                 populateEndpointList(messageContext, synapseConfiguration);
             }
         } else {
+            String userName = (String) messageContext.getProperty(USERNAME_PROPERTY);
             try {
-                if (SecurityUtils.canUserEdit(messageContext.getProperty(USERNAME_PROPERTY).toString())) {
+                if (SecurityUtils.canUserEdit(userName)) {
                     if (!JsonUtil.hasAJsonPayload(axis2MessageContext)) {
                         Utils.setJsonPayLoad(axis2MessageContext, Utils.createJsonErrorObject("JSON payload is missing"));
                         return true;

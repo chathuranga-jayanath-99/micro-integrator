@@ -113,6 +113,7 @@ public class CarbonAppResource extends APIResource {
         if (messageContext.getProperty(Constants.USERNAME_PROPERTY) !=  null) {
             performedBy = messageContext.getProperty(Constants.USERNAME_PROPERTY).toString();
         }
+        String userName = (String) messageContext.getProperty(USERNAME_PROPERTY);
         switch (httpMethod) {
             case Constants.HTTP_GET: {
                 String param = Utils.getQueryParameter(messageContext, "carbonAppName");
@@ -134,7 +135,7 @@ public class CarbonAppResource extends APIResource {
             }
             case Constants.HTTP_POST: {
                 try {
-                    if (SecurityUtils.canUserEdit(messageContext.getProperty(USERNAME_PROPERTY).toString())) {
+                    if (SecurityUtils.canUserEdit(userName)) {
                         handlePost(performedBy, axis2MessageContext);
                     } else {
                         Utils.sendForbiddenFaultResponse(axis2MessageContext);
@@ -147,7 +148,7 @@ public class CarbonAppResource extends APIResource {
             }
             case Constants.HTTP_DELETE: {
                 try {
-                    if (SecurityUtils.canUserEdit(messageContext.getProperty(USERNAME_PROPERTY).toString())) {
+                    if (SecurityUtils.canUserEdit(userName)) {
                         handleDelete(performedBy, messageContext, axis2MessageContext);
                     } else {
                         Utils.sendForbiddenFaultResponse(axis2MessageContext);

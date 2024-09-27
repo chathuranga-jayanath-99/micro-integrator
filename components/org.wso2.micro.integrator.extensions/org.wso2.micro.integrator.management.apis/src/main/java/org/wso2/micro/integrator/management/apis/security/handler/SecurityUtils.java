@@ -141,6 +141,9 @@ public class SecurityUtils {
      * @throws UserStoreException if there is an error accessing the user store
      */
     public static boolean canUserEdit(String userName) throws UserStoreException {
+        if (userName == null) {
+            return true;
+        }
         return isAdmin(userName) || !isNonAdminUsersReadOnly();
     }
 }

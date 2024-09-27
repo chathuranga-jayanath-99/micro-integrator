@@ -83,8 +83,9 @@ public class SequenceResource extends APIResource {
                 populateSequenceList(messageContext);
             }
         } else {
+            String userName = (String) messageContext.getProperty(USERNAME_PROPERTY);
             try {
-                if (SecurityUtils.canUserEdit(messageContext.getProperty(USERNAME_PROPERTY).toString())) {
+                if (SecurityUtils.canUserEdit(userName)) {
                     handlePost(messageContext, axisMsgCtx);
                 } else {
                     Utils.sendForbiddenFaultResponse(axisMsgCtx);

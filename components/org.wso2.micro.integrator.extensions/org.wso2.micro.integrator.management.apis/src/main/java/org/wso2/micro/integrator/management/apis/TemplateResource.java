@@ -100,8 +100,9 @@ public class TemplateResource extends APIResource {
             }
         } else {
             JSONObject response;
+            String userName = (String) msgCtx.getProperty(USERNAME_PROPERTY);
             try {
-                if (SecurityUtils.canUserEdit(msgCtx.getProperty(USERNAME_PROPERTY).toString())) {
+                if (SecurityUtils.canUserEdit(userName)) {
                     JsonObject payload = Utils.getJsonPayload(axis2MsgCtx);
                     if (payload.has(TEMPLATE_TYPE_PARAM)) {
                         templateTypeParam = payload.get(TEMPLATE_TYPE_PARAM).getAsString();

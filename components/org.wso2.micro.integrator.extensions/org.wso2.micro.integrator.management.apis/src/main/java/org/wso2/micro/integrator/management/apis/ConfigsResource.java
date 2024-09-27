@@ -67,6 +67,7 @@ public class ConfigsResource implements MiApiResource {
             LOG.debug("Handling" + httpMethod + "request");
         }
         JSONObject response;
+        String userName = (String) messageContext.getProperty(USERNAME_PROPERTY);
         try {
             switch (httpMethod) {
                 case Constants.HTTP_GET: {
@@ -74,7 +75,7 @@ public class ConfigsResource implements MiApiResource {
                     break;
                 }
                 case Constants.HTTP_PUT: {
-                    if (SecurityUtils.canUserEdit(messageContext.getProperty(USERNAME_PROPERTY).toString())) {
+                    if (SecurityUtils.canUserEdit(userName)) {
                         response = handlePut(axis2MessageContext);
                     } else {
                         Utils.sendForbiddenFaultResponse(axis2MessageContext);

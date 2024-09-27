@@ -130,8 +130,9 @@ public class LoggingResource extends APIResource {
                 return true;
             }
         } else {
+            String userName = (String) messageContext.getProperty(USERNAME_PROPERTY);
             try {
-                if (SecurityUtils.canUserEdit(messageContext.getProperty(USERNAME_PROPERTY).toString())) {
+                if (SecurityUtils.canUserEdit(userName)) {
                     if (jsonPayload.has(Constants.LOGGING_LEVEL)) {
                         String logLevel = jsonPayload.getString(Constants.LOGGING_LEVEL);
                         if (!isValidLogLevel(logLevel)) {

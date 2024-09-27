@@ -111,8 +111,9 @@ public class MessageProcessorResource extends APIResource {
             }
             axis2MessageContext.removeProperty(Constants.NO_ENTITY_BODY);
         } else if (Utils.isDoingPOST(axis2MessageContext)) {
+            String userName = (String) messageContext.getProperty(USERNAME_PROPERTY);
             try {
-                if (SecurityUtils.canUserEdit(messageContext.getProperty(USERNAME_PROPERTY).toString())) {
+                if (SecurityUtils.canUserEdit(userName)) {
                     if (!JsonUtil.hasAJsonPayload(axis2MessageContext)) {
                         return false;
                     }
