@@ -28,16 +28,12 @@ import org.json.JSONObject;
 import org.wso2.micro.core.util.CoreServerInitializerHolder;
 import org.wso2.micro.integrator.core.services.CarbonServerConfigurationService;
 import org.wso2.micro.integrator.core.util.MicroIntegratorBaseUtils;
-import org.wso2.micro.integrator.management.apis.security.handler.SecurityUtils;
-import org.wso2.micro.integrator.security.user.api.UserStoreException;
 
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import static org.wso2.micro.integrator.management.apis.Constants.USERNAME_PROPERTY;
 
 /**
  * This class serves metadata related to the server.
@@ -71,60 +67,53 @@ public class MetaDataResource implements MiApiResource {
             return true;
         } else {
             try {
-                if (SecurityUtils.canUserEdit(messageContext.getProperty(USERNAME_PROPERTY).toString())) {
-                    if (!JsonUtil.hasAJsonPayload(axis2MessageContext)) {
-                        Utils.setJsonPayLoad(axis2MessageContext, Utils.createJsonErrorObject("JSON payload is missing."));
-                        return true;
+                if (!JsonUtil.hasAJsonPayload(axis2MessageContext)) {
+                    Utils.setJsonPayLoad(axis2MessageContext, Utils.createJsonErrorObject("JSON payload is missing."));
+                    return true;
+                }
+                JsonObject payload = Utils.getJsonPayload(axis2MessageContext);
+                if (payload.has(Constants.STATUS)) {
+                    ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime()
+                                                                                          .availableProcessors());
+                    Runnable runnable = null;
+                    switch (payload.get(Constants.STATUS).getAsString()) {
+                        case "shutdown":
+                            runnable = this::shutdownServer;
+                            Utils.setJsonPayLoad(axis2MessageContext,
+                                                 createJsonResponse("The server will start to shutdown."));
+                            break;
+                        case "shutdownGracefully":
+                            runnable = this::gracefullyShutdownServer;
+                            Utils.setJsonPayLoad(axis2MessageContext,
+                                                 createJsonResponse("The server will start to shutdown gracefully."));
+                            break;
+                        case "restart":
+                            runnable = this::restart;
+                            Utils.setJsonPayLoad(axis2MessageContext,
+                                                 createJsonResponse("The server will start to restart."));
+                            break;
+                        case "restartGracefully":
+                            runnable = this::gracefullyRestartServer;
+                            Utils.setJsonPayLoad(axis2MessageContext,
+                                                 createJsonResponse("The server will start to restart gracefully."));
+                            break;
+                        default:
+                            LOG.error("Invalid server status received.");
+                            Utils.setJsonPayLoad(axis2MessageContext,
+                                                 Utils.createJsonErrorObject("Invalid server status received."));
                     }
-                    JsonObject payload = Utils.getJsonPayload(axis2MessageContext);
-                    if (payload.has(Constants.STATUS)) {
-                        ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime()
-                                .availableProcessors());
-                        Runnable runnable = null;
-                        switch (payload.get(Constants.STATUS).getAsString()) {
-                            case "shutdown":
-                                runnable = this::shutdownServer;
-                                Utils.setJsonPayLoad(axis2MessageContext,
-                                        createJsonResponse("The server will start to shutdown."));
-                                break;
-                            case "shutdownGracefully":
-                                runnable = this::gracefullyShutdownServer;
-                                Utils.setJsonPayLoad(axis2MessageContext,
-                                        createJsonResponse("The server will start to shutdown gracefully."));
-                                break;
-                            case "restart":
-                                runnable = this::restart;
-                                Utils.setJsonPayLoad(axis2MessageContext,
-                                        createJsonResponse("The server will start to restart."));
-                                break;
-                            case "restartGracefully":
-                                runnable = this::gracefullyRestartServer;
-                                Utils.setJsonPayLoad(axis2MessageContext,
-                                        createJsonResponse("The server will start to restart gracefully."));
-                                break;
-                            default:
-                                LOG.error("Invalid server status received.");
-                                Utils.setJsonPayLoad(axis2MessageContext,
-                                        Utils.createJsonErrorObject("Invalid server status received."));
-                        }
-                        if (runnable != null) {
-                            executorService.execute(runnable);
-                        }
-                    } else {
-                        LOG.error("Invalid payload structure received.");
-                        Utils.setJsonPayLoad(axis2MessageContext,
-                                Utils.createJsonErrorObject("Invalid payload structure received."));
+                    if (runnable != null) {
+                        executorService.execute(runnable);
                     }
                 } else {
-                    Utils.sendForbiddenFaultResponse(axis2MessageContext);
+                    LOG.error("Invalid payload structure received.");
+                    Utils.setJsonPayLoad(axis2MessageContext,
+                                         Utils.createJsonErrorObject("Invalid payload structure received."));
                 }
             } catch (IOException e) {
                 LOG.error("Error when parsing JSON payload.", e);
                 Utils.setJsonPayLoad(axis2MessageContext,
                                      Utils.createJsonErrorObject("Error when parsing JSON payload."));
-            } catch (UserStoreException e) {
-                LOG.error("Error occurred while retrieving the user data", e);
-                Utils.setJsonPayLoad(axis2MessageContext, Utils.createJsonErrorObject("Error occurred while retrieving the user data"));
             }
         }
         return true;

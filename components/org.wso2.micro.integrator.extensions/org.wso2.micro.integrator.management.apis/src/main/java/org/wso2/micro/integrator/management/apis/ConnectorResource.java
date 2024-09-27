@@ -37,8 +37,6 @@ import org.wso2.micro.core.util.AuditLogger;
 import org.wso2.micro.integrator.initializer.ServiceBusUtils;
 import org.wso2.micro.integrator.initializer.persistence.MediationPersistenceManager;
 import org.wso2.micro.integrator.initializer.deployment.synapse.deployer.SynapseAppDeployer;
-import org.wso2.micro.integrator.management.apis.security.handler.SecurityUtils;
-import org.wso2.micro.integrator.security.user.api.UserStoreException;
 
 import java.io.IOException;
 
@@ -52,7 +50,6 @@ import java.util.stream.Collectors;
 
 import static org.wso2.micro.integrator.management.apis.Constants.ITEM_TYPE_IMPORT;
 import static org.wso2.micro.integrator.management.apis.Constants.SEARCH_KEY;
-import static org.wso2.micro.integrator.management.apis.Constants.USERNAME_PROPERTY;
 
 /**
  * API Resource to manage connectors deployed
@@ -101,24 +98,21 @@ public class ConnectorResource implements MiApiResource {
             }
             axis2MessageContext.removeProperty(Constants.NO_ENTITY_BODY);
         } else {
+
             try {
-                if (SecurityUtils.canUserEdit(messageContext.getProperty(USERNAME_PROPERTY).toString())) {
-                    if (!JsonUtil.hasAJsonPayload(axis2MessageContext)) {
-                        Utils.setJsonPayLoad(axis2MessageContext, Utils.createJsonErrorObject("POST method required json payload"));
-                    } else {
-                        JsonObject payload = Utils.getJsonPayload(axis2MessageContext);
-                        String performedBy = Constants.ANONYMOUS_USER;
-                        if (messageContext.getProperty(Constants.USERNAME_PROPERTY) !=  null) {
-                            performedBy = messageContext.getProperty(Constants.USERNAME_PROPERTY).toString();
-                        }
-                        if (payload.has(NAME_ATTRIBUTE) && payload.has(STATUS_ATTRIBUTE) && payload.has(PACKAGE_ATTRIBUTE)) {
-                            changeConnectorState(performedBy, axis2MessageContext, payload, synapseConfiguration);
-                        } else {
-                            Utils.setJsonPayLoad(axis2MessageContext, Utils.createJsonErrorObject("Missing parameters in payload"));
-                        }
-                    }
+                if (!JsonUtil.hasAJsonPayload(axis2MessageContext)) {
+                    Utils.setJsonPayLoad(axis2MessageContext, Utils.createJsonErrorObject("POST method required json payload"));
                 } else {
-                    Utils.sendForbiddenFaultResponse(axis2MessageContext);
+                    JsonObject payload = Utils.getJsonPayload(axis2MessageContext);
+                    String performedBy = Constants.ANONYMOUS_USER;
+                    if (messageContext.getProperty(Constants.USERNAME_PROPERTY) !=  null) {
+                        performedBy = messageContext.getProperty(Constants.USERNAME_PROPERTY).toString();
+                    }
+                    if (payload.has(NAME_ATTRIBUTE) && payload.has(STATUS_ATTRIBUTE) && payload.has(PACKAGE_ATTRIBUTE)) {
+                        changeConnectorState(performedBy, axis2MessageContext, payload, synapseConfiguration);
+                    } else {
+                        Utils.setJsonPayLoad(axis2MessageContext, Utils.createJsonErrorObject("Missing parameters in payload"));
+                    }
                 }
             } catch (AxisFault axisFault) {
                 LOG.error("Error when updating connector status", axisFault);
@@ -126,9 +120,6 @@ public class ConnectorResource implements MiApiResource {
             } catch (IOException e) {
                 LOG.error("Error when parsing JSON payload", e);
                 Utils.setJsonPayLoad(axis2MessageContext, Utils.createJsonErrorObject("Error when parsing JSON payload"));
-            } catch (UserStoreException e) {
-                LOG.error("Error occurred while retrieving the user data", e);
-                Utils.setJsonPayLoad(axis2MessageContext, Utils.createJsonErrorObject("Error occurred while retrieving the user data"));
             }
         }
         return true;

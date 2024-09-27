@@ -30,8 +30,6 @@ import org.apache.synapse.inbound.InboundEndpoint;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.wso2.carbon.inbound.endpoint.internal.http.api.APIResource;
-import org.wso2.micro.integrator.management.apis.security.handler.SecurityUtils;
-import org.wso2.micro.integrator.security.user.api.UserStoreException;
 
 import java.io.IOException;
 
@@ -45,7 +43,6 @@ import java.util.stream.Collectors;
 
 import static org.wso2.micro.integrator.management.apis.Constants.SEARCH_KEY;
 import static org.wso2.micro.integrator.management.apis.Constants.SYNAPSE_CONFIGURATION;
-import static org.wso2.micro.integrator.management.apis.Constants.USERNAME_PROPERTY;
 
 public class InboundEndpointResource extends APIResource {
 
@@ -83,16 +80,7 @@ public class InboundEndpointResource extends APIResource {
                 populateInboundEndpointList(messageContext);
             }
         } else {
-            try {
-                if (SecurityUtils.canUserEdit(messageContext.getProperty(USERNAME_PROPERTY).toString())) {
-                    handlePost(messageContext, axisMsgCtx);
-                } else {
-                    Utils.sendForbiddenFaultResponse(axisMsgCtx);
-                }
-            } catch (UserStoreException e) {
-                LOG.error("Error occurred while retrieving the user data", e);
-                Utils.setJsonPayLoad(axisMsgCtx, Utils.createJsonErrorObject("Error occurred while retrieving the user data"));
-            }
+            handlePost(messageContext, axisMsgCtx);
         }
         return true;
     }

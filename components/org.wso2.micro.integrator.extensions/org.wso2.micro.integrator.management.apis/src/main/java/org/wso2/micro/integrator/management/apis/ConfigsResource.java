@@ -24,14 +24,10 @@ import org.apache.synapse.commons.json.JsonUtil;
 import org.apache.synapse.config.SynapseConfiguration;
 import org.apache.synapse.transport.passthru.config.PassThroughCorrelationConfigDataHolder;
 import org.json.JSONObject;
-import org.wso2.micro.integrator.management.apis.security.handler.SecurityUtils;
-import org.wso2.micro.integrator.security.user.api.UserStoreException;
 
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
-
-import static org.wso2.micro.integrator.management.apis.Constants.USERNAME_PROPERTY;
 
 /**
  * This resource will handle requests coming to configs/.
@@ -74,12 +70,7 @@ public class ConfigsResource implements MiApiResource {
                     break;
                 }
                 case Constants.HTTP_PUT: {
-                    if (SecurityUtils.canUserEdit(messageContext.getProperty(USERNAME_PROPERTY).toString())) {
-                        response = handlePut(axis2MessageContext);
-                    } else {
-                        Utils.sendForbiddenFaultResponse(axis2MessageContext);
-                        response = Utils.createJsonError("", axis2MessageContext, Constants.FORBIDDEN);
-                    }
+                    response = handlePut(axis2MessageContext);
                     break;
                 }
                 default: {
@@ -94,10 +85,6 @@ public class ConfigsResource implements MiApiResource {
         } catch (IOException e) {
             LOG.error("Error when parsing JSON payload", e);
             response = Utils.createJsonErrorObject("Error while parsing JSON payload");
-        } catch (UserStoreException e) {
-            LOG.error("Error occurred while retrieving the user data", e);
-            response = Utils.createJsonError("Error occurred while retrieving the user data",
-                    axis2MessageContext, Constants.FORBIDDEN);
         }
         Utils.setJsonPayLoad(axis2MessageContext, response);
         return true;
