@@ -179,7 +179,7 @@ public abstract class AbstractQuartzTaskManager implements TaskManager {
             throw new TaskException("Error in temporarily pausing task with name: " + taskName,
                     TaskException.Code.UNKNOWN, e);
         }
-}
+    }
 
     protected String getTenantTaskGroup() {
         return "TENANT_" + this.getTenantId() + "_TYPE_" + this.getTaskType();
