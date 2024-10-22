@@ -30,6 +30,8 @@ import org.apache.synapse.core.axis2.Axis2MessageContext;
 import org.apache.synapse.mediators.base.SequenceMediator;
 import org.json.JSONObject;
 import org.wso2.carbon.inbound.endpoint.internal.http.api.APIResource;
+import org.wso2.micro.integrator.management.apis.security.handler.SecurityUtils;
+import org.wso2.micro.integrator.security.user.api.UserStoreException;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -37,6 +39,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+
+import static org.wso2.micro.integrator.management.apis.Constants.USERNAME_PROPERTY;
 
 public class SequenceResource extends APIResource {
 
@@ -71,7 +75,17 @@ public class SequenceResource extends APIResource {
                 populateSequenceList(messageContext);
             }
         } else {
-            handlePost(messageContext, axisMsgCtx);
+            String userName = (String) messageContext.getProperty(USERNAME_PROPERTY);
+            try {
+                if (SecurityUtils.canUserEdit(userName)) {
+                    handlePost(messageContext, axisMsgCtx);
+                } else {
+                    Utils.sendForbiddenFaultResponse(axisMsgCtx);
+                }
+            } catch (UserStoreException e) {
+                LOG.error("Error occurred while retrieving the user data", e);
+                Utils.setJsonPayLoad(axisMsgCtx, Utils.createJsonErrorObject("Error occurred while retrieving the user data"));
+            }
         }
         return true;
     }
