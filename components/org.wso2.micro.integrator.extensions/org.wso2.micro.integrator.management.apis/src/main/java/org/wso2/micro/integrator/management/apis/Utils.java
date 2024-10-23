@@ -442,4 +442,13 @@ public class Utils {
         }
         return name;
     }
+
+    /**
+     * Sends unauthorized fault response.
+     * @param axis2MessageContext   AXIS2 message context
+     */
+    public static void sendForbiddenFaultResponse(org.apache.axis2.context.MessageContext axis2MessageContext) {
+        axis2MessageContext.setProperty(Constants.NO_ENTITY_BODY, true);
+        axis2MessageContext.setProperty(Constants.HTTP_STATUS_CODE, 403);
+    }
 }

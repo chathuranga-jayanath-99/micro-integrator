@@ -36,6 +36,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.wso2.carbon.inbound.endpoint.internal.http.api.APIResource;
 import org.wso2.micro.core.util.AuditLogger;
+import org.wso2.micro.integrator.management.apis.security.handler.SecurityUtils;
+import org.wso2.micro.integrator.security.user.api.UserStoreException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -48,6 +50,7 @@ import static org.wso2.micro.integrator.management.apis.Constants.ACTIVE_STATUS;
 import static org.wso2.micro.integrator.management.apis.Constants.INACTIVE_STATUS;
 import static org.wso2.micro.integrator.management.apis.Constants.NAME;
 import static org.wso2.micro.integrator.management.apis.Constants.STATUS;
+import static org.wso2.micro.integrator.management.apis.Constants.USERNAME_PROPERTY;
 
 /**
  * Represents message processor resources defined in the synapse configuration.
@@ -99,19 +102,28 @@ public class MessageProcessorResource extends APIResource {
             }
             axis2MessageContext.removeProperty(Constants.NO_ENTITY_BODY);
         } else if (Utils.isDoingPOST(axis2MessageContext)) {
+            String userName = (String) messageContext.getProperty(USERNAME_PROPERTY);
             try {
-                if (!JsonUtil.hasAJsonPayload(axis2MessageContext)) {
-                    return false;
-                }
-                JsonObject payload = getJsonPayload(messageContext);
-                if (payload.has(NAME) && payload.has(STATUS)) {
-                     changeProcessorStatus(messageContext, payload);
+                if (SecurityUtils.canUserEdit(userName)) {
+                    if (!JsonUtil.hasAJsonPayload(axis2MessageContext)) {
+                        return false;
+                    }
+                    JsonObject payload = getJsonPayload(messageContext);
+                    if (payload.has(NAME) && payload.has(STATUS)) {
+                        changeProcessorStatus(messageContext, payload);
+                    } else {
+                        Utils.setJsonPayLoad(axis2MessageContext, Utils.createJsonErrorObject("Missing parameters in payload"));
+                    }
                 } else {
-                    Utils.setJsonPayLoad(axis2MessageContext, Utils.createJsonErrorObject("Missing parameters in payload"));
+                    Utils.sendForbiddenFaultResponse(axis2MessageContext);
                 }
+
             } catch (IOException e) {
                 LOG.error("Error when parsing JSON payload", e);
                 Utils.setJsonPayLoad(axis2MessageContext, Utils.createJsonErrorObject("Error when parsing JSON payload"));
+            } catch (UserStoreException e) {
+                LOG.error("Error occurred while retrieving the user data", e);
+                Utils.setJsonPayLoad(axis2MessageContext, Utils.createJsonErrorObject("Error occurred while retrieving the user data"));
             }
         }
         return true;
