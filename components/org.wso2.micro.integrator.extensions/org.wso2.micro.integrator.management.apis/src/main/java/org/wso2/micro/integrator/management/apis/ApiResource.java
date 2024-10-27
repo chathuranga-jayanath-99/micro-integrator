@@ -141,7 +141,8 @@ public class ApiResource extends APIResource {
             String apiUrl = getApiUrl(api, messageContext);
             JSONArray urlArray = new JSONArray(apiUrl.split(","));
             apiObject.put(Constants.NAME, api.getName());
-            apiObject.put(Constants.URL, urlArray);
+            apiObject.put(Constants.URL, urlArray.get(0));
+            apiObject.put(Constants.URL_LIST, urlArray);
             apiObject.put(Constants.TRACING,
                           api.getAspectConfiguration().isTracingEnabled() ? Constants.ENABLED : Constants.DISABLED);
             jsonBody.getJSONArray(Constants.LIST).put(apiObject);
@@ -182,7 +183,8 @@ public class ApiResource extends APIResource {
         apiObject.put(Constants.NAME, api.getName());
         String apiUrl = getApiUrl(api, messageContext);
         JSONArray urlArray = new JSONArray(apiUrl.split(","));
-        apiObject.put(Constants.URL, urlArray);
+        apiObject.put(Constants.URL, urlArray.get(0));
+        apiObject.put(Constants.URL_LIST, urlArray);
 
         String version = api.getVersion().equals("") ? "N/A" : api.getVersion();
 
