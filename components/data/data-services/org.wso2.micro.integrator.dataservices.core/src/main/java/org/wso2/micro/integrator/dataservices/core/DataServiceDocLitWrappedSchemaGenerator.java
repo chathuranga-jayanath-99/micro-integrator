@@ -446,18 +446,6 @@ public class DataServiceDocLitWrappedSchemaGenerator {
 			activeElement.setMaxOccurs(Long.MAX_VALUE);
 		}
 
-		if (!DBUtils.isEmptyString(String.valueOf(result.isEscapeNonPrintableChar()))) {
-			tmpElement = getElement(cparams, result.getNamespace(), String.valueOf(result.isEscapeNonPrintableChar()));
-			if (tmpElement != null) {
-				addToElement(cparams, activeElement, tmpElement, true, false
-						, callQuery.isOptional());
-				return;
-			}
-			activeElement = createAndAddToElement(cparams, activeElement,
-					String.valueOf(result.isEscapeNonPrintableChar()), result.getNamespace(), false
-					, false, callQuery.isOptional());
-		}
-
 		/* process the result content */
 		processElementGroup(cparams, activeElement, result.getDefaultElementGroup());
 	}
