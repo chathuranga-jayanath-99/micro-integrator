@@ -1706,6 +1706,7 @@
         <commons-collections4.orbit.version>4.4.wso2v1</commons-collections4.orbit.version>
         <commons-collections4.orbit.imp.pkg.version>0.0.0</commons-collections4.orbit.imp.pkg.version>
         <xmlbeans.orbit.imp.pkg.version>[5.3.0.wso2v1,6.0.0.wso2v1)</xmlbeans.orbit.imp.pkg.version>
+        <xmlbeans.orbit.version>5.3.0.wso2v1</xmlbeans.orbit.version>
         <carbon.registry.imp.pkg.version>0.0.0</carbon.registry.imp.pkg.version> <!-- todo remove this and use {carbon.kernel.imp.pkg.version} after registry bundles are corrected to export correct versions-->
 
         <mongo-java-driver.orbit.version>3.5.0</mongo-java-driver.orbit.version>
