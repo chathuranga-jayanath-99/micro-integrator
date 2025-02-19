@@ -1679,6 +1679,7 @@ public class SQLQuery extends ExpressionQuery implements BatchRequestParticipant
                  sqlQuery.setNull(i + 1, Types.CLOB);
              } else {
                  // Use of Try-with-resources is removed since it causes "Stream closed" error.
+                 // The JDBC driver will handle closing the stream after reading the data.
                  sqlQuery.setClob(i + 1, new BufferedReader(new StringReader(value)),
                          value.length());
              }
@@ -1688,6 +1689,7 @@ public class SQLQuery extends ExpressionQuery implements BatchRequestParticipant
                                         Types.CLOB);
              } else {
                  // Use of Try-with-resources is removed since it causes "Stream closed" error.
+                 // The JDBC driver will handle closing the stream after reading the data.
                  ((CallableStatement) sqlQuery).setClob(i + 1,
                          new BufferedReader(new StringReader(value)), value.length());
              }
