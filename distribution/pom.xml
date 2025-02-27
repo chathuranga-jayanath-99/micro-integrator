@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="ISO-8859-1"?>
-<!--
+<?xml version="1.0" encoding="ISO-8859-1" standalone="no"?><!--
   ~ Copyright (c) 2016, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
   ~
   ~ WSO2 Inc. licenses this file to you under the Apache License,
@@ -15,13 +14,11 @@
   ~ KIND, either express or implied. See the License for the
   ~ specific language governing permissions and limitations
   ~ under the License.
-  -->
-
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  --><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <parent>
         <groupId>org.wso2.ei</groupId>
         <artifactId>wso2-micro-integrator-parent</artifactId>
-        <version>4.4.0</version>
+        <version>4.4.0.1-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -241,11 +238,11 @@
                         <configuration>
                             <skip>${docker.skip}</skip>
                             <target>
-                                <echo message="prepare phase" />
-                                <unzip src="${project.build.directory}/${project.artifactId}-${project.version}.zip" dest="${project.build.directory}/docker" />
-                                <move file="${project.build.directory}/docker/${project.artifactId}-${project.version}" tofile="${project.build.directory}/docker/${project.artifactId}" />
-                                <chmod file="${project.build.directory}/docker/${project.artifactId}/bin/*.sh" perm="+x" />
-                                <chmod file="${project.build.directory}/docker/docker-entrypoint.sh" perm="+x" />
+                                <echo message="prepare phase"/>
+                                <unzip dest="${project.build.directory}/docker" src="${project.build.directory}/${project.artifactId}-${project.version}.zip"/>
+                                <move file="${project.build.directory}/docker/${project.artifactId}-${project.version}" tofile="${project.build.directory}/docker/${project.artifactId}"/>
+                                <chmod file="${project.build.directory}/docker/${project.artifactId}/bin/*.sh" perm="+x"/>
+                                <chmod file="${project.build.directory}/docker/docker-entrypoint.sh" perm="+x"/>
                             </target>
                         </configuration>
                         <goals>

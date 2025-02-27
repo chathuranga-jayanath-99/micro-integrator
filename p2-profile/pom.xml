@@ -1,4 +1,4 @@
-<!--
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><!--
   ~ Copyright (c) 2016, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
   ~
   ~ WSO2 Inc. licenses this file to you under the Apache License,
@@ -14,14 +14,12 @@
   ~ KIND, either express or implied. See the License for the
   ~ specific language governing permissions and limitations
   ~ under the License.
-  -->
-
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  --><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
     <parent>
         <groupId>org.wso2.ei</groupId>
         <artifactId>wso2-micro-integrator-parent</artifactId>
-        <version>4.4.0</version>
+        <version>4.4.0.1-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -441,7 +439,7 @@
                         <phase>generate-resources</phase>
                         <configuration>
                             <target>
-                                <mkdir dir="target/wso2carbon-core-${carbon.kernel.version}/wso2/deployment/server" />
+                                <mkdir dir="target/wso2carbon-core-${carbon.kernel.version}/wso2/deployment/server"/>
                             </target>
                         </configuration>
                         <goals>
@@ -455,8 +453,8 @@
                         </goals>
                         <configuration>
                             <target>
-                                <replace token="false" value="true" dir="target/wso2carbon-core-${carbon.kernel.version}/wso2/components">
-                                    <include name="**/bundles.info" />
+                                <replace dir="target/wso2carbon-core-${carbon.kernel.version}/wso2/components" token="false" value="true">
+                                    <include name="**/bundles.info"/>
                                 </replace>
                             </target>
                         </configuration>

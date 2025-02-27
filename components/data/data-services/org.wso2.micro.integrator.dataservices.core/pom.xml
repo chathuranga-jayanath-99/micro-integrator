@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8" standalone="no"?><!--
   ~ Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
   ~
   ~ WSO2 Inc. licenses this file to you under the Apache License,
@@ -15,13 +14,12 @@
   ~ KIND, either express or implied. See the License for the
   ~ specific language governing permissions and limitations
   ~ under the License.
-  -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  --><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
     <parent>
         <groupId>org.wso2.ei</groupId>
         <artifactId>data-services</artifactId>
-        <version>4.4.0</version>
+        <version>4.4.0.1-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -435,15 +433,15 @@
                                 <echo>######################################</echo>
                                 <echo>Creating Repository for Data Services</echo>
                                 <echo>######################################</echo>
-                                <mkdir dir="${basedir}/target/repository" />
-                                <mkdir dir="${basedir}/target/repository/dataservices" />
-                                <mkdir dir="${basedir}/target/repository/services" />
-                                <mkdir dir="${basedir}/target/repository/modules" />
-                                <mkdir dir="${basedir}/target/repository/database" />
-                                <property name="test_dbs_files_dir" value="${basedir}/src/test/resources/test-dbs" />
+                                <mkdir dir="${basedir}/target/repository"/>
+                                <mkdir dir="${basedir}/target/repository/dataservices"/>
+                                <mkdir dir="${basedir}/target/repository/services"/>
+                                <mkdir dir="${basedir}/target/repository/modules"/>
+                                <mkdir dir="${basedir}/target/repository/database"/>
+                                <property name="test_dbs_files_dir" value="${basedir}/src/test/resources/test-dbs"/>
                                 <copy todir="${basedir}/target/repository/dataservices">
                                     <fileset dir="${test_dbs_files_dir}">
-                                        <include name="**/*.dbs" />
+                                        <include name="**/*.dbs"/>
                                     </fileset>
                                 </copy>
                             </tasks>
@@ -460,11 +458,11 @@
                                 <echo>######################################</echo>
                                 <echo>Coping carbon.xml</echo>
                                 <echo>######################################</echo>
-                                <mkdir dir="${basedir}/target/carbonHome" />
-                                <mkdir dir="${basedir}/target/carbonHome/repository" />
-                                <mkdir dir="${basedir}/target/carbonHome/repository/conf" />
-                                <copy file="${basedir}/src/test/resources/carbon.xml" tofile="${basedir}/target/carbonHome/repository/conf/carbon.xml" />
-                                <copy file="${basedir}/src/test/resources/dataServices.xml" tofile="${basedir}/target/carbonHome/repository/conf/dataServices.xml" />
+                                <mkdir dir="${basedir}/target/carbonHome"/>
+                                <mkdir dir="${basedir}/target/carbonHome/repository"/>
+                                <mkdir dir="${basedir}/target/carbonHome/repository/conf"/>
+                                <copy file="${basedir}/src/test/resources/carbon.xml" tofile="${basedir}/target/carbonHome/repository/conf/carbon.xml"/>
+                                <copy file="${basedir}/src/test/resources/dataServices.xml" tofile="${basedir}/target/carbonHome/repository/conf/dataServices.xml"/>
                             </tasks>
                         </configuration>
                         <goals>
