@@ -18,7 +18,7 @@
     <parent>
         <groupId>org.wso2.ei</groupId>
         <artifactId>wso2-micro-integrator-parent</artifactId>
-        <version>4.4.0.1-SNAPSHOT</version>
+        <version>4.4.0.1</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -238,11 +238,11 @@
                         <configuration>
                             <skip>${docker.skip}</skip>
                             <target>
-                                <echo message="prepare phase"/>
-                                <unzip dest="${project.build.directory}/docker" src="${project.build.directory}/${project.artifactId}-${project.version}.zip"/>
-                                <move file="${project.build.directory}/docker/${project.artifactId}-${project.version}" tofile="${project.build.directory}/docker/${project.artifactId}"/>
-                                <chmod file="${project.build.directory}/docker/${project.artifactId}/bin/*.sh" perm="+x"/>
-                                <chmod file="${project.build.directory}/docker/docker-entrypoint.sh" perm="+x"/>
+                                <echo message="prepare phase" />
+                                <unzip dest="${project.build.directory}/docker" src="${project.build.directory}/${project.artifactId}-${project.version}.zip" />
+                                <move file="${project.build.directory}/docker/${project.artifactId}-${project.version}" tofile="${project.build.directory}/docker/${project.artifactId}" />
+                                <chmod file="${project.build.directory}/docker/${project.artifactId}/bin/*.sh" perm="+x" />
+                                <chmod file="${project.build.directory}/docker/docker-entrypoint.sh" perm="+x" />
                             </target>
                         </configuration>
                         <goals>

@@ -3,7 +3,7 @@
     <parent>
         <groupId>org.wso2.ei</groupId>
         <artifactId>mediation-integration</artifactId>
-        <version>4.4.0.1-SNAPSHOT</version>
+        <version>4.4.0.1</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -38,7 +38,7 @@
                         <argument>-Dinstr.file=${basedir}/instrumentation.txt</argument>
                         <argument>-Dfilters.file=${basedir}/filters.txt</argument>
                         <argument>-classpath</argument>
-                        <classpath/>
+                        <classpath />
                         <argument>org.wso2.esb.integration.common.utils.coverage.TestCoverageGenerator</argument>
                     </arguments>
                     <workingDirectory>${basedir}/target</workingDirectory>

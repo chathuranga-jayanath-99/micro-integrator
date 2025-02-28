@@ -19,7 +19,7 @@
     <parent>
         <groupId>org.wso2.ei</groupId>
         <artifactId>wso2-micro-integrator-parent</artifactId>
-        <version>4.4.0.1-SNAPSHOT</version>
+        <version>4.4.0.1</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -439,7 +439,7 @@
                         <phase>generate-resources</phase>
                         <configuration>
                             <target>
-                                <mkdir dir="target/wso2carbon-core-${carbon.kernel.version}/wso2/deployment/server"/>
+                                <mkdir dir="target/wso2carbon-core-${carbon.kernel.version}/wso2/deployment/server" />
                             </target>
                         </configuration>
                         <goals>
@@ -454,7 +454,7 @@
                         <configuration>
                             <target>
                                 <replace dir="target/wso2carbon-core-${carbon.kernel.version}/wso2/components" token="false" value="true">
-                                    <include name="**/bundles.info"/>
+                                    <include name="**/bundles.info" />
                                 </replace>
                             </target>
                         </configuration>
