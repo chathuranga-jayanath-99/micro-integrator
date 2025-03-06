@@ -73,7 +73,7 @@
                         </Import-Package>
                         <Export-Package>
                             !org.wso2.micro.integrator.ntask.internal,
-                            org.wso2.micro.integrator.ntask.core.*; version="${project.version}",
+                            org.wso2.micro.integrator.ntask.core.*; version="${package.version}",
                         </Export-Package>
                     </instructions>
                 </configuration>

@@ -128,10 +128,10 @@
                         </CAPP_MANAGER-RequiredServices>
                         <Export-Package>
                             !org.wso2.micro.integrator.initializer.deployment.internal,
-                            org.wso2.micro.integrator.initializer.*;version="${project.version}"
+                            org.wso2.micro.integrator.initializer.*;version="${package.version}"
                         </Export-Package>
                         <Import-Package>
-                            org.wso2.micro.integrator.core.*;version="${project.version}",
+                            org.wso2.micro.integrator.core.*;version="${package.version}",
                             *;resolution:=optional
                         </Import-Package>
                         <DynamicImport-Package>*</DynamicImport-Package>

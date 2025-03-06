@@ -51,7 +51,7 @@
                             *;resolution:=optional
                         </Import-Package>
                         <Export-Package>
-                            org.wso2.micro.integrator.coordination.*; version="${project.version}",
+                            org.wso2.micro.integrator.coordination.*; version="${package.version}",
                         </Export-Package>
                     </instructions>
                 </configuration>
