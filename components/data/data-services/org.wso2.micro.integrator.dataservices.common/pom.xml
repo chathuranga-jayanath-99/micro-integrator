@@ -40,7 +40,7 @@
                         <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Name>${project.artifactId}</Bundle-Name>
                         <Export-Package>
-                            org.wso2.micro.integrator.dataservices.common.*;version="${project.version}"
+                            org.wso2.micro.integrator.dataservices.common.*;version="${package.version}"
                         </Export-Package>
                     </instructions>
                 </configuration>

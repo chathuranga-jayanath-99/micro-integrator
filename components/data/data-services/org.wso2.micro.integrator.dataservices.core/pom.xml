@@ -312,8 +312,8 @@
                         <Bundle-Name>${project.artifactId}</Bundle-Name>
                         <Private-Package>org.wso2.micro.integrator.dataservices.core.internal</Private-Package>
                         <Export-Package>
-                            !org.wso2.micro.integrator.dataservices.core.internal;version="${project.version}",
-                            org.wso2.micro.integrator.dataservices.core.*;version="${project.version}"
+                            !org.wso2.micro.integrator.dataservices.core.internal;version="${package.version}",
+                            org.wso2.micro.integrator.dataservices.core.*;version="${package.version}"
                         </Export-Package>
                         <Import-Package>
                             !org.wso2.micro.integrator.dataservices.core.*,
@@ -347,15 +347,15 @@
                             org.apache.axis2.deployment.util;version="${apache.axis2.orbit.imp.pkg.version}",
                             org.apache.axis2.transport.http;version="${apache.axis2.orbit.imp.pkg.version}",
                             org.apache.commons.logging;version="${carbon.commons.logging.imp.pkg.version}",
-                            org.wso2.micro.integrator.dataservices.common;version="${project.version}",
-                            org.wso2.micro.integrator.dataservices.common.conf;version="${project.version}",
+                            org.wso2.micro.integrator.dataservices.common;version="${package.version}",
+                            org.wso2.micro.integrator.dataservices.common.conf;version="${package.version}",
                             org.apache.commons.io;version="${commons-io.orbit.imp.pkg.version}",
                             org.apache.commons.io.output;version="${commons-io.orbit.imp.pkg.version}",
-                            org.wso2.micro.integrator.ndatasource.common;version="${project.version}",
-                            org.wso2.micro.integrator.ndatasource.common.spi;version="${project.version}",
-                            org.wso2.micro.integrator.ndatasource.core;version="${project.version}",
-                            org.wso2.micro.integrator.ndatasource.core.utils;version="${project.version}",
-                            org.wso2.micro.integrator.ndatasource.rdbms;version="${project.version}",
+                            org.wso2.micro.integrator.ndatasource.common;version="${package.version}",
+                            org.wso2.micro.integrator.ndatasource.common.spi;version="${package.version}",
+                            org.wso2.micro.integrator.ndatasource.core;version="${package.version}",
+                            org.wso2.micro.integrator.ndatasource.core.utils;version="${package.version}",
+                            org.wso2.micro.integrator.ndatasource.rdbms;version="${package.version}",
                             com.hp.hpl.jena.query;version="${jena-arq.orbit.imp.pkg.version}",
                             com.hp.hpl.jena.rdf.model;version="${jena-arq.orbit.imp.pkg.version}",
                             com.hp.hpl.jena.datatypes.xsd;version="${jena-arq.orbit.imp.pkg.version}",
@@ -369,11 +369,11 @@
                             org.apache.xmlbeans;version="${xmlbeans.orbit.imp.pkg.version}",
                             org.apache.commons.collections4;version="${commons-collections4.orbit.imp.pkg.version}",
                             com.mongodb;version="${mongodb-driver-sync.imp.pkg.version}",
-                            org.wso2.micro.integrator.dataservices.sql.driver;version="${project.version}",
-                            org.wso2.micro.integrator.dataservices.sql.driver.parser;version="${project.version}",
-                            org.wso2.micro.integrator.dataservices.sql.driver.util;version="${project.version}",
-                            org.wso2.micro.integrator.dataservices.sql.driver.processor.reader;version="${project.version}",
-                            org.wso2.micro.integrator.dataservices.sql.driver.query;version="${project.version}",
+                            org.wso2.micro.integrator.dataservices.sql.driver;version="${package.version}",
+                            org.wso2.micro.integrator.dataservices.sql.driver.parser;version="${package.version}",
+                            org.wso2.micro.integrator.dataservices.sql.driver.util;version="${package.version}",
+                            org.wso2.micro.integrator.dataservices.sql.driver.processor.reader;version="${package.version}",
+                            org.wso2.micro.integrator.dataservices.sql.driver.query;version="${package.version}",
                             org.json;version="${json.orbit.imp.pkg.version}",
                             org.webharvest.definition;version="${webharvest-core.orbit.imp.pkg.version}",
                             org.webharvest.runtime;version="${webharvest-core.orbit.imp.pkg.version}",
