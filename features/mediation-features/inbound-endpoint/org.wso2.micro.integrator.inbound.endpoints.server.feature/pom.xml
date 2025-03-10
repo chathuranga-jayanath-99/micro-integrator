@@ -19,7 +19,7 @@
     <parent>
         <artifactId>inbound-endpoint</artifactId>
         <groupId>org.wso2.ei</groupId>
-        <version>4.4.0.6-SNAPSHOT</version>
+        <version>4.4.0.6</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
