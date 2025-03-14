@@ -3,7 +3,7 @@
     <parent>
         <groupId>org.wso2.ei</groupId>
         <artifactId>micro-integrator-integration-test</artifactId>
-        <version>4.4.0.9</version>
+        <version>4.4.0.10-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
