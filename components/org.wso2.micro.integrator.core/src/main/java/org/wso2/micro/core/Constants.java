@@ -103,4 +103,6 @@ public class Constants {
 
     public static final String BOUNCY_CASTLE_PROVIDER = "BC";
     public static final String BOUNCY_CASTLE_FIPS_PROVIDER = "BCFIPS";
+    public static final String PAYLOAD = "payload";
+    public static final String BATCH_REQUEST = "_batch_req";
 }
