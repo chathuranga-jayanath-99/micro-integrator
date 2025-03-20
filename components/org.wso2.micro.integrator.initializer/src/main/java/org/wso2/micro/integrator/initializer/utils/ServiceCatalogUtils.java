@@ -56,7 +56,6 @@ import org.wso2.micro.application.deployer.AppDeployerUtils;
 import org.wso2.micro.application.deployer.CarbonApplication;
 import org.wso2.micro.core.util.CarbonException;
 import org.wso2.micro.core.util.StringUtils;
-import org.wso2.micro.integrator.dataservices.common.DBConstants;
 import org.wso2.micro.integrator.dataservices.core.DataHolder;
 import org.wso2.micro.integrator.initializer.deployment.application.deployer.CappDeployer;
 import org.wso2.securevault.SecretResolver;
@@ -82,34 +81,12 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import static org.wso2.micro.integrator.initializer.utils.Constants.*;
-import static org.wso2.micro.integrator.initializer.utils.Constants.CURLY_CLOSE_BRACKET;
-import static org.wso2.micro.integrator.initializer.utils.Constants.CURLY_OPEN_BRACKET;
-import static org.wso2.micro.integrator.initializer.utils.Constants.DAT_REQUEST_BOX;
-import static org.wso2.micro.integrator.initializer.utils.Constants.EMPTY_STRING;
-import static org.wso2.micro.integrator.initializer.utils.Constants.ENVELOPE;
-import static org.wso2.micro.integrator.initializer.utils.Constants.OBJECT;
-import static org.wso2.micro.integrator.initializer.utils.Constants.OPERATION_NAME;
-import static org.wso2.micro.integrator.initializer.utils.Constants.OPERATION_NAME_1;
-import static org.wso2.micro.integrator.initializer.utils.Constants.OPERATION_NAME_2;
-import static org.wso2.micro.integrator.initializer.utils.Constants.PARAM_NAME_1;
-import static org.wso2.micro.integrator.initializer.utils.Constants.PARAM_NAME_2;
-import static org.wso2.micro.integrator.initializer.utils.Constants.QUESTION_MARK;
-import static org.wso2.micro.integrator.initializer.utils.Constants.REQUEST_BOX;
-import static org.wso2.micro.integrator.initializer.utils.Constants.SLASH;
-import static org.wso2.micro.integrator.initializer.utils.Constants.SOAP_ENV;
-import static org.wso2.micro.integrator.initializer.utils.Constants.SOAP_ENV_BODY;
-import static org.wso2.micro.integrator.initializer.utils.Constants.SOAP_ENV_HEADER;
-import static org.wso2.micro.integrator.initializer.utils.Constants.STRING;
-import static org.wso2.micro.integrator.initializer.utils.Constants.UNDERSCORE;
-import static org.wso2.micro.integrator.initializer.utils.Constants.URN;
-import static org.wso2.micro.integrator.initializer.utils.Constants.URN_REQUEST_BOX;
 
 /**
  * Util class for service catalog feature.
@@ -512,10 +489,10 @@ public class ServiceCatalogUtils {
                 metaFileName.replaceAll(METADATA_FOLDER_STRING, SWAGGER_FOLDER_STRING))).exists()) {
             return processProxyServiceMetadata(tempDir, metadataYamlFolder, md5MapOfAllService);
         } else if (metaFileName.contains(DATA_SERVICE_SUFFIX)) {
-            return processAPIMetadata(metadataFolder, metaFileName, tempDir, metadataYamlFolder,
+            return processServiceMetadata(metadataFolder, metaFileName, tempDir, metadataYamlFolder,
                     md5MapOfAllService, true);
         } else {
-            return processAPIMetadata(metadataFolder, metaFileName, tempDir, metadataYamlFolder,
+            return processServiceMetadata(metadataFolder, metaFileName, tempDir, metadataYamlFolder,
                     md5MapOfAllService, false);
         }
     }
@@ -533,9 +510,9 @@ public class ServiceCatalogUtils {
      * @throws ResolverException        error occurred while updating the metadata file.
      * @throws NoSuchAlgorithmException could not find the MD% algorithm.
      */
-    private static boolean processAPIMetadata(File metadataFolder, String metaFileName, File tempDir,
-                                              File metadataYamlFolder, Map<String, String> md5MapOfAllService,
-                                              boolean isDataService)
+    private static boolean processServiceMetadata(File metadataFolder, String metaFileName, File tempDir,
+                                                  File metadataYamlFolder, Map<String, String> md5MapOfAllService,
+                                                  boolean isDataService)
             throws IOException, ResolverException, NoSuchAlgorithmException {
         String APIName = metaFileName.substring(0, metaFileName.indexOf(METADATA_FOLDER_STRING));
         String APIVersion =
@@ -1046,7 +1023,7 @@ public class ServiceCatalogUtils {
         headerParameter.setName("SOAPAction");
         headerParameter.setRequired(true);
         RequestBody requestBody = new RequestBody();
-        if (soapOperation.contains(REQUEST_BOX) && soapOperation.size() > 1) {
+        if (soapOperation.contains(URN_REQUEST_BOX) && soapOperation.size() > 1) {
             requestBody.description("This example accommodates both single and request box operations. " +
                     "Populate `dat:operation_name` for single requests or `dat:request_box` " +
                     "for invoking multiple operations. Include only the relevant sections for your operation.");
