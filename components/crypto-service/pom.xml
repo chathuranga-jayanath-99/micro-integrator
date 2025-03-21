@@ -19,7 +19,7 @@
     <parent>
         <artifactId>mi-component-parent</artifactId>
         <groupId>org.wso2.ei</groupId>
-        <version>4.4.0.10</version>
+        <version>4.4.0.11-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
