@@ -238,16 +238,15 @@ public class SynapseArtifactInitUtils {
     }
 
     private static void extract(String sourcePath, String destPath) throws IOException {
-        Enumeration entries;
-        ZipFile zipFile;
+        ZipFile zipFile = new ZipFile(sourcePath);
+        Enumeration entries = zipFile.entries();
 
-        zipFile = new ZipFile(sourcePath);
-        entries = zipFile.entries();
-
-        String canonicalDestPath = new File(destPath).getCanonicalPath();
+        File destDirPath = new File(destPath);
+        String canonicalDestPath = destDirPath.getCanonicalPath();
         while (entries.hasMoreElements()) {
             ZipEntry entry = (ZipEntry) entries.nextElement();
-            String canonicalEntryPath = new File(destPath + entry.getName()).getCanonicalPath();
+            File destFile = new File(destDirPath + entry.getName());
+            String canonicalEntryPath = destFile.getCanonicalPath();
             if(!canonicalEntryPath.startsWith(canonicalDestPath)){
                 throw new IOException("Entry is outside of the target dir: " + entry.getName());
             }
@@ -255,7 +254,7 @@ public class SynapseArtifactInitUtils {
             if (!entry.isDirectory() && entry.getName().equalsIgnoreCase(CONNECTOR_XML)) {
                 // if the entry is a file, write the file
                 copyInputStream(zipFile.getInputStream(entry),
-                        new BufferedOutputStream(new FileOutputStream(destPath + entry.getName())));
+                        new BufferedOutputStream(new FileOutputStream(destFile)));
             }
         }
         zipFile.close();
