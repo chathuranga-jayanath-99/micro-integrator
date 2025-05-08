@@ -36,9 +36,11 @@ import java.io.InputStream;
 import java.io.StringReader;
 import java.math.BigDecimal;
 import java.sql.Blob;
+import java.sql.Clob;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.Date;
+import java.sql.NClob;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -263,13 +265,13 @@ public class RDBMSDataHandler implements ODataDataHandler {
             for (String column : modifyValues.getNames()) {
                 String value = modifyValues.getValue(column);
                 bindValuesToPreparedStatement(this.rdbmsDataTypes.get(exportedTable).get(column), value, index,
-                                              statement);
+                                              statement, connection);
                 index++;
             }
             for (String column : primaryKeys.getNames()) {
                 String value = primaryKeys.getValue(column);
                 bindValuesToPreparedStatement(this.rdbmsDataTypes.get(importedTable).get(column), value, index,
-                                              statement);
+                                              statement, connection);
                 index++;
             }
             statement.execute();
@@ -296,7 +298,8 @@ public class RDBMSDataHandler implements ODataDataHandler {
             int index = 1;
             for (String column : keys.getNames()) {
                 String value = keys.getValue(column);
-                bindValuesToPreparedStatement(this.rdbmsDataTypes.get(tableName).get(column), value, index, statement);
+                bindValuesToPreparedStatement(this.rdbmsDataTypes.get(tableName).get(column), value, index, statement,
+                        connection);
                 index++;
             }
             resultSet = statement.executeQuery();
@@ -430,7 +433,7 @@ public class RDBMSDataHandler implements ODataDataHandler {
                 if (this.rdbmsDataTypes.get(tableName).keySet().contains(column)) {
                     String value = entry.getValue(column);
                     bindValuesToPreparedStatement(this.rdbmsDataTypes.get(tableName).get(column), value, index,
-                                                  statement);
+                                                  statement, connection);
                     index++;
                 }
             }
@@ -492,7 +495,7 @@ public class RDBMSDataHandler implements ODataDataHandler {
                 if (this.rdbmsDataTypes.get(tableName).keySet().contains(column)) {
                     String value = keys.getValue(column);
                     bindValuesToPreparedStatement(this.rdbmsDataTypes.get(tableName).get(column), value, index,
-                                                  statement);
+                                                  statement, connection);
                     index++;
                 }
             }
@@ -519,7 +522,7 @@ public class RDBMSDataHandler implements ODataDataHandler {
      * @throws ODataServiceFault
      */
     private void bindValuesToPreparedStatement(int type, String value, int ordinalPosition,
-                                               PreparedStatement sqlStatement)
+                                               PreparedStatement sqlStatement, Connection connection)
             throws SQLException, ParseException, ODataServiceFault {
         byte[] data;
         try {
@@ -567,8 +570,9 @@ public class RDBMSDataHandler implements ODataDataHandler {
                     if (value == null) {
                         sqlStatement.setNull(ordinalPosition, type);
                     } else {
-                        sqlStatement.setClob(ordinalPosition, new BufferedReader(new StringReader(value)),
-                                             value.length());
+                        Clob clob = connection.createClob();
+                        clob.setString(1, value);
+                        sqlStatement.setClob(ordinalPosition, clob);
                     }
                     break;
                 case Types.BOOLEAN:
@@ -647,8 +651,9 @@ public class RDBMSDataHandler implements ODataDataHandler {
                     if (value == null) {
                         sqlStatement.setNull(ordinalPosition, type);
                     } else {
-                        sqlStatement.setNClob(ordinalPosition, new BufferedReader(new StringReader(value)),
-                                              value.length());
+                        NClob nclob = connection.createNClob();
+                        nclob.setString(1, value);
+                        sqlStatement.setNClob(ordinalPosition, nclob);
                     }
                     break;
                 case Types.BIGINT:
@@ -701,7 +706,7 @@ public class RDBMSDataHandler implements ODataDataHandler {
                 if (!pKeys.contains(column)) {
                     value = newProperties.getValue(column);
                     bindValuesToPreparedStatement(this.rdbmsDataTypes.get(tableName).get(column), value, index,
-                                                  statement);
+                                                  statement, connection);
                     index++;
                 }
             }
@@ -710,7 +715,7 @@ public class RDBMSDataHandler implements ODataDataHandler {
                     if (pKeys.contains(column)) {
                         value = newProperties.getValue(column);
                         bindValuesToPreparedStatement(this.rdbmsDataTypes.get(tableName).get(column), value, index,
-                                                      statement);
+                                                      statement, connection);
                         index++;
                     }
                 } else {
@@ -745,7 +750,7 @@ public class RDBMSDataHandler implements ODataDataHandler {
                 if (!pKeys.contains(column)) {
                     value = newProperties.getValue(column);
                     bindValuesToPreparedStatement(this.rdbmsDataTypes.get(tableName).get(column), value, index,
-                                                  statement);
+                                                  statement, connection);
                     index++;
                 }
             }
@@ -754,7 +759,7 @@ public class RDBMSDataHandler implements ODataDataHandler {
                     if (pKeys.contains(column)) {
                         value = oldProperties.getValue(column);
                         bindValuesToPreparedStatement(this.rdbmsDataTypes.get(tableName).get(column), value, index,
-                                                      statement);
+                                                      statement, connection);
                         index++;
                     }
                 } else {
@@ -789,7 +794,7 @@ public class RDBMSDataHandler implements ODataDataHandler {
                 if (this.rdbmsDataTypes.get(tableName).keySet().contains(column)) {
                     value = entry.getValue(column);
                     bindValuesToPreparedStatement(this.rdbmsDataTypes.get(tableName).get(column), value, index,
-                                                  statement);
+                                                  statement, connection);
                     index++;
                 }
             }
