@@ -390,7 +390,7 @@ public class MetricHandler extends AbstractExtendedSynapseHandler {
         for (API api : apiList) {
             String apiContextPath = api.getContext();
             if (!defaultVersionStrategy) {
-                if(api.getVersionStrategy() instanceof URLBasedVersionStrategy) {
+                if (api.getVersionStrategy() instanceof URLBasedVersionStrategy) {
                     apiContextPath = apiContextPath + "/" + api.getVersionStrategy().getVersion();
                 }
             }
