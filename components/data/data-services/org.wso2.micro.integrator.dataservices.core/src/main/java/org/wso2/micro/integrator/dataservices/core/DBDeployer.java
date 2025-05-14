@@ -87,6 +87,7 @@ import javax.management.ObjectName;
 import javax.naming.InitialContext;
 import javax.transaction.TransactionManager;
 import javax.xml.namespace.QName;
+import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -109,12 +110,15 @@ import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+
 /**
  * Represents the custom Axis2 deployer used in deploying data-services .dbs files.
  */
 public class DBDeployer extends AbstractDeployer {
 
     public static final String HTTP_TRANSPORT = "http";
+
+	private final XMLInputFactory inputFactory = XMLInputFactory.newInstance();
 
 	public static final String HTTPS_TRANSPORT = "https";
 
@@ -809,7 +813,9 @@ public class DBDeployer extends AbstractDeployer {
 			convertConfigToMultipleDSFormat(configFilePath);
 
 			fis = new FileInputStream(configFilePath);
-			OMElement dbsElement = (new StAXOMBuilder(fis)).getDocumentElement();
+			inputFactory.setProperty(XMLInputFactory.IS_COALESCING, true);
+			javax.xml.stream.XMLStreamReader xmlReader = inputFactory.createXMLStreamReader(fis);
+			OMElement dbsElement = (new StAXOMBuilder(xmlReader)).getDocumentElement();
 			dbsElement.build();
 
 			/* apply secure vault information in resolving the aliases to decrypted values */
