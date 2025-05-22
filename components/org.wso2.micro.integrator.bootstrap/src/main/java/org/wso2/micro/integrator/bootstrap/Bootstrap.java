@@ -105,7 +105,7 @@ public class Bootstrap {
         }
         System.setProperty("javax.xml.bind.JAXBContextFactory", "com.sun.xml.bind.v2.ContextFactory");
         // System property to acknowledge server startup process
-        System.setProperty("setup", "true");
+        System.setProperty("org.wso2.mi.server.startup.mode", "true");
     }
 
     protected void addClassPathEntries() throws MalformedURLException {

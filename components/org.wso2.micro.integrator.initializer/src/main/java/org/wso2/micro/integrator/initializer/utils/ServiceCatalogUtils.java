@@ -83,6 +83,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -95,7 +96,7 @@ public class ServiceCatalogUtils {
 
     private static final Log log = LogFactory.getLog(ServiceCatalogUtils.class);
     private static SecretResolver secretResolver;
-    private static List<ServiceMetaDataHolder> md5List = new ArrayList<>();
+    private static List<ServiceMetaDataHolder> md5List = new CopyOnWriteArrayList<>();
     private static Boolean alreadyUploaded = false;
     private static String resolvedHostName;
     private static String resolvedGroupId;
@@ -1270,6 +1271,7 @@ public class ServiceCatalogUtils {
      * @return true if the server is in startup mode, false otherwise
      */
     public static boolean isServerInStartupMode() {
-        return System.getProperty("setup") != null;
+        String isStartUpMode = System.getProperty("org.wso2.mi.server.startup.mode");
+        return isStartUpMode != null && Boolean.parseBoolean(isStartUpMode);
     }
 }
