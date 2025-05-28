@@ -190,7 +190,7 @@ public class CarbonUtils {
 
         TransformerFactory factory = TransformerFactory.newInstance();
         factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-//        Revert these configurations as these properties are not supported.
+//        Can't configure the XML parser to disable external entity resolution
 //        factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
 //        factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
         return factory;
