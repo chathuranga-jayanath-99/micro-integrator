@@ -50,6 +50,7 @@ import org.wso2.micro.integrator.initializer.utils.ServiceCatalogUtils;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -67,6 +68,7 @@ import javax.xml.stream.XMLStreamException;
 
 import static org.wso2.micro.core.Constants.SUPER_TENANT_DOMAIN_NAME;
 import static org.wso2.micro.integrator.initializer.deployment.synapse.deployer.SynapseAppDeployerConstants.API_TYPE;
+import static org.wso2.micro.integrator.initializer.utils.Constants.CAPP_FOLDER_NAME;
 
 public class CappDeployer extends AbstractDeployer {
 
@@ -232,8 +234,9 @@ public class CappDeployer extends AbstractDeployer {
             faultyCapps.add(cAppName);
         }
 
-        // Initial execution of Service catalog Deployer at server startup when first CApp get deployed
-        if (isServiceCatalogStartupExecutionPending && serviceCatalogConfiguration != null) {
+        // Initial execution of Service catalog Deployer at server startup when last CApp get deployed
+        boolean isAllCAppsDeployed = getCAppFileList().length == cAppMap.size() + faultyCapps.size();
+        if (isServiceCatalogStartupExecutionPending && serviceCatalogConfiguration != null && isAllCAppsDeployed) {
             ServiceCatalogDeployer serviceDeployer = new ServiceCatalogDeployer(null,
                     ((CarbonAxisConfigurator) axisConfig.getAxisConfiguration().getConfigurator()).getRepoLocation(),
                     serviceCatalogConfiguration, false);
@@ -736,5 +739,22 @@ public class CappDeployer extends AbstractDeployer {
             // Hence the exception is not propagated from here.
             return null;
         }
+    }
+
+    /**
+     * Retrieves a list of Carbon Application (CApp) files from the CApps directory.
+     *
+     * This method scans the CApps folder within the Carbon repository location
+     * and returns all files with the ".car" extension (Carbon Archive files).
+     *
+     * @return an array of File objects representing all .car files found in the
+     *         CApps directory.
+     */
+    private File[] getCAppFileList() {
+        FilenameFilter CAPP_FILTER = (f, name) -> name.endsWith(".car");
+
+        File cappFolder = new File(((CarbonAxisConfigurator) axisConfig.getAxisConfiguration().getConfigurator())
+                .getRepoLocation(), CAPP_FOLDER_NAME);
+        return cappFolder.listFiles(CAPP_FILTER);
     }
 }
