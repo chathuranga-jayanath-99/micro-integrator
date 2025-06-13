@@ -90,6 +90,6 @@ public class JMSTask extends InboundTask implements LocalTaskActionListener {
 
     @Override
     public void notifyLocalTaskResume(String taskName) {
-        //ignore
+        jmsPollingConsumer.enablePolling();
     }
 }
