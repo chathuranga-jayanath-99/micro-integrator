@@ -1507,13 +1507,13 @@ public class SQLQuery extends ExpressionQuery implements BatchRequestParticipant
                         for (ParamValue arrayElement : value.getArrayValue()) {
                             this.setParamInPreparedStatement(
                                     stmt, param, arrayElement == null ? null : arrayElement.toString(),
-                                    queryType, currentOrdinal);
+                                    queryType, currentOrdinal,conn);
                             currentOrdinal++;
                         }
                     } else { /* scalar value */
                         this.setParamInPreparedStatement(stmt, param,
                                 value != null ? value.getScalarValue() : null, queryType,
-                                currentOrdinal);
+                                currentOrdinal,conn);
                         currentOrdinal++;
                     }
                 }
@@ -1617,7 +1617,7 @@ public class SQLQuery extends ExpressionQuery implements BatchRequestParticipant
     }
 
     private void setParamInPreparedStatement(PreparedStatement stmt, InternalParam param,
-            String value, int queryType, int index) throws SQLException, DataServiceFault {
+            String value, int queryType, int index, Connection connection) throws SQLException, DataServiceFault {
         String paramName = param.getName();
         String sqlType = param.getSqlType();
         String paramType = param.getType();
@@ -1671,8 +1671,7 @@ public class SQLQuery extends ExpressionQuery implements BatchRequestParticipant
         }
     }
 
-    private void setClobValue(String value, String paramType, PreparedStatement sqlQuery, int i, Connection connection)
-         throws SQLException, DataServiceFault {
+    private void setClobValue(String value, String paramType, PreparedStatement sqlQuery, int i, Connection connection) throws SQLException, DataServiceFault {
          if ("IN".equals(paramType)) {
              if (value == null) {
                  sqlQuery.setNull(i + 1, Types.CLOB);
