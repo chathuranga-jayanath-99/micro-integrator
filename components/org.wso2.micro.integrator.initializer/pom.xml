@@ -102,6 +102,13 @@
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.apache.ws.commons.axiom</groupId>
+            <artifactId>axiom-api</artifactId>
+            <!-- Adding orbit version here, since default axiom and wso2 fork has same groupId
+            and artifactId. If added in root pom, its causing build issues -->
+            <version>1.2.11-wso2v22.1</version>
+        </dependency>
     </dependencies>
 
     <build>
