@@ -110,6 +110,13 @@
             <groupId>org.wso2.integration.transaction.counter</groupId>
             <artifactId>transaction-count-handler</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.apache.ws.commons.axiom</groupId>
+            <artifactId>axiom-api</artifactId>
+            <!-- Adding orbit version here, since default axiom and wso2 fork has same groupId
+            and artifactId. If added in root pom, its causing build issues -->
+            <version>1.2.11-wso2v25.3</version>
+        </dependency>
     </dependencies>
 
     <build>
