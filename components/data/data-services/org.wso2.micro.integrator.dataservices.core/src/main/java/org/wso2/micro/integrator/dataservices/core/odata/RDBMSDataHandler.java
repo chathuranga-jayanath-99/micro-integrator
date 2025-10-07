@@ -29,11 +29,9 @@ import org.wso2.micro.integrator.dataservices.core.DataServiceFault;
 import org.wso2.micro.integrator.dataservices.core.engine.DataEntry;
 
 import javax.sql.DataSource;
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-import java.io.StringReader;
 import java.math.BigDecimal;
 import java.sql.Blob;
 import java.sql.Clob;
@@ -190,6 +188,8 @@ public class RDBMSDataHandler implements ODataDataHandler {
     @Override
     public void updateReference(String rootTable, ODataEntry rootTableKeys, String navigationTable,
                                 ODataEntry navigationTableKeys) throws ODataServiceFault {
+        validateTableName(rootTable);
+        validateTableName(navigationTable);
 		/* To add a reference first we need to find the foreign key values of the tables,
 		and therefore we need to identify which table has been exported */
         // Identifying the exported table and change the imported tables' column value
@@ -223,6 +223,8 @@ public class RDBMSDataHandler implements ODataDataHandler {
     @Override
     public void deleteReference(String rootTable, ODataEntry rootTableKeys, String navigationTable,
                                 ODataEntry navigationTableKeys) throws ODataServiceFault {
+        validateTableName(rootTable);
+        validateTableName(navigationTable);
 		/* To add a reference first we need to find the foreign key values of the tables,
 		and therefore we need to identify which table has been exported */
         // Identifying the exported table and change the imported tables' column value
@@ -375,12 +377,15 @@ public class RDBMSDataHandler implements ODataDataHandler {
 
     @Override
     public List<ODataEntry> readTable(String tableName) throws ODataServiceFault {
+        validateTableName(tableName);
         ResultSet resultSet = null;
         Connection connection = null;
         PreparedStatement statement = null;
         try {
             connection = initializeConnection();
-            String query = "select * from " + tableName;
+            StringBuilder sql = new StringBuilder();
+            sql.append("SELECT * FROM ").append(tableName);
+            String query = sql.toString();
             statement = connection.prepareStatement(query);
             resultSet = statement.executeQuery();
             return createDataEntryCollectionFromRS(tableName, resultSet);
@@ -417,6 +422,7 @@ public class RDBMSDataHandler implements ODataDataHandler {
 
     @Override
     public ODataEntry insertEntityToTable(String tableName, ODataEntry entry) throws ODataServiceFault {
+        validateTableName(tableName);
         Connection connection = null;
         PreparedStatement statement = null;
         try {
@@ -483,6 +489,7 @@ public class RDBMSDataHandler implements ODataDataHandler {
 
     @Override
     public List<ODataEntry> readTableWithKeys(String tableName, ODataEntry keys) throws ODataServiceFault {
+        validateTableName(tableName);
         ResultSet resultSet = null;
         Connection connection = null;
         PreparedStatement statement = null;
@@ -693,6 +700,7 @@ public class RDBMSDataHandler implements ODataDataHandler {
 
     @Override
     public boolean updateEntityInTable(String tableName, ODataEntry newProperties) throws ODataServiceFault {
+        validateTableName(tableName);
         List<String> pKeys = this.primaryKeys.get(tableName);
         Connection connection = null;
         PreparedStatement statement = null;
@@ -737,6 +745,7 @@ public class RDBMSDataHandler implements ODataDataHandler {
 
     public boolean updateEntityInTableTransactional(String tableName, ODataEntry oldProperties,
                                                     ODataEntry newProperties) throws ODataServiceFault {
+        validateTableName(tableName);
         List<String> pKeys = this.primaryKeys.get(tableName);
         PreparedStatement statement = null;
         Connection connection = null;
@@ -781,6 +790,7 @@ public class RDBMSDataHandler implements ODataDataHandler {
 
     @Override
     public boolean deleteEntityInTable(String tableName, ODataEntry entry) throws ODataServiceFault {
+        validateTableName(tableName);
         List<String> pKeys = this.primaryKeys.get(tableName);
         Connection connection = null;
         PreparedStatement statement = null;
@@ -1432,6 +1442,71 @@ public class RDBMSDataHandler implements ODataDataHandler {
             } catch (Exception ignore) {
                 // ignore
             }
+        }
+    }
+
+    /**
+     * Validates that a table name exists in the database.
+     * This method performs the following checks:
+     * 1. Ensures the table name is not null or empty
+     * 2. Checks for exact match in the table list
+     * 3. Performs case-insensitive comparison
+     * 4. Handles schema-qualified table names (e.g., schema.table)
+     *
+     * @param tableName The name of the table to validate
+     * @throws ODataServiceFault if the table name is invalid or not found
+     */
+    private void validateTableName(String tableName) throws ODataServiceFault {
+        if (tableName == null || tableName.trim().isEmpty()) {
+            throw new ODataServiceFault("Table name cannot be null or empty");
+        }
+        
+        if (tableList.contains(tableName)) {
+            return;
+        }
+
+        String lowerTableName = tableName.toLowerCase();
+        boolean found = tableList.stream()
+            .anyMatch(table -> table.toLowerCase().equals(lowerTableName));
+        
+        if (!found) {
+            String tableOnly = tableName.contains(".") ? 
+                tableName.substring(tableName.lastIndexOf('.') + 1) : tableName;
+            
+            found = tableList.stream()
+                .anyMatch(table -> table.equalsIgnoreCase(tableOnly));
+        }
+        
+        if (!found) {
+            throw new ODataServiceFault("Table not found in available tables: " + tableName);
+        }
+    }
+
+    /**
+     * Validates that a column name exists in the specified table.
+     * This method performs the following checks:
+     * 1. Ensures the column name is not null or empty
+     * 2. Verifies that table metadata exists
+     * 3. Checks if the column exists in the table's metadata
+     *
+     * @param table The name of the table
+     * @param column The name of the column to validate
+     * @throws ODataServiceFault if the column name is invalid or not found
+     */
+    private void validateColumnName(String table, String column) throws ODataServiceFault {
+        if (column == null || column.trim().isEmpty()) {
+            throw new ODataServiceFault("Column name cannot be null or empty");
+        }
+        
+        Map<String, Integer> cols = rdbmsDataTypes.get(table);
+        if (cols == null) {
+            throw new ODataServiceFault("Table metadata not found: " + table);
+        }
+        
+        String cleanColumn = column.replaceAll("^[\"\\[]|[\"\\]]$", "");
+        
+        if (!cols.containsKey(cleanColumn)) {
+            throw new ODataServiceFault("Column not found in table " + table + ": " + column);
         }
     }
 }
