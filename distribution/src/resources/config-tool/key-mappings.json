@@ -114,6 +114,8 @@
   "opentracing.jaeger.reporter.flush_interval": "synapse_properties.'jaeger.reporter.flush.interval'",
   "opentracing.zipkin.enable": "synapse_properties.'opentracing.zipkin.enable'",
   "opentracing.zipkin.backend.url": "synapse_properties.'opentracing.zipkin.backend.url'",
+  "opentracing.deferred.tracing.scope.cleanup.enabled": "synapse_properties.'opentracing.deferred.tracing.scope.cleanup.enabled'",
+  "opentracing.deferred.tracing.scope.cleanup.interval": "synapse_properties.'opentracing.deferred.tracing.scope.cleanup.interval'",
 
   "transport.http.socket_timeout": "passthru_properties.'http.socket.timeout'",
   "transport.http.block_service_list": "passthru_properties.'http.block_service_list'",
