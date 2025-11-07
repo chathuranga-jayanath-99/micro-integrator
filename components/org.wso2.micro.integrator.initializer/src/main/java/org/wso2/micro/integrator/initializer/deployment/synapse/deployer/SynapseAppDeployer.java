@@ -1323,7 +1323,8 @@ public class SynapseAppDeployer implements AppDeploymentHandler {
     }
 
     private String getConnectorName(String artifactName) {
-        return artifactName.substring(0, artifactName.lastIndexOf("-connector"));
+        final String prefix = "mi-connector-";
+        return artifactName.substring(prefix.length());
     }
 
     private String getTemplateName(String artifactPath, String name) {
