@@ -193,6 +193,11 @@ public class TaskInfo implements Serializable {
         private boolean disallowConcurrentExecution;
 
         public TriggerInfo() {
+            // Set misfire policy to do nothing as the task will be triggered by the task engine when
+            // the server starts and if there are any misfired tasks, they will be triggered immediately.
+            // In a cluster scenario this can result is multiple nodes triggering the same task.
+            // We are prioritizing avoiding duplicates over missing a task execution.
+            setMisfirePolicy(TaskConstants.TaskMisfirePolicy.DO_NOTHING);
         }
 
         public TriggerInfo(Date startTime, Date endTime, long intervalMillis, int repeatCount) {
