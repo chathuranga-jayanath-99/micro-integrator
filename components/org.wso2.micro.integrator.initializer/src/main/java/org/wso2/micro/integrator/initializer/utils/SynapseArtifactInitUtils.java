@@ -247,14 +247,14 @@ public class SynapseArtifactInitUtils {
         while (entries.hasMoreElements()) {
             ZipEntry entry = (ZipEntry) entries.nextElement();
             String canonicalEntryPath = new File(destPath + entry.getName()).getCanonicalPath();
-            if(!canonicalEntryPath.startsWith(canonicalDestPath)){
+            if (!canonicalEntryPath.startsWith(canonicalDestPath)) {
                 throw new IOException("Entry is outside of the target dir: " + entry.getName());
             }
             // if the entry is a directory, create a new dir
             if (!entry.isDirectory() && entry.getName().equalsIgnoreCase(CONNECTOR_XML)) {
                 // if the entry is a file, write the file
                 copyInputStream(zipFile.getInputStream(entry),
-                        new BufferedOutputStream(new FileOutputStream(destPath + entry.getName())));
+                    new BufferedOutputStream(new FileOutputStream(destPath + entry.getName())));
             }
         }
         zipFile.close();

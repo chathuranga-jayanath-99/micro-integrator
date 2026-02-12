@@ -18,9 +18,9 @@
 
 package org.wso2.micro.integrator.management.apis;
 
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.PropertiesConfiguration;
-import org.apache.commons.configuration.PropertiesConfigurationLayout;
+import org.apache.commons.configuration2.PropertiesConfiguration;
+import org.apache.commons.configuration2.PropertiesConfigurationLayout;
+import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.logging.log4j.Level;
@@ -186,8 +186,12 @@ public class LoggingResource extends ApiResource {
             loadConfigs();
             String modifiedLogger = getLoggers().concat(", ").concat(loggerName);
             config.setProperty(LOGGERS_PROPERTY, modifiedLogger);
-            config.setProperty(LOGGER_PREFIX + loggerName + LOGGER_NAME_SUFFIX, loggerClass);
-            config.setProperty(LOGGER_PREFIX + loggerName + LOGGER_LEVEL_SUFFIX, logLevel);
+            String loggerNameKey = LOGGER_PREFIX + loggerName + LOGGER_NAME_SUFFIX;
+            String loggerLevelKey = LOGGER_PREFIX + loggerName + LOGGER_LEVEL_SUFFIX;
+            config.setProperty(loggerNameKey, loggerClass);
+            config.setProperty(loggerLevelKey, logLevel);
+            layout.setBlankLinesBefore(loggerNameKey, 1);
+            layout.setBlankLinesBefore(loggerLevelKey, 0);
             applyConfigs();
             jsonBody.put(Constants.MESSAGE, getSuccessMsg(loggerClass, loggerName, logLevel));
             AuditLogger.logAuditMessage(performedBy, Constants.AUDIT_LOG_TYPE_LOG_LEVEL,
@@ -241,8 +245,8 @@ public class LoggingResource extends ApiResource {
 
         jsonBody = new JSONObject();
         config = new PropertiesConfiguration();
-        layout = new PropertiesConfigurationLayout(config);
-        layout.load(new InputStreamReader(new FileInputStream(logPropFile)));
+        layout = new PropertiesConfigurationLayout();
+        layout.load(config, new InputStreamReader(new FileInputStream(logPropFile)));
     }
 
     private boolean isLoggerExist(String loggerName) throws IOException {
@@ -307,7 +311,7 @@ public class LoggingResource extends ApiResource {
     }
 
     private void applyConfigs() throws IOException, ConfigurationException {
-        layout.save(new FileWriter(filePath, false));
+        layout.save(config, new FileWriter(filePath, false));
         Utils.updateLoggingConfiguration();
     }
 }

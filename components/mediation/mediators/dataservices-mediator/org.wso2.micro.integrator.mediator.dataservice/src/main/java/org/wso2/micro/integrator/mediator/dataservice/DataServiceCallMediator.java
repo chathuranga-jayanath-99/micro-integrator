@@ -105,9 +105,9 @@ public class DataServiceCallMediator extends AbstractMediator {
                 axis2MessageContext.setAxisService(axisService);
                 // Check configured source type for inline/body
                 if (sourceType.equalsIgnoreCase(DataServiceCallMediatorConstants.INLINE_SOURCE)) {
-                    axis2MessageContext = handleSourceTypeInline(messageContext, axis2MessageContext);
+                    axis2MessageContext = handleSourceTypeInline(messageContext, axis2MessageContext, axisService);
                 } else {
-                    axis2MessageContext = handleSourceTypeBody(messageContext, axis2MessageContext);
+                    axis2MessageContext = handleSourceTypeBody(messageContext, axis2MessageContext, axisService);
                 }
                 dispatchToService(axis2MessageContext, messageContext);
             } else {
@@ -130,8 +130,11 @@ public class DataServiceCallMediator extends AbstractMediator {
      * @param axis2MessageContext Axis2MessageContext
      * @return dataServiceCallMediator source type inline
      */
-    private org.apache.axis2.context.MessageContext handleSourceTypeInline(MessageContext messageContext, org.apache.axis2.context.MessageContext axis2MessageContext) {
-        OMElement payload = addRootOperation(axis2MessageContext, messageContext);
+    private org.apache.axis2.context.MessageContext handleSourceTypeInline(MessageContext messageContext,
+                                                                           org.apache.axis2.context.MessageContext
+                                                                                   axis2MessageContext,
+                                                                           AxisService axisService) {
+        OMElement payload = addRootOperation(axis2MessageContext, messageContext, axisService);
         if (axis2MessageContext.getEnvelope().getBody().getFirstElement() != null) {
             axis2MessageContext.getEnvelope().getBody().getFirstElement().detach();
         }
@@ -146,7 +149,10 @@ public class DataServiceCallMediator extends AbstractMediator {
      * @param axis2MessageContext Axis2MessageContext
      * @return dataServiceCallMediator with source type body
      */
-    private org.apache.axis2.context.MessageContext handleSourceTypeBody(MessageContext messageContext, org.apache.axis2.context.MessageContext axis2MessageContext) {
+    private org.apache.axis2.context.MessageContext handleSourceTypeBody(MessageContext messageContext,
+                                                                         org.apache.axis2.context.MessageContext
+                                                                                 axis2MessageContext,
+                                                                         AxisService axisService) {
         OMElement operationElement = axis2MessageContext.getEnvelope().getBody().getFirstElement();
         if (operationElement != null) {
             String rootOperation = operationElement.getLocalName();
@@ -154,9 +160,8 @@ public class DataServiceCallMediator extends AbstractMediator {
             if (rootOperation.equals(DataServiceCallMediatorConstants.JSON_OBJECT)) {
                 return handleJsonObject(operationElement, axis2MessageContext);
             } else {
-                AxisOperation axisOperation = axis2MessageContext.getAxisOperation();
-                QName rootOpQName = new QName(rootOperation);
-                axisOperation.setName(rootOpQName);
+                AxisOperation axisOperation = axisService.getOperation(new QName(rootOperation));
+                axis2MessageContext.setAxisOperation(axisOperation);
             }
 
         } else {
@@ -183,7 +188,7 @@ public class DataServiceCallMediator extends AbstractMediator {
     }
 
     private OMElement addRootOperation(org.apache.axis2.context.MessageContext axis2MessageContext,
-                                       MessageContext messageContext) {
+                                       MessageContext messageContext, AxisService axisService) {
         Operations rootOperations = getOperations();
         String rootOpName;
         switch (rootOperations.getType()) {
@@ -204,6 +209,8 @@ public class DataServiceCallMediator extends AbstractMediator {
             }
         }
         QName rootOpQName = new QName(rootOpName);
+        AxisOperation axisOperation = axisService.getOperation(rootOpQName);
+        axis2MessageContext.setAxisOperation(axisOperation);
         axis2MessageContext.getAxisOperation().setName(rootOpQName);
         // Setting axis2 operation name as a property since its getting changes before invocation under high load.
         axis2MessageContext.setProperty(AXIS_OPERATION_NAME, rootOpQName.getLocalPart());
