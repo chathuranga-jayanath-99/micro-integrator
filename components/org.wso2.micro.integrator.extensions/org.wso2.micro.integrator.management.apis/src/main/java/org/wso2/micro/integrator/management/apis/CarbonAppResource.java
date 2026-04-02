@@ -365,6 +365,9 @@ public class CarbonAppResource extends APIResource {
             JSONObject appObject = new JSONObject();
             appObject.put(Constants.NAME, faultyApp.getAppName());
             appObject.put(Constants.VERSION, faultyApp.getAppVersion());
+            if (faultyApp.getFaultDescription() != null) {
+                appObject.put(Constants.FAULT_DESCRIPTION, faultyApp.getFaultDescription());
+            }
 
             jsonBody.getJSONArray(Constants.FAULTY_LIST).put(appObject);
         }

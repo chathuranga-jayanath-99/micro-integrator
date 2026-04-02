@@ -31,6 +31,7 @@ public class CarbonApplication {
     private String appFilePath;
     private String appVersion;
     private boolean deploymentCompleted;
+    private String faultDescription;
 
     private ApplicationConfiguration appConfig;
 
@@ -99,6 +100,14 @@ public class CarbonApplication {
 
     public void setDeploymentCompleted(boolean deploymentCompleted) {
         this.deploymentCompleted = deploymentCompleted;
+    }
+
+    public String getFaultDescription() {
+        return faultDescription;
+    }
+
+    public void setFaultDescription(String faultDescription) {
+        this.faultDescription = faultDescription;
     }
 }
 

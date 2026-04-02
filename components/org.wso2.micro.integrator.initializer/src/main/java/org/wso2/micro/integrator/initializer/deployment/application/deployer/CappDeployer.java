@@ -262,6 +262,7 @@ public class CappDeployer extends AbstractDeployer {
         undeployCarbonApp(currentApp, axisConfig);
         // Validate synapse config to remove half added swagger definitions in the case of a faulty CAPP.
         SynapseConfigUtils.getSynapseConfiguration(SUPER_TENANT_DOMAIN_NAME).validateSwaggerTable();
+        currentApp.setFaultDescription(e.getMessage());
         faultyCAppObjects.add(currentApp);
         faultyCapps.add(cAppName);
     }

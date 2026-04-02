@@ -62,6 +62,7 @@ public class Constants {
     public static final String ACTIVE_LIST = "activeList";
     public static final String FAULTY_COUNT = "faultyCount";
     public static final String FAULTY_LIST = "faultyList";
+    public static final String FAULT_DESCRIPTION = "faultDescription";
     public static final String NAME = "name";
     public static final String STATUS = "status";
     public static final String URL = "url";
