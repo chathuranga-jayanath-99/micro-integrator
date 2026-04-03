@@ -36,6 +36,7 @@ import static org.wso2.micro.integrator.management.apis.Constants.PATH_PARAM_TRA
 import static org.wso2.micro.integrator.management.apis.Constants.PATH_PARAM_USER;
 import static org.wso2.micro.integrator.management.apis.Constants.PREFIX_APIS;
 import static org.wso2.micro.integrator.management.apis.Constants.PREFIX_CARBON_APPS;
+import static org.wso2.micro.integrator.management.apis.Constants.PREFIX_CARBON_APPS_FAULT_INFO;
 import static org.wso2.micro.integrator.management.apis.Constants.PREFIX_CONNECTORS;
 import static org.wso2.micro.integrator.management.apis.Constants.PREFIX_DATA_SERVICES;
 import static org.wso2.micro.integrator.management.apis.Constants.PREFIX_DATA_SOURCES;
@@ -76,6 +77,7 @@ public class ManagementInternalApi implements InternalAPI {
         resourcesList.add(new ApiResourceAdapter(PREFIX_ENDPOINTS, new EndpointResource()));
         resourcesList.add(new InboundEndpointResource(PREFIX_INBOUND_ENDPOINTS));
         resourcesList.add(new ProxyServiceResource(PREFIX_PROXY_SERVICES));
+        resourcesList.add(new CarbonAppResource(PREFIX_CARBON_APPS_FAULT_INFO));
         resourcesList.add(new CarbonAppResource(PREFIX_CARBON_APPS));
         resourcesList.add(new CarbonAppResource(PREFIX_CARBON_APPS + PATH_PARAM_CARBON_APP_NAME));
         resourcesList.add(new TaskResource(PREFIX_TASKS));

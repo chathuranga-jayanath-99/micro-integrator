@@ -32,6 +32,7 @@ public class CarbonApplication {
     private String appVersion;
     private boolean deploymentCompleted;
     private String faultDescription;
+    private String faultStackTrace;
 
     private ApplicationConfiguration appConfig;
 
@@ -108,6 +109,14 @@ public class CarbonApplication {
 
     public void setFaultDescription(String faultDescription) {
         this.faultDescription = faultDescription;
+    }
+
+    public String getFaultStackTrace() {
+        return faultStackTrace;
+    }
+
+    public void setFaultStackTrace(String faultStackTrace) {
+        this.faultStackTrace = faultStackTrace;
     }
 }
 

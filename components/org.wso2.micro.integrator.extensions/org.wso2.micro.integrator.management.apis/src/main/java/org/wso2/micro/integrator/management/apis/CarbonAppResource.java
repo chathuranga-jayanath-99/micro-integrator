@@ -77,9 +77,11 @@ public class CarbonAppResource extends APIResource {
     private static final String CAPP_FILE_NAME = "cAppFileName";
     // HTTP method types supported by the resource
     private Set<String> methods;
+    private final String urlTemplate;
 
     public CarbonAppResource(String urlTemplate){
         super(urlTemplate);
+        this.urlTemplate = urlTemplate;
         methods = new HashSet<>();
         methods.add(Constants.HTTP_GET);
         methods.add(Constants.HTTP_POST);
@@ -111,6 +113,10 @@ public class CarbonAppResource extends APIResource {
         String userName = (String) messageContext.getProperty(USERNAME_PROPERTY);
         switch (httpMethod) {
             case Constants.HTTP_GET: {
+                if (Constants.PREFIX_CARBON_APPS_FAULT_INFO.equals(urlTemplate)) {
+                    populateFaultyAppInfo(messageContext);
+                    break;
+                }
                 String param = Utils.getQueryParameter(messageContext, "carbonAppName");
 
                 if (Objects.nonNull(param)) {
@@ -439,6 +445,38 @@ public class CarbonAppResource extends APIResource {
             artifactListObject.put(artifactObject);
         }
         return appObject;
+    }
+
+    private void populateFaultyAppInfo(MessageContext messageContext) {
+
+        org.apache.axis2.context.MessageContext axis2MessageContext =
+                ((Axis2MessageContext) messageContext).getAxis2MessageContext();
+
+        String carbonAppName = Utils.getQueryParameter(messageContext, "carbonAppName");
+        if (carbonAppName == null) {
+            Utils.setJsonPayLoad(axis2MessageContext,
+                    Utils.createJsonError("carbonAppName query parameter is required.",
+                            axis2MessageContext, BAD_REQUEST));
+            return;
+        }
+
+        List<CarbonApplication> faultyAppList = CappDeployer.getFaultyCAppObjects();
+        for (CarbonApplication faultyApp : faultyAppList) {
+            if (faultyApp.getAppName().equals(carbonAppName)) {
+                JSONObject appObject = new JSONObject();
+                appObject.put(Constants.NAME, faultyApp.getAppName());
+                appObject.put(Constants.VERSION, faultyApp.getAppVersion());
+                if (faultyApp.getFaultDescription() != null) {
+                    appObject.put(Constants.FAULT_DESCRIPTION, faultyApp.getFaultDescription());
+                }
+                if (faultyApp.getFaultStackTrace() != null) {
+                    appObject.put(Constants.FAULT_STACK_TRACE, faultyApp.getFaultStackTrace());
+                }
+                Utils.setJsonPayLoad(axis2MessageContext, appObject);
+                return;
+            }
+        }
+        axis2MessageContext.setProperty(Constants.HTTP_STATUS_CODE, Constants.NOT_FOUND);
     }
 
     private void sendFaultResponse(org.apache.axis2.context.MessageContext axis2MessageContext) {
