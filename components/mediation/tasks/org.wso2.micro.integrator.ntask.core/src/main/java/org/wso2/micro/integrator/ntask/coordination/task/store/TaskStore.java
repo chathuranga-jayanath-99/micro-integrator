@@ -201,4 +201,73 @@ public class TaskStore {
         return rdmbsConnector.retrieveAllUnAssignedAndIncompleteTasks();
     }
 
+    /**
+     * Opens a delete barrier for the given task.
+     *
+     * @param taskName task name
+     * @param guardUuid barrier token
+     * @param ownerNodeId owner node id
+     * @param expectedNodeIds expected nodes for acknowledgement
+     * @param deadlineAt barrier deadline in epoch millis
+     * @param updatedAt updated timestamp in epoch millis
+     * @throws TaskCoordinationException if operation fails
+     */
+    public void createDeleteBarrier(String taskName, String guardUuid, String ownerNodeId, List<String> expectedNodeIds,
+                                    long deadlineAt, long updatedAt) throws TaskCoordinationException {
+        rdmbsConnector.createDeleteBarrier(taskName, guardUuid, ownerNodeId, expectedNodeIds, deadlineAt, updatedAt);
+    }
+
+    /**
+     * Acknowledges open barrier for a task from current node.
+     *
+     * @param taskName task name
+     * @param nodeId node id
+     * @param ackedAt ack timestamp in epoch millis
+     * @return true if open barrier was found and acknowledged
+     * @throws TaskCoordinationException if operation fails
+     */
+    public boolean acknowledgeOpenDeleteBarrier(String taskName, String nodeId, long ackedAt)
+            throws TaskCoordinationException {
+        return rdmbsConnector.acknowledgeOpenDeleteBarrier(taskName, nodeId, ackedAt);
+    }
+
+    /**
+     * Checks if all expected nodes acknowledged barrier for a task.
+     *
+     * @param taskName task name
+     * @param guardUuid barrier token
+     * @return true if all expected nodes acknowledged
+     * @throws TaskCoordinationException if operation fails
+     */
+    public boolean areAllExpectedNodesAcked(String taskName, String guardUuid) throws TaskCoordinationException {
+        return rdmbsConnector.areAllExpectedNodesAcked(taskName, guardUuid);
+    }
+
+    /**
+     * Finalizes delete barrier and attempts task row removal from .
+     *
+     * @param taskName task name
+     * @param guardUuid barrier token
+     * @param currentTime current time in epoch millis
+     * @return true when task row delete path completed
+     * @throws TaskCoordinationException if operation fails
+     */
+    public boolean finalizeDeleteBarrier(String taskName, String guardUuid, long currentTime)
+            throws TaskCoordinationException {
+        return rdmbsConnector.finalizeDeleteBarrier(taskName, guardUuid, currentTime);
+    }
+
+    /**
+     * Recovers expired/abandoned open barriers.
+     *
+     * @param liveNodeIds currently live nodes
+     * @param currentTime current time in epoch millis
+     * @return number of recovered barriers attempted
+     * @throws TaskCoordinationException if operation fails
+     */
+    public int recoverExpiredOrAbandonedDeleteBarriers(List<String> liveNodeIds, long currentTime)
+            throws TaskCoordinationException {
+        return rdmbsConnector.recoverExpiredOrAbandonedDeleteBarriers(liveNodeIds, currentTime);
+    }
+
 }

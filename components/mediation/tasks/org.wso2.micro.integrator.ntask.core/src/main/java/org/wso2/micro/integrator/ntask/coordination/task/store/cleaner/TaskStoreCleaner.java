@@ -66,10 +66,11 @@ public class TaskStoreCleaner {
         List<String> allNodesAvailableInCluster = clusterCoordinator.getAllNodeIds();
         if (allTasks.isEmpty()) {
             LOG.debug("No tasks found in task database.");
-            return;
+        } else {
+            removeInvalidTasksFromStore(allTasks, allNodesAvailableInCluster);
+            validateDestinedNodeAndUpdateStore(allNodesAvailableInCluster);
         }
-        removeInvalidTasksFromStore(allTasks, allNodesAvailableInCluster);
-        validateDestinedNodeAndUpdateStore(allNodesAvailableInCluster);
+        recoverExpiredOrAbandonedDeleteBarriers(allNodesAvailableInCluster);
         LOG.debug("Completed task store cleaning.");
     }
 
@@ -127,6 +128,21 @@ public class TaskStoreCleaner {
         taskStore.deleteTasks(tasksList.stream().map(CoordinatedTask::getTaskName).collect(Collectors.toList()));
         if (LOG.isDebugEnabled()) {
             tasksList.forEach(removedTask -> LOG.debug("Removed invalid task :" + removedTask));
+        }
+    }
+
+    /**
+     * Recovers delete barriers owned by dead nodes or expired by deadline.
+     *
+     * @param allNodesAvailableInCluster currently live nodes
+     * @throws TaskCoordinationException when recovery query execution fails
+     */
+    private void recoverExpiredOrAbandonedDeleteBarriers(List<String> allNodesAvailableInCluster)
+            throws TaskCoordinationException {
+        int recovered = taskStore.recoverExpiredOrAbandonedDeleteBarriers(allNodesAvailableInCluster,
+                System.currentTimeMillis());
+        if (recovered > 0) {
+            LOG.info("Recovered [" + recovered + "] expired or abandoned task delete barrier(s).");
         }
     }
 

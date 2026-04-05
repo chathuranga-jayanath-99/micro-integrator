@@ -29,29 +29,58 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.sql.DataSource;
 
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.ACTIVATE_TASK;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.ADD_TASK;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.BARRIER_STATUS_FINALIZING;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.BARRIER_STATUS_OPEN;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.CLEAN_TASKS_OF_NODE;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.DELETE_TASK;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.DELETE_TASK_DELETE_BARRIER;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.DELETE_TASK_DELETE_BARRIER_ACKS;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.DELETE_TASK_DELETE_BARRIER_EXPECTED;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.DEADLINE_AT;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.DESTINED_NODE_ID;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.GET_ALL_ASSIGNED_INCOMPLETE_TASKS;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.GUARD_UUID;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.INSERT_TASK_DELETE_BARRIER;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.INSERT_TASK_DELETE_BARRIER_ACK;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.INSERT_TASK_DELETE_BARRIER_EXPECTED;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.INSERT_TASK_DELETE_GUARD;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.NODE_ID;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.OWNER_NODE_ID;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.REMOVE_ASSIGNMENT_AND_UPDATE_STATE;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.REMOVE_TASKS_OF_NODE;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.RETRIEVE_ALL_TASKS;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.RETRIEVE_TASKS_OF_NODE;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.RETRIEVE_TASK_STATE;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.RETRIEVE_UNASSIGNED_NOT_COMPLETED_TASKS;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.SELECT_OPEN_TASK_DELETE_BARRIERS;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.SELECT_OPEN_TASK_DELETE_BARRIER_BY_TASK_AND_GUARD;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.SELECT_TASK_DELETE_BARRIER_ACK_NODES;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.SELECT_TASK_DELETE_BARRIER;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.SELECT_TASK_DELETE_BARRIER_EXPECTED_NODES;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.SELECT_TASK_DELETE_GUARD;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.TASK_NAME;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.TASK_STATE;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.UPDATE_ASSIGNMENT_AND_STATE;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.UPDATE_TASK_DELETE_BARRIER_ACK;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.UPDATE_TASK_DELETE_BARRIER_STATUS;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.UPDATE_TASK_DELETE_BARRIER_TIMESTAMP;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.UPDATE_TASK_DELETE_GUARD;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.UPDATE_TASK_DELETE_GUARD_TIMESTAMP_IF_MATCH;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.UPDATE_TASK_STATE;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.UPDATE_TASK_STATE_FOR_DESTINED_NODE;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.UPDATE_TASK_STATUS_TO_DEACTIVATED;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.UPDATED_AT;
 
 /**
  * The connector class which deals with underlying coordinated task table.
@@ -62,7 +91,29 @@ public class RDMBSConnector {
     private static final String ERROR_MSG = "Error while doing data base operation.";
     private static final String EMPTY_LIST = "Provided list is empty ";
     private static final String SQL_INTEGRITY_VIOLATION_CODE = "23";
+    private static final Set<Integer> DUPLICATE_KEY_ERROR_CODES = Collections.unmodifiableSet(
+            new HashSet<>(Arrays.asList(1, 1062, 2627, 2601, 803, -803)));
     private DataSource dataSource;
+
+    /**
+     * In memory view of a delete barrier row used during ACK/Finalize/Recovery flows.
+     */
+    private static class DeleteBarrierRecord {
+        private final String taskName;
+        private final String guardUuid;
+        private final String ownerNodeId;
+        private final long deadlineAt;
+        private final long updatedAt;
+
+        DeleteBarrierRecord(String taskName, String guardUuid, String ownerNodeId, long deadlineAt,
+                            long updatedAt) {
+            this.taskName = taskName;
+            this.guardUuid = guardUuid;
+            this.ownerNodeId = ownerNodeId;
+            this.deadlineAt = deadlineAt;
+            this.updatedAt = updatedAt;
+        }
+    }
 
     /**
      * Constructor.
@@ -367,7 +418,7 @@ public class RDMBSConnector {
                 LOG.debug("Successfully added the task [" + taskName + "].");
             }
         } catch (SQLException ex) {
-            if (ex.getSQLState().startsWith(SQL_INTEGRITY_VIOLATION_CODE)) {
+            if (isIntegrityViolation(ex)) {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Task [" + taskName + "] already exists.");
                 }
@@ -475,6 +526,597 @@ public class RDMBSConnector {
             return query(preparedStatement, "for unassigned incomplete tasks");
         } catch (SQLException ex) {
             throw new TaskCoordinationException(ERROR_MSG, ex);
+        }
+    }
+
+    /**
+     * Opens a new delete barrier for a task and updates guard token.
+     *
+     * @param taskName        name of the task
+     * @param guardUuid       barrier/guard token
+     * @param ownerNodeId     owner node of this barrier
+     * @param expectedNodeIds expected nodes for acknowledgements
+     * @param deadlineAt      barrier deadline in epoch millis
+     * @param updatedAt       update timestamp in epoch millis
+     * @throws TaskCoordinationException if barrier creation fails
+     */
+    public void createDeleteBarrier(String taskName, String guardUuid, String ownerNodeId, List<String> expectedNodeIds,
+                                    long deadlineAt, long updatedAt) throws TaskCoordinationException {
+        Set<String> expectedNodes = new HashSet<>();
+        if (expectedNodeIds != null) {
+            expectedNodes.addAll(expectedNodeIds);
+        }
+        expectedNodes.remove(null);
+        if (expectedNodes.isEmpty() && ownerNodeId != null) {
+            expectedNodes.add(ownerNodeId);
+        }
+
+        Connection connection = null;
+        try {
+            connection = getTransactionalConnection();
+            upsertGuard(connection, taskName, guardUuid, updatedAt);
+
+            try (PreparedStatement insertBarrier = connection.prepareStatement(INSERT_TASK_DELETE_BARRIER)) {
+                insertBarrier.setString(1, taskName);
+                insertBarrier.setString(2, guardUuid);
+                insertBarrier.setString(3, ownerNodeId);
+                insertBarrier.setString(4, BARRIER_STATUS_OPEN);
+                insertBarrier.setLong(5, deadlineAt);
+                insertBarrier.setLong(6, updatedAt);
+                insertBarrier.executeUpdate();
+            }
+
+            insertExpectedNodes(connection, taskName, guardUuid, expectedNodes);
+            connection.commit();
+        } catch (SQLException ex) {
+            rollbackQuietly(connection);
+            throw new TaskCoordinationException(ERROR_MSG, ex);
+        } finally {
+            closeQuietly(connection);
+        }
+    }
+
+    /**
+     * Writes acknowledgement for latest open barrier of the task.
+     *
+     * @param taskName task name
+     * @param nodeId   node id to ack
+     * @param ackedAt  ack timestamp in epoch millis
+     * @return true if an open barrier was found and acked, false otherwise
+     * @throws TaskCoordinationException when DB operation fails
+     */
+    public boolean acknowledgeOpenDeleteBarrier(String taskName, String nodeId, long ackedAt)
+            throws TaskCoordinationException {
+        try (Connection connection = getConnection()) {
+            // Read current guard first, then ACK only the matching OPEN barrier.
+            // This avoids accidentally ACKing a stale OPEN barrier picked by timestamp ordering.
+            String currentGuard = readGuardUuid(connection, taskName);
+            if (currentGuard == null) {
+                return false;
+            }
+            DeleteBarrierRecord barrier = readOpenBarrierByTaskAndGuard(connection, taskName, currentGuard);
+            if (barrier == null) {
+                return false;
+            }
+            upsertBarrierAck(connection, taskName, barrier.guardUuid, nodeId, ackedAt);
+            try (PreparedStatement updateBarrier = connection.prepareStatement(UPDATE_TASK_DELETE_BARRIER_TIMESTAMP)) {
+                updateBarrier.setLong(1, ackedAt);
+                updateBarrier.setString(2, taskName);
+                updateBarrier.setString(3, barrier.guardUuid);
+                updateBarrier.executeUpdate();
+            }
+            return true;
+        } catch (SQLException ex) {
+            throw new TaskCoordinationException(ERROR_MSG, ex);
+        }
+    }
+
+    /**
+     * Checks whether all expected nodes acknowledged the barrier.
+     *
+     * @param taskName  task name
+     * @param guardUuid barrier token
+     * @return true if all expected nodes acknowledged
+     * @throws TaskCoordinationException when DB operation fails
+     */
+    public boolean areAllExpectedNodesAcked(String taskName, String guardUuid) throws TaskCoordinationException {
+        try (Connection connection = getConnection()) {
+            return !hasMissingAcks(connection, taskName, guardUuid);
+        } catch (SQLException ex) {
+            throw new TaskCoordinationException(ERROR_MSG, ex);
+        }
+    }
+
+    /**
+     * Attempts to finalize barrier and remove coordinated task row atomically.
+     *
+     * @param taskName     task name
+     * @param guardUuid    barrier token
+     * @param currentTime  current time in epoch millis
+     * @return true if task row was deleted and barrier was finalized
+     * @throws TaskCoordinationException when DB operation fails
+     */
+    public boolean finalizeDeleteBarrier(String taskName, String guardUuid, long currentTime)
+            throws TaskCoordinationException {
+        Connection connection = null;
+        try {
+            connection = getTransactionalConnection();
+
+            int claimed;
+
+            // Update updated_at time for both open and finalized barriers
+            try (PreparedStatement claimBarrier = connection.prepareStatement(UPDATE_TASK_DELETE_BARRIER_STATUS)) {
+                claimBarrier.setString(1, BARRIER_STATUS_FINALIZING);
+                claimBarrier.setLong(2, currentTime);
+                claimBarrier.setString(3, taskName);
+                claimBarrier.setString(4, guardUuid);
+                claimBarrier.setString(5, BARRIER_STATUS_OPEN);
+                claimed = claimBarrier.executeUpdate();
+            }
+            if (claimed == 0) {
+                try (PreparedStatement claimBarrier = connection.prepareStatement(UPDATE_TASK_DELETE_BARRIER_STATUS)) {
+                    claimBarrier.setString(1, BARRIER_STATUS_FINALIZING);
+                    claimBarrier.setLong(2, currentTime);
+                    claimBarrier.setString(3, taskName);
+                    claimBarrier.setString(4, guardUuid);
+                    claimBarrier.setString(5, BARRIER_STATUS_FINALIZING);
+                    claimed = claimBarrier.executeUpdate();
+                }
+                if (claimed == 0) {
+                    connection.rollback();
+                    return false;
+                }
+            }
+
+            DeleteBarrierRecord barrier = readBarrierByTaskAndGuard(connection, taskName, guardUuid);
+            if (barrier == null) {
+                connection.rollback();
+                return false;
+            }
+            String currentGuard = readGuardUuid(connection, taskName);
+            if (!guardUuid.equals(currentGuard)) {
+                LOG.info("Detected stale delete barrier for task [" + taskName + "]. A newer delete wave exists "
+                        + "(current guard: [" + currentGuard + "], stale guard: [" + guardUuid
+                        + "]). Clearing stale barrier entries and skipping finalize.");
+                cleanupBarrierEntries(connection, taskName, guardUuid);
+                connection.commit();
+                return false;
+            }
+
+            // Recheck ACK completeness inside finalize transaction.
+            // The leader wait loop runs outside this transaction and may exit on timeout.
+            // Also, finalize can be triggered by recovery flow without going through waitForDeleteBarrier().
+            // If ACKs are still missing before deadline, barrier is reopened and delete is omitted.
+            // In that case this call returns false, and a later finalize attempt (recovery cleaner) retries it.
+            // After deadline, delete proceeds even with missing ACKs to avoid permanent blocking when nodes fail.
+            // This DB state check is the final gate before deleting task row state.
+            boolean allAcked = !hasMissingAcks(connection, taskName, guardUuid);
+            if (!allAcked && currentTime < barrier.deadlineAt) {
+                try (PreparedStatement reopen = connection.prepareStatement(UPDATE_TASK_DELETE_BARRIER_STATUS)) {
+                    reopen.setString(1, BARRIER_STATUS_OPEN);
+                    reopen.setLong(2, currentTime);
+                    reopen.setString(3, taskName);
+                    reopen.setString(4, guardUuid);
+                    reopen.setString(5, BARRIER_STATUS_FINALIZING);
+                    reopen.executeUpdate();
+                }
+                connection.commit();
+                return false;
+            }
+
+            // Final compare and set guard check before deleting task state.
+            // This avoids stale wave delete races.
+            int guardMatchedRows;
+            try (PreparedStatement guardMatch = connection.prepareStatement(
+                    UPDATE_TASK_DELETE_GUARD_TIMESTAMP_IF_MATCH)) {
+                guardMatch.setLong(1, currentTime);
+                guardMatch.setString(2, taskName);
+                guardMatch.setString(3, guardUuid);
+                guardMatchedRows = guardMatch.executeUpdate();
+            }
+            if (guardMatchedRows == 0) {
+                LOG.info("Skipping delete during finalize for task [" + taskName + "] because guard changed after "
+                        + "barrier checks. A newer wave exists for this task.");
+                cleanupBarrierEntries(connection, taskName, guardUuid);
+                connection.commit();
+                return false;
+            }
+
+            int deletedTaskRows;
+            try (PreparedStatement deleteTask = connection.prepareStatement(DELETE_TASK)) {
+                deleteTask.setString(1, taskName);
+                deletedTaskRows = deleteTask.executeUpdate();
+            }
+            cleanupBarrierEntries(connection, taskName, guardUuid);
+            connection.commit();
+            return deletedTaskRows > 0;
+        } catch (SQLException ex) {
+            rollbackQuietly(connection);
+            throw new TaskCoordinationException(ERROR_MSG, ex);
+        } finally {
+            closeQuietly(connection);
+        }
+    }
+
+    /**
+     * Recovers open barriers that are expired or owned by nodes no longer live.
+     *
+     * @param liveNodeIds list of currently live node ids
+     * @param currentTime current time in epoch millis
+     * @return number of barriers attempted for recovery
+     * @throws TaskCoordinationException when DB operation fails
+     */
+    public int recoverExpiredOrAbandonedDeleteBarriers(List<String> liveNodeIds, long currentTime)
+            throws TaskCoordinationException {
+        Set<String> liveNodes = new HashSet<>();
+        if (liveNodeIds != null) {
+            liveNodes.addAll(liveNodeIds);
+        }
+        List<DeleteBarrierRecord> openBarriers;
+        try (Connection connection = getConnection()) {
+            openBarriers = readOpenBarriers(connection);
+        } catch (SQLException ex) {
+            throw new TaskCoordinationException(ERROR_MSG, ex);
+        }
+
+        int recovered = 0;
+        for (DeleteBarrierRecord barrier : openBarriers) {
+            boolean ownerMissing = barrier.ownerNodeId == null || !liveNodes.contains(barrier.ownerNodeId);
+            boolean deadlinePassed = currentTime >= barrier.deadlineAt;
+            if (ownerMissing || deadlinePassed) {
+                boolean finalized = finalizeDeleteBarrier(barrier.taskName, barrier.guardUuid, currentTime);
+                if (finalized) {
+                    recovered++;
+                }
+            }
+        }
+        return recovered;
+    }
+
+    /**
+     * Updates guard token for a task, or inserts a new row if absent.
+     * Handles duplicate key races by retrying as update.
+     *
+     * @param connection transactional connection
+     * @param taskName task name
+     * @param guardUuid guard token
+     * @param updatedAt guard update time
+     * @throws SQLException when query execution fails
+     */
+    private void upsertGuard(Connection connection, String taskName, String guardUuid, long updatedAt)
+            throws SQLException {
+        int updated;
+        // Guard rows are durable per task once hot deployed. And guardUuid is rotated per hot deployment wave.
+        // Update first is the common path and insert is only for first time which is rare.
+        // Also, this avoids depending on integrity violation handling in the common path.
+        try (PreparedStatement updateGuard = connection.prepareStatement(UPDATE_TASK_DELETE_GUARD)) {
+            updateGuard.setString(1, guardUuid);
+            updateGuard.setLong(2, updatedAt);
+            updateGuard.setString(3, taskName);
+            updated = updateGuard.executeUpdate();
+        }
+
+        if (updated > 0) {
+            return;
+        }
+        try (PreparedStatement insertGuard = connection.prepareStatement(INSERT_TASK_DELETE_GUARD)) {
+            insertGuard.setString(1, taskName);
+            insertGuard.setString(2, guardUuid);
+            insertGuard.setLong(3, updatedAt);
+            insertGuard.executeUpdate();
+        } catch (SQLException ex) {
+            if (isIntegrityViolation(ex)) {
+                try (PreparedStatement updateGuard = connection.prepareStatement(UPDATE_TASK_DELETE_GUARD)) {
+                    updateGuard.setString(1, guardUuid);
+                    updateGuard.setLong(2, updatedAt);
+                    updateGuard.setString(3, taskName);
+                    updateGuard.executeUpdate();
+                }
+            } else {
+                throw ex;
+            }
+        }
+    }
+
+    /**
+     * Inserts expected acknowledgement node set for a barrier.
+     *
+     * @param connection transactional connection
+     * @param taskName task name
+     * @param guardUuid guard token
+     * @param expectedNodes expected node IDs
+     * @throws SQLException when query execution fails
+     */
+    private void insertExpectedNodes(Connection connection, String taskName, String guardUuid
+            , Set<String> expectedNodes) throws SQLException {
+        if (expectedNodes.isEmpty()) {
+            return;
+        }
+        try (PreparedStatement insertExpected = connection.prepareStatement(INSERT_TASK_DELETE_BARRIER_EXPECTED)) {
+            for (String node : expectedNodes) {
+                insertExpected.setString(1, taskName);
+                insertExpected.setString(2, guardUuid);
+                insertExpected.setString(3, node);
+                insertExpected.addBatch();
+            }
+            insertExpected.executeBatch();
+        }
+    }
+
+    /**
+     * Reads open barrier for a specific task and guard token.
+     *
+     * @param connection connection
+     * @param taskName task name
+     * @param guardUuid guard token
+     * @return open barrier or null
+     * @throws SQLException when query execution fails
+     */
+    private DeleteBarrierRecord readOpenBarrierByTaskAndGuard(Connection connection, String taskName, String guardUuid)
+            throws SQLException {
+        try (PreparedStatement queryBarrier = connection.prepareStatement(
+                SELECT_OPEN_TASK_DELETE_BARRIER_BY_TASK_AND_GUARD)) {
+            queryBarrier.setString(1, taskName);
+            queryBarrier.setString(2, guardUuid);
+            queryBarrier.setString(3, BARRIER_STATUS_OPEN);
+            try (ResultSet resultSet = queryBarrier.executeQuery()) {
+                if (resultSet.next()) {
+                    return mapBarrier(resultSet);
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Reads all currently open delete barriers.
+     *
+     * @param connection connection
+     * @return list of open barriers
+     * @throws SQLException when query execution fails
+     */
+    private List<DeleteBarrierRecord> readOpenBarriers(Connection connection) throws SQLException {
+        List<DeleteBarrierRecord> barriers = new ArrayList<>();
+        try (PreparedStatement queryBarrier = connection.prepareStatement(SELECT_OPEN_TASK_DELETE_BARRIERS)) {
+            queryBarrier.setString(1, BARRIER_STATUS_OPEN);
+            try (ResultSet resultSet = queryBarrier.executeQuery()) {
+                while (resultSet.next()) {
+                    barriers.add(mapBarrier(resultSet));
+                }
+            }
+        }
+        return barriers;
+    }
+
+    /**
+     * Reads barrier row for a specific task and guard token.
+     *
+     * @param connection connection
+     * @param taskName task name
+     * @param guardUuid guard token
+     * @return barrier row or null
+     * @throws SQLException when query execution fails
+     */
+    private DeleteBarrierRecord readBarrierByTaskAndGuard(Connection connection, String taskName, String guardUuid)
+            throws SQLException {
+        try (PreparedStatement queryBarrier = connection.prepareStatement(SELECT_TASK_DELETE_BARRIER)) {
+            queryBarrier.setString(1, taskName);
+            queryBarrier.setString(2, guardUuid);
+            try (ResultSet resultSet = queryBarrier.executeQuery()) {
+                if (resultSet.next()) {
+                    return mapBarrier(resultSet);
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Reads current guard token for a task.
+     *
+     * @param connection connection
+     * @param taskName task name
+     * @return guard token or null
+     * @throws SQLException when query execution fails
+     */
+    private String readGuardUuid(Connection connection, String taskName) throws SQLException {
+        try (PreparedStatement queryGuard = connection.prepareStatement(SELECT_TASK_DELETE_GUARD)) {
+            queryGuard.setString(1, taskName);
+            try (ResultSet resultSet = queryGuard.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getString(GUARD_UUID);
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Checks whether at least one expected node has not acknowledged the barrier.
+     * Uses two simple selects (expected nodes and acked nodes) and computes missing acks in Java.
+     *
+     * @param connection connection
+     * @param taskName task name
+     * @param guardUuid guard token
+     * @return true if there are missing acknowledgements
+     * @throws SQLException when query execution fails
+     */
+    private boolean hasMissingAcks(Connection connection, String taskName, String guardUuid) throws SQLException {
+        Set<String> expectedNodes = new HashSet<>();
+        try (PreparedStatement queryExpectedNodes
+                     = connection.prepareStatement(SELECT_TASK_DELETE_BARRIER_EXPECTED_NODES)) {
+            queryExpectedNodes.setString(1, taskName);
+            queryExpectedNodes.setString(2, guardUuid);
+            try (ResultSet resultSet = queryExpectedNodes.executeQuery()) {
+                while (resultSet.next()) {
+                    expectedNodes.add(resultSet.getString(NODE_ID));
+                }
+            }
+        }
+
+        if (expectedNodes.isEmpty()) {
+            return false;
+        }
+
+        try (PreparedStatement queryAckNodes = connection.prepareStatement(SELECT_TASK_DELETE_BARRIER_ACK_NODES)) {
+            queryAckNodes.setString(1, taskName);
+            queryAckNodes.setString(2, guardUuid);
+            try (ResultSet resultSet = queryAckNodes.executeQuery()) {
+                while (resultSet.next() && !expectedNodes.isEmpty()) {
+                    expectedNodes.remove(resultSet.getString(NODE_ID));
+                }
+            }
+        }
+        return !expectedNodes.isEmpty();
+    }
+
+    /**
+     * Inserts or updates acknowledgement row for a node and barrier.
+     *
+     * @param connection connection
+     * @param taskName task name
+     * @param guardUuid guard token
+     * @param nodeId node identifier
+     * @param ackedAt acknowledgement time
+     * @throws SQLException when query execution fails
+     */
+    private void upsertBarrierAck(Connection connection, String taskName, String guardUuid, String nodeId, long ackedAt)
+            throws SQLException {
+        int updated;
+        // Update first so repeated ACKs are handled normally.
+        // This avoids depending on integrity violation handling in the common path.
+        // Insert is only for the first ACK row.
+        try (PreparedStatement updateAck = connection.prepareStatement(UPDATE_TASK_DELETE_BARRIER_ACK)) {
+            updateAck.setLong(1, ackedAt);
+            updateAck.setString(2, taskName);
+            updateAck.setString(3, guardUuid);
+            updateAck.setString(4, nodeId);
+            updated = updateAck.executeUpdate();
+        }
+        if (updated > 0) {
+            return;
+        }
+        try (PreparedStatement insertAck = connection.prepareStatement(INSERT_TASK_DELETE_BARRIER_ACK)) {
+            insertAck.setString(1, taskName);
+            insertAck.setString(2, guardUuid);
+            insertAck.setString(3, nodeId);
+            insertAck.setLong(4, ackedAt);
+            insertAck.executeUpdate();
+        } catch (SQLException ex) {
+            if (isIntegrityViolation(ex)) {
+                try (PreparedStatement updateAck = connection.prepareStatement(UPDATE_TASK_DELETE_BARRIER_ACK)) {
+                    updateAck.setLong(1, ackedAt);
+                    updateAck.setString(2, taskName);
+                    updateAck.setString(3, guardUuid);
+                    updateAck.setString(4, nodeId);
+                    updateAck.executeUpdate();
+                }
+            } else {
+                throw ex;
+            }
+        }
+    }
+
+    /**
+     * Deletes helper rows for a barrier (ACK, EXPECTED, BARRIER).
+     *
+     * @param connection transactional connection
+     * @param taskName task name
+     * @param guardUuid guard token
+     * @throws SQLException when query execution fails
+     */
+    private void cleanupBarrierEntries(Connection connection, String taskName, String guardUuid) throws SQLException {
+        try (PreparedStatement deleteAcks = connection.prepareStatement(DELETE_TASK_DELETE_BARRIER_ACKS);
+             PreparedStatement deleteExpected = connection.prepareStatement(DELETE_TASK_DELETE_BARRIER_EXPECTED);
+             PreparedStatement deleteBarrier = connection.prepareStatement(DELETE_TASK_DELETE_BARRIER)) {
+            deleteAcks.setString(1, taskName);
+            deleteAcks.setString(2, guardUuid);
+            deleteAcks.executeUpdate();
+
+            deleteExpected.setString(1, taskName);
+            deleteExpected.setString(2, guardUuid);
+            deleteExpected.executeUpdate();
+
+            deleteBarrier.setString(1, taskName);
+            deleteBarrier.setString(2, guardUuid);
+            deleteBarrier.executeUpdate();
+        }
+    }
+
+    /**
+     * Maps barrier query result row into an in memory record.
+     *
+     * @param resultSet query result
+     * @return mapped barrier record
+     * @throws SQLException when row read fails
+     */
+    private DeleteBarrierRecord mapBarrier(ResultSet resultSet) throws SQLException {
+        return new DeleteBarrierRecord(resultSet.getString(TASK_NAME), resultSet.getString(GUARD_UUID),
+                resultSet.getString(OWNER_NODE_ID), resultSet.getLong(DEADLINE_AT), resultSet.getLong(UPDATED_AT));
+    }
+
+    /**
+     * Checks whether a SQLException chain represents an integrity/duplicate key violation.
+     *
+     * @param ex SQL exception
+     * @return true when violation is identified
+     */
+    private boolean isIntegrityViolation(SQLException ex) {
+        SQLException current = ex;
+        while (current != null) {
+            // Check SQLState integrity class first then fallback to vendor specific duplicate key codes.
+            String sqlState = current.getSQLState();
+            if (sqlState != null && sqlState.startsWith(SQL_INTEGRITY_VIOLATION_CODE)) {
+                return true;
+            }
+
+            if (DUPLICATE_KEY_ERROR_CODES.contains(current.getErrorCode())) {
+                return true;
+            }
+            current = current.getNextException();
+        }
+        return false;
+    }
+
+    /**
+     * Creates a connection with auto-commit disabled for transactional operations.
+     *
+     * @return transactional connection
+     * @throws SQLException when connection creation fails
+     */
+    private Connection getTransactionalConnection() throws SQLException {
+        Connection connection = dataSource.getConnection();
+        connection.setAutoCommit(false);
+        return connection;
+    }
+
+    /**
+     * Attempts rollback and suppresses rollback exceptions as warnings.
+     *
+     * @param connection transactional connection
+     */
+    private void rollbackQuietly(Connection connection) {
+        if (connection != null) {
+            try {
+                connection.rollback();
+            } catch (SQLException ex) {
+                LOG.warn("Error while rolling back the transaction.", ex);
+            }
+        }
+    }
+
+    /**
+     * Closes connection and suppresses close exceptions as warnings.
+     *
+     * @param connection connection
+     */
+    private void closeQuietly(Connection connection) {
+        if (connection != null) {
+            try {
+                connection.close();
+            } catch (SQLException ex) {
+                LOG.warn("Error while closing the connection.", ex);
+            }
         }
     }
 

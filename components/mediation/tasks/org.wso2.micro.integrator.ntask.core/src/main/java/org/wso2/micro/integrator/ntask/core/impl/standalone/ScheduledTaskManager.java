@@ -39,6 +39,7 @@ import org.wso2.micro.integrator.ntask.core.internal.TasksDSComponent;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * This class is responsible for handling / scheduling all tasks in Micro Integrator.
@@ -241,27 +242,14 @@ public class ScheduledTaskManager extends AbstractQuartzTaskManager {
 
         boolean result = this.deleteLocalTask(taskName);
 
-        // This hits if and only if when hot deployment enabled so give the coordinator node to handle the task
-        // delete capability and give grace period to other nodes to update the local task states.
-        // Since soon after deleted the coordinator node will be assigning the task to other node and the node should
-        // be updated with the task state.
-
         boolean isCoordinationEnabled = DataHolder.getInstance().isCoordinationEnabledGlobally();
-        if (isCoordinationEnabled && !clusterCoordinator.isLeader()) {
-            log.warn("Hot deployment enabled. Hence the task " + taskName
-                    + " will be deleted by the coordinator node.");
-        }
-        if (isCoordinationEnabled && clusterCoordinator.isLeader() && deployedCoordinatedTasks.contains(taskName)) {
-            long hotDeploymentDelay = clusterCoordinator.getHeartbeatMaxRetryInterval();
+        if (isCoordinationEnabled && deployedCoordinatedTasks.contains(taskName)) {
             try {
-                log.info("Waiting for " + hotDeploymentDelay + " ms to hotdeployment to settle.");
-                try {
-                    Thread.sleep(hotDeploymentDelay); // Wait for nodes to settle
-                } catch (InterruptedException e) {
-                    // Ignore
+                if (clusterCoordinator.isLeader()) {
+                    coordinateDeleteWithBarrier(taskName);
+                } else {
+                    acknowledgeDeleteBarrier(taskName);
                 }
-                log.info("Deleting task " + taskName + " from the data base since this is a coordinated task.");
-                taskStore.deleteTasks(Collections.singletonList(taskName));
             } catch (TaskCoordinationException ex) {
                 log.error("Error while removing tasks.", ex);
             }
@@ -379,6 +367,92 @@ public class ScheduledTaskManager extends AbstractQuartzTaskManager {
     private void resumeTask(String taskName) throws TaskException {
         this.resumeLocalTask(taskName);
         TaskUtils.setTaskPaused(this.getTaskRepository(), taskName, false);
+    }
+
+    /**
+     * Leader path for coordinated task delete.
+     * Creates barrier rows, waits for worker acknowledgements (or deadline), and finalizes task-row deletion.
+     *
+     * @param taskName task name being hot-deployed
+     * @throws TaskCoordinationException when barrier operations fail
+     */
+    private void coordinateDeleteWithBarrier(String taskName) throws TaskCoordinationException {
+        long currentTime = System.currentTimeMillis();
+        long hotDeploymentDelay = clusterCoordinator.getHeartbeatMaxRetryInterval();
+        long deadlineAt = currentTime + hotDeploymentDelay;
+        String guardUuid = UUID.randomUUID().toString();
+        List<String> expectedNodes = clusterCoordinator.getAllNodeIds();
+        if (localNodeId != null && !expectedNodes.contains(localNodeId)) {
+            expectedNodes.add(localNodeId);
+        }
+        taskStore.createDeleteBarrier(taskName, guardUuid, localNodeId, expectedNodes, deadlineAt, currentTime);
+        taskStore.acknowledgeOpenDeleteBarrier(taskName, localNodeId, currentTime);
+        waitForDeleteBarrier(taskName, guardUuid, deadlineAt);
+        boolean deleted = taskStore.finalizeDeleteBarrier(taskName, guardUuid, System.currentTimeMillis());
+
+        log.info("Task [" + taskName + "] barrier finalization completed. Deleted from store : " + deleted);
+
+    }
+
+
+    /**
+     * Worker path for coordinated task delete.
+     * Tries to acknowledge the leader created barrier with a bounded retry window.
+     *
+     * @param taskName task name being hot deployed
+     * @throws TaskCoordinationException when acknowledgement operations fail
+     */
+    private void acknowledgeDeleteBarrier(String taskName) throws TaskCoordinationException {
+        // Barrier can be created by leader slightly after worker reaches delete path.
+        // Retry for the full heartbeat max retry interval, aligned with leader barrier deadline.
+        long ackWindowMillis = clusterCoordinator.getHeartbeatMaxRetryInterval();
+        long deadlineAt = System.currentTimeMillis() + ackWindowMillis;
+        boolean acked = false;
+        while (System.currentTimeMillis() <= deadlineAt) {
+            acked = taskStore.acknowledgeOpenDeleteBarrier(taskName, localNodeId, System.currentTimeMillis());
+            if (acked) {
+                break;
+            }
+            long remaining = deadlineAt - System.currentTimeMillis();
+            if (remaining <= 0) {
+                break;
+            }
+            try {
+                Thread.sleep(Math.min(remaining, 200));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+        log.info("Barrier acknowledgement for task [" + taskName + "] by node [" + localNodeId + "] : " + acked);
+
+    }
+
+    /**
+     * Waits until all expected nodes acknowledge the delete barrier or the barrier deadline is reached.
+     *
+     * @param taskName task name
+     * @param guardUuid barrier token
+     * @param deadlineAt barrier deadline in epoch millis
+     * @throws TaskCoordinationException when acknowledgement-check queries fail
+     */
+    private void waitForDeleteBarrier(String taskName, String guardUuid, long deadlineAt)
+            throws TaskCoordinationException {
+        while (System.currentTimeMillis() < deadlineAt) {
+            if (taskStore.areAllExpectedNodesAcked(taskName, guardUuid)) {
+                return;
+            }
+            long remaining = deadlineAt - System.currentTimeMillis();
+            if (remaining <= 0) {
+                return;
+            }
+            try {
+                Thread.sleep(Math.min(remaining, 200));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+        }
     }
 
 }
