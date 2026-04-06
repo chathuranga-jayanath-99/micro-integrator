@@ -59,12 +59,20 @@ import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLStreamException;
@@ -89,6 +97,21 @@ public class CappDeployer extends AbstractDeployer {
     private static final String SWAGGER_SUBSTRING = "_swagger";
     private static final String METADATA_FOLDER_NAME = "metadata";
     private static final String ARTIFACT_FILE = "artifact.xml";
+
+    /**
+     * Artifact type for class mediators. CApps containing this type are treated as high priority.
+     */
+    private static final String CLASS_MEDIATOR_TYPE = "lib/synapse/mediator";
+
+    /**
+     * Artifact type for connectors. CApps containing this type are treated as high priority.
+     */
+    private static final String CONNECTOR_TYPE = "synapse/lib";
+
+    /**
+     * Artifact type for registry resources. CApps containing this type are treated as high priority.
+     */
+    private static final String REGISTRY_RESOURCE_TYPE = "registry/resource";
     /**
      * Carbon application repository directory.
      */
@@ -772,6 +795,135 @@ public class CappDeployer extends AbstractDeployer {
             // Hence the exception is not propagated from here.
             return null;
         }
+    }
+
+    /**
+     * Sorts a sub-range of the filesToDeploy list with priority-based ordering.
+     *
+     * <p>CApps that contain any of the following artifact types are considered high priority:
+     * <ul>
+     *   <li>Class mediator  - {@code lib/synapse/mediator}</li>
+     *   <li>Connector       - {@code synapse/lib}</li>
+     *   <li>Registry resource - {@code registry/resource}</li>
+     * </ul>
+     *
+     * <p>High-priority CApps are placed first (sorted alphabetically), followed by
+     * low-priority CApps (also sorted alphabetically). The sorted result is written
+     * back into filesToDeploy in the range [startIndex, toIndex).
+     *
+     * @param filesToDeploy - list of all deployment file data
+     * @param startIndex    - start index (inclusive) of the range to sort
+     * @param toIndex       - end index (exclusive) of the range to sort
+     */
+    public void sort(List<DeploymentFileData> filesToDeploy, int startIndex, int toIndex) {
+        if (log.isDebugEnabled()) {
+            log.debug("Sorting CApp files with priority order in range [" + startIndex + ", " + toIndex + ")");
+        }
+
+        // Extract the sub-range to classify and sort
+        List<DeploymentFileData> subList = new ArrayList<>(filesToDeploy.subList(startIndex, toIndex));
+
+        List<DeploymentFileData> highPriorityCApps = new ArrayList<>();
+        List<DeploymentFileData> lowPriorityCApps = new ArrayList<>();
+
+        // Classify each CApp as high or low priority by inspecting artifact types inside the .car archive
+        for (DeploymentFileData fileData : subList) {
+            File carFile = new File(fileData.getAbsolutePath());
+            if (isHighPriorityCApp(carFile)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("CApp classified as high priority: " + carFile.getName());
+                }
+                highPriorityCApps.add(fileData);
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("CApp classified as low priority: " + carFile.getName());
+                }
+                lowPriorityCApps.add(fileData);
+            }
+        }
+
+        // Sort each group alphabetically by file name (case-insensitive)
+        Comparator<DeploymentFileData> byFileName =
+                Comparator.comparing(f -> new File(f.getAbsolutePath()).getName().toLowerCase());
+        highPriorityCApps.sort(byFileName);
+        lowPriorityCApps.sort(byFileName);
+
+        if (log.isDebugEnabled()) {
+            log.debug("High priority CApps (" + highPriorityCApps.size() + "): " +
+                    highPriorityCApps.stream()
+                            .map(f -> new File(f.getAbsolutePath()).getName())
+                            .collect(Collectors.joining(", ")));
+            log.debug("Low priority CApps (" + lowPriorityCApps.size() + "): " +
+                    lowPriorityCApps.stream()
+                            .map(f -> new File(f.getAbsolutePath()).getName())
+                            .collect(Collectors.joining(", ")));
+        }
+
+        // Merge sorted groups: high priority first, then low priority
+        List<DeploymentFileData> sorted = new ArrayList<>();
+        sorted.addAll(highPriorityCApps);
+        sorted.addAll(lowPriorityCApps);
+
+        // Write the sorted list back into the original list within the specified range
+        for (int i = 0; i < sorted.size(); i++) {
+            filesToDeploy.set(startIndex + i, sorted.get(i));
+        }
+
+        log.info("CApp deployment order sorted: " + highPriorityCApps.size() + " high-priority CApp(s) followed by "
+                + lowPriorityCApps.size() + " low-priority CApp(s).");
+    }
+
+    /**
+     * Determines whether a .car file is a high-priority CApp by inspecting the {@code type} attribute
+     * of each {@code <artifact>} element inside the archive's {@code artifact.xml} files.
+     *
+     * <p>A CApp is considered high priority if it contains any artifact with one of the types:
+     * <ul>
+     *   <li>{@code lib/synapse/mediator}  - class mediator</li>
+     *   <li>{@code synapse/lib}           - connector</li>
+     *   <li>{@code registry/resource}     - registry resource</li>
+     * </ul>
+     *
+     * @param carFile - the .car file to inspect
+     * @return true if the CApp contains at least one high-priority artifact type, false otherwise
+     */
+    private boolean isHighPriorityCApp(File carFile) {
+        Set<String> highPriorityTypes = new HashSet<>(Arrays.asList(
+                CLASS_MEDIATOR_TYPE,
+                CONNECTOR_TYPE,
+                REGISTRY_RESOURCE_TYPE
+        ));
+
+        try (ZipFile zipFile = new ZipFile(carFile)) {
+            Enumeration<? extends ZipEntry> entries = zipFile.entries();
+            while (entries.hasMoreElements()) {
+                ZipEntry entry = entries.nextElement();
+                // Look only for artifact.xml files inside artifact directories (e.g., <artifact-dir>/artifact.xml).
+                // The top-level descriptor is named "artifacts.xml" so the "/" prefix check correctly excludes it.
+                if (!entry.isDirectory() && entry.getName().endsWith("/" + ARTIFACT_FILE)) {
+                    try (InputStream is = zipFile.getInputStream(entry)) {
+                        OMElement artElement = new StAXOMBuilder(is).getDocumentElement();
+                        if (Artifact.ARTIFACT.equals(artElement.getLocalName())) {
+                            String artifactType = artElement.getAttributeValue(new QName("type"));
+                            if (artifactType != null && highPriorityTypes.contains(artifactType)) {
+                                if (log.isDebugEnabled()) {
+                                    log.debug("Found high-priority artifact type '" + artifactType
+                                            + "' in CApp: " + carFile.getName()
+                                            + " [entry: " + entry.getName() + "]");
+                                }
+                                return true;
+                            }
+                        }
+                    } catch (XMLStreamException | OMException e) {
+                        log.warn("Error parsing artifact.xml entry '" + entry.getName()
+                                + "' in CApp: " + carFile.getName() + ". Skipping entry.", e);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            log.warn("Error reading CApp file: " + carFile.getName() + ". Treating as low priority.", e);
+        }
+        return false;
     }
 
     /**
