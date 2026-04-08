@@ -34,6 +34,7 @@ import org.wso2.micro.integrator.ntask.core.TaskRepository;
 import org.wso2.micro.integrator.ntask.core.TaskUtils;
 import org.wso2.micro.integrator.ntask.core.impl.AbstractQuartzTaskManager;
 import org.wso2.micro.integrator.ntask.core.internal.DataHolder;
+import org.wso2.micro.integrator.ntask.core.internal.TaskHandlingConfigUtils;
 import org.wso2.micro.integrator.ntask.core.internal.TasksDSComponent;
 
 import java.util.ArrayList;
@@ -63,6 +64,7 @@ public class ScheduledTaskManager extends AbstractQuartzTaskManager {
     private TaskStore taskStore;
     private String localNodeId;
     private ClusterCoordinator clusterCoordinator;
+    private final boolean taskDeleteBarrierEnabled;
 
     ScheduledTaskManager(TaskRepository taskRepository, TaskStore taskStore) throws TaskException {
 
@@ -70,6 +72,9 @@ public class ScheduledTaskManager extends AbstractQuartzTaskManager {
         this.taskStore = taskStore;
         this.localNodeId = DataHolder.getInstance().getLocalNodeId();
         this.clusterCoordinator = DataHolder.getInstance().getClusterCoordinator();
+        this.taskDeleteBarrierEnabled = TaskHandlingConfigUtils.isTaskDeleteBarrierEnabled();
+        log.info("Clustered task delete barrier flow is " + (taskDeleteBarrierEnabled ? "enabled" : "disabled")
+                + ". Configure [" + TaskHandlingConfigUtils.TASK_DELETE_BARRIER_ENABLED_CONFIG + "] to control it.");
     }
 
     @Override
@@ -244,17 +249,21 @@ public class ScheduledTaskManager extends AbstractQuartzTaskManager {
 
         boolean isCoordinationEnabled = DataHolder.getInstance().isCoordinationEnabledGlobally();
         if (isCoordinationEnabled && deployedCoordinatedTasks.contains(taskName)) {
-            try {
-                if (clusterCoordinator.isLeader()) {
-                    coordinateDeleteWithBarrier(taskName);
-                } else {
-                    acknowledgeDeleteBarrier(taskName);
+            if (taskDeleteBarrierEnabled) {
+                try {
+                    if (clusterCoordinator.isLeader()) {
+                        coordinateDeleteWithBarrier(taskName);
+                    } else {
+                        acknowledgeDeleteBarrier(taskName);
+                    }
+                } catch (TaskCoordinationException ex) {
+                    log.error("Error while removing tasks.", ex);
                 }
-            } catch (TaskCoordinationException ex) {
-                log.error("Error while removing tasks.", ex);
+                deployedCoordinatedTasks.remove(taskName);
+                locallyRunningCoordinatedTasks.remove(taskName);
+            } else {
+                deleteTaskWithLegacyDelay(taskName);
             }
-            deployedCoordinatedTasks.remove(taskName);
-            locallyRunningCoordinatedTasks.remove(taskName);
         }
         return result;
     }
@@ -367,6 +376,35 @@ public class ScheduledTaskManager extends AbstractQuartzTaskManager {
     private void resumeTask(String taskName) throws TaskException {
         this.resumeLocalTask(taskName);
         TaskUtils.setTaskPaused(this.getTaskRepository(), taskName, false);
+    }
+
+    /**
+     * Legacy coordinated delete flow used when barrier feature flag is disabled.
+     * Non-leader nodes skip DB delete and leader waits heartbeat delay before deleting.
+     *
+     * @param taskName task name
+     */
+    private void deleteTaskWithLegacyDelay(String taskName) {
+        if (!clusterCoordinator.isLeader()) {
+            log.warn("Hot deployment enabled. Hence the task " + taskName
+                    + " will be deleted by the coordinator node.");
+            return;
+        }
+        long hotDeploymentDelay = clusterCoordinator.getHeartbeatMaxRetryInterval();
+        try {
+            log.info("Waiting for " + hotDeploymentDelay + " ms to hotdeployment to settle.");
+            try {
+                Thread.sleep(hotDeploymentDelay); // Wait for nodes to settle
+            } catch (InterruptedException e) {
+                // Ignore to preserve legacy behavior
+            }
+            log.info("Deleting task " + taskName + " from the data base since this is a coordinated task.");
+            taskStore.deleteTasks(Collections.singletonList(taskName));
+        } catch (TaskCoordinationException ex) {
+            log.error("Error while removing tasks.", ex);
+        }
+        deployedCoordinatedTasks.remove(taskName);
+        locallyRunningCoordinatedTasks.remove(taskName);
     }
 
     /**

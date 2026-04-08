@@ -26,6 +26,7 @@ import org.wso2.micro.integrator.ntask.coordination.task.CoordinatedTask;
 import org.wso2.micro.integrator.ntask.coordination.task.store.TaskStore;
 import org.wso2.micro.integrator.ntask.core.impl.standalone.ScheduledTaskManager;
 import org.wso2.micro.integrator.ntask.core.internal.DataHolder;
+import org.wso2.micro.integrator.ntask.core.internal.TaskHandlingConfigUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,6 +44,7 @@ public class TaskStoreCleaner {
     private ClusterCoordinator clusterCoordinator = dataHolder.getClusterCoordinator();
     private TaskStore taskStore;
     private ScheduledTaskManager taskManager;
+    private final boolean taskDeleteBarrierEnabled;
 
     /**
      * Constructor.
@@ -52,6 +54,7 @@ public class TaskStoreCleaner {
     public TaskStoreCleaner(ScheduledTaskManager taskManager, TaskStore taskStore) {
         this.taskManager = taskManager;
         this.taskStore = taskStore;
+        this.taskDeleteBarrierEnabled = TaskHandlingConfigUtils.isTaskDeleteBarrierEnabled();
     }
 
     /**
@@ -66,11 +69,17 @@ public class TaskStoreCleaner {
         List<String> allNodesAvailableInCluster = clusterCoordinator.getAllNodeIds();
         if (allTasks.isEmpty()) {
             LOG.debug("No tasks found in task database.");
+            if (!taskDeleteBarrierEnabled) {
+                LOG.debug("Completed task store cleaning.");
+                return;
+            }
         } else {
             removeInvalidTasksFromStore(allTasks, allNodesAvailableInCluster);
             validateDestinedNodeAndUpdateStore(allNodesAvailableInCluster);
         }
-        recoverExpiredOrAbandonedDeleteBarriers(allNodesAvailableInCluster);
+        if (taskDeleteBarrierEnabled) {
+            recoverExpiredOrAbandonedDeleteBarriers(allNodesAvailableInCluster);
+        }
         LOG.debug("Completed task store cleaning.");
     }
 
