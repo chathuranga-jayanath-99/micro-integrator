@@ -294,10 +294,10 @@ public class TaskStore {
      *
      * @param liveNodeIds currently live nodes
      * @param currentTime current time in epoch millis
-     * @return number of recovered barriers attempted
+     * @return recovered task names whose delete barriers were finalized
      * @throws TaskCoordinationException if operation fails
      */
-    public int recoverExpiredOrAbandonedDeleteBarriers(List<String> liveNodeIds, long currentTime)
+    public List<String> recoverExpiredOrAbandonedDeleteBarriers(List<String> liveNodeIds, long currentTime)
             throws TaskCoordinationException {
         return rdmbsConnector.recoverExpiredOrAbandonedDeleteBarriers(liveNodeIds, currentTime);
     }

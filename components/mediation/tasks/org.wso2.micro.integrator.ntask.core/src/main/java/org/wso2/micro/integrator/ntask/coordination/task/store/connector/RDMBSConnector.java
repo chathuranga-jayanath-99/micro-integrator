@@ -799,10 +799,10 @@ public class RDMBSConnector {
      *
      * @param liveNodeIds list of currently live node ids
      * @param currentTime current time in epoch millis
-     * @return number of barriers attempted for recovery
+     * @return recovered task names whose barriers were finalized
      * @throws TaskCoordinationException when DB operation fails
      */
-    public int recoverExpiredOrAbandonedDeleteBarriers(List<String> liveNodeIds, long currentTime)
+    public List<String> recoverExpiredOrAbandonedDeleteBarriers(List<String> liveNodeIds, long currentTime)
             throws TaskCoordinationException {
         Set<String> liveNodes = new HashSet<>();
         if (liveNodeIds != null) {
@@ -815,18 +815,22 @@ public class RDMBSConnector {
             throw new TaskCoordinationException(ERROR_MSG, ex);
         }
 
-        int recovered = 0;
+        Set<String> recoveredTaskNames = new HashSet<>();
         for (DeleteBarrierRecord barrier : openBarriers) {
             boolean ownerMissing = barrier.ownerNodeId == null || !liveNodes.contains(barrier.ownerNodeId);
             boolean deadlinePassed = currentTime >= barrier.deadlineAt;
             if (ownerMissing || deadlinePassed) {
+                String recoveryReason = ownerMissing && deadlinePassed ? "owner-missing-and-deadline-passed"
+                        : ownerMissing ? "owner-missing" : "deadline-passed";
                 boolean finalized = finalizeDeleteBarrier(barrier.taskName, barrier.guardUuid, currentTime);
                 if (finalized) {
-                    recovered++;
+                    recoveredTaskNames.add(barrier.taskName);
+                    LOG.info("Recovery flow cleaned delete barrier for task [" + barrier.taskName + "] with guard ["
+                            + barrier.guardUuid + "] due to [" + recoveryReason + "].");
                 }
             }
         }
-        return recovered;
+        return new ArrayList<>(recoveredTaskNames);
     }
 
     /**

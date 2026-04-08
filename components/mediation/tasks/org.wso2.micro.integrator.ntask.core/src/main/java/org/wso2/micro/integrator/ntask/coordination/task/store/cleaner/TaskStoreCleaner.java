@@ -148,11 +148,12 @@ public class TaskStoreCleaner {
      */
     private void recoverExpiredOrAbandonedDeleteBarriers(List<String> allNodesAvailableInCluster)
             throws TaskCoordinationException {
-        int recovered = taskStore.recoverExpiredOrAbandonedDeleteBarriers(allNodesAvailableInCluster,
+        List<String> recoveredTaskNames = taskStore.recoverExpiredOrAbandonedDeleteBarriers(allNodesAvailableInCluster,
                 System.currentTimeMillis());
-        if (recovered > 0) {
-            LOG.info("Recovered [" + recovered + "] expired or abandoned task delete barrier(s).");
+        if (recoveredTaskNames.isEmpty()) {
+            return;
         }
+        LOG.info("Recovered [" + recoveredTaskNames.size() + "] expired or abandoned task delete barrier(s).");
     }
 
 }
