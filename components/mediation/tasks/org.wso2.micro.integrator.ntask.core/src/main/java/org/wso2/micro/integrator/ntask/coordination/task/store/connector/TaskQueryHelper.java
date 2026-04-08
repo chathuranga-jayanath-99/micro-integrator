@@ -115,6 +115,10 @@ public class TaskQueryHelper {
             "UPDATE " + TASK_DELETE_GUARD_TABLE + " SET " + GUARD_UUID + " = ?, " + UPDATED_AT + " = ? WHERE "
                     + TASK_NAME + " = ?";
 
+    static final String UPDATE_TASK_DELETE_GUARD_IF_MATCH =
+            "UPDATE " + TASK_DELETE_GUARD_TABLE + " SET " + GUARD_UUID + " = ?, " + UPDATED_AT + " = ? WHERE "
+                    + TASK_NAME + " = ? AND " + GUARD_UUID + " = ?";
+
     static final String UPDATE_TASK_DELETE_GUARD_TIMESTAMP_IF_MATCH =
             "UPDATE " + TASK_DELETE_GUARD_TABLE + " SET " + UPDATED_AT + " = ? WHERE " + TASK_NAME
                     + " = ? AND " + GUARD_UUID + " = ?";

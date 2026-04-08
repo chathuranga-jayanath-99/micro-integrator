@@ -76,6 +76,7 @@ import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.UPDATE_TASK_DELETE_BARRIER_STATUS;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.UPDATE_TASK_DELETE_BARRIER_TIMESTAMP;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.UPDATE_TASK_DELETE_GUARD;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.UPDATE_TASK_DELETE_GUARD_IF_MATCH;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.UPDATE_TASK_DELETE_GUARD_TIMESTAMP_IF_MATCH;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.UPDATE_TASK_STATE;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.UPDATE_TASK_STATE_FOR_DESTINED_NODE;
@@ -542,14 +543,7 @@ public class RDMBSConnector {
      */
     public void createDeleteBarrier(String taskName, String guardUuid, String ownerNodeId, List<String> expectedNodeIds,
                                     long deadlineAt, long updatedAt) throws TaskCoordinationException {
-        Set<String> expectedNodes = new HashSet<>();
-        if (expectedNodeIds != null) {
-            expectedNodes.addAll(expectedNodeIds);
-        }
-        expectedNodes.remove(null);
-        if (expectedNodes.isEmpty() && ownerNodeId != null) {
-            expectedNodes.add(ownerNodeId);
-        }
+        Set<String> expectedNodes = sanitizeExpectedNodes(expectedNodeIds, ownerNodeId);
 
         Connection connection = null;
         try {
@@ -568,6 +562,68 @@ public class RDMBSConnector {
 
             insertExpectedNodes(connection, taskName, guardUuid, expectedNodes);
             connection.commit();
+        } catch (SQLException ex) {
+            rollbackQuietly(connection);
+            throw new TaskCoordinationException(ERROR_MSG, ex);
+        } finally {
+            closeQuietly(connection);
+        }
+    }
+
+    /**
+     * Reads current guard token for the given task.
+     *
+     * @param taskName task name
+     * @return current guard token or null when no guard row exists
+     * @throws TaskCoordinationException when DB operation fails
+     */
+    public String getCurrentDeleteGuardUuid(String taskName) throws TaskCoordinationException {
+        try (Connection connection = getConnection()) {
+            return readGuardUuid(connection, taskName);
+        } catch (SQLException ex) {
+            throw new TaskCoordinationException(ERROR_MSG, ex);
+        }
+    }
+
+    /**
+     * Attempts worker bootstrap for a delete barrier by CAS claiming guard ownership.
+     * This operation updates/inserts guard and creates barrier rows atomically in one transaction.
+     *
+     * @param taskName task name
+     * @param expectedGuardUuid guard observed by worker before CAS (nullable)
+     * @param newGuardUuid new guard token candidate for bootstrap owner
+     * @param ownerNodeId owner node id for barrier
+     * @param expectedNodeIds expected nodes for acknowledgements
+     * @param deadlineAt barrier deadline in epoch millis
+     * @param updatedAt updated timestamp in epoch millis
+     * @return true when this node won CAS and created barrier rows
+     * @throws TaskCoordinationException when DB operation fails
+     */
+    public boolean tryCreateDeleteBarrierWithGuardCas(String taskName, String expectedGuardUuid, String newGuardUuid,
+                                                      String ownerNodeId, List<String> expectedNodeIds, long deadlineAt,
+                                                      long updatedAt) throws TaskCoordinationException {
+        Set<String> expectedNodes = sanitizeExpectedNodes(expectedNodeIds, ownerNodeId);
+        Connection connection = null;
+        try {
+            connection = getTransactionalConnection();
+            boolean acquired = acquireGuardByCompareAndSet(connection, taskName, expectedGuardUuid, newGuardUuid,
+                    updatedAt);
+            if (!acquired) {
+                connection.rollback();
+                return false;
+            }
+            try (PreparedStatement insertBarrier = connection.prepareStatement(INSERT_TASK_DELETE_BARRIER)) {
+                insertBarrier.setString(1, taskName);
+                insertBarrier.setString(2, newGuardUuid);
+                insertBarrier.setString(3, ownerNodeId);
+                insertBarrier.setString(4, BARRIER_STATUS_OPEN);
+                insertBarrier.setLong(5, deadlineAt);
+                insertBarrier.setLong(6, updatedAt);
+                insertBarrier.executeUpdate();
+            }
+            insertExpectedNodes(connection, taskName, newGuardUuid, expectedNodes);
+            connection.commit();
+            return true;
         } catch (SQLException ex) {
             rollbackQuietly(connection);
             throw new TaskCoordinationException(ERROR_MSG, ex);
@@ -771,6 +827,64 @@ public class RDMBSConnector {
             }
         }
         return recovered;
+    }
+
+    /**
+     * Normalizes and deduplicates expected node IDs for barrier creation.
+     *
+     * @param expectedNodeIds expected node IDs
+     * @param ownerNodeId owner node id
+     * @return normalized expected node set
+     */
+    private Set<String> sanitizeExpectedNodes(List<String> expectedNodeIds, String ownerNodeId) {
+        Set<String> expectedNodes = new HashSet<>();
+        if (expectedNodeIds != null) {
+            expectedNodes.addAll(expectedNodeIds);
+        }
+        expectedNodes.remove(null);
+        if (expectedNodes.isEmpty() && ownerNodeId != null) {
+            expectedNodes.add(ownerNodeId);
+        }
+        return expectedNodes;
+    }
+
+    /**
+     * Compares and sets guard token for worker bootstrap ownership.
+     * If expected guard is null, this tries to insert a new guard row.
+     * If expected guard is non-null, this updates only when current guard matches expected.
+     *
+     * @param connection transactional connection
+     * @param taskName task name
+     * @param expectedGuardUuid guard observed by worker before CAS (nullable)
+     * @param newGuardUuid new guard token candidate
+     * @param updatedAt update timestamp in epoch millis
+     * @return true if guard ownership was acquired
+     * @throws SQLException when query execution fails
+     */
+    private boolean acquireGuardByCompareAndSet(Connection connection, String taskName, String expectedGuardUuid,
+                                                String newGuardUuid, long updatedAt) throws SQLException {
+        if (expectedGuardUuid == null) {
+            try (PreparedStatement insertGuard = connection.prepareStatement(INSERT_TASK_DELETE_GUARD)) {
+                insertGuard.setString(1, taskName);
+                insertGuard.setString(2, newGuardUuid);
+                insertGuard.setLong(3, updatedAt);
+                insertGuard.executeUpdate();
+                return true;
+            } catch (SQLException ex) {
+                if (isIntegrityViolation(ex)) {
+                    return false;
+                }
+                throw ex;
+            }
+        }
+
+        try (PreparedStatement updateGuard = connection.prepareStatement(UPDATE_TASK_DELETE_GUARD_IF_MATCH)) {
+            updateGuard.setString(1, newGuardUuid);
+            updateGuard.setLong(2, updatedAt);
+            updateGuard.setString(3, taskName);
+            updateGuard.setString(4, expectedGuardUuid);
+            return updateGuard.executeUpdate() > 0;
+        }
     }
 
     /**

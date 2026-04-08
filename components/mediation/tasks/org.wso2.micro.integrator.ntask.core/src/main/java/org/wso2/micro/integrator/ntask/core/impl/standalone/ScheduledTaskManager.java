@@ -424,8 +424,53 @@ public class ScheduledTaskManager extends AbstractQuartzTaskManager {
                 break;
             }
         }
+        boolean bootstrapOwner = false;
+        if (!acked) {
+            bootstrapOwner = bootstrapDeleteBarrierIfMissing(taskName);
+        }
         log.info("Barrier acknowledgement for task [" + taskName + "] by node [" + localNodeId + "] : " + acked);
+        if (bootstrapOwner) {
+            log.info("Node [" + localNodeId + "] became bootstrap owner and created delete barrier for task ["
+                    + taskName + "].");
+        }
 
+    }
+
+    /**
+     * Worker create deleteBarrier path when no leader created barrier appears within ACK window.
+     * Uses guard compare and set ownership, so only one worker can create barrier rows for a task wave.
+     * This path does not finalize deletion, recovery flow will finalize later.
+     *
+     * @param taskName task name
+     * @return true if this worker won CAS and created barrier rows
+     * @throws TaskCoordinationException when barrier operations fail
+     */
+    private boolean bootstrapDeleteBarrierIfMissing(String taskName) throws TaskCoordinationException {
+        long currentTime = System.currentTimeMillis();
+        long hotDeploymentDelay = clusterCoordinator.getHeartbeatMaxRetryInterval();
+        long deadlineAt = currentTime + hotDeploymentDelay;
+        String observedGuard = taskStore.getCurrentDeleteGuardUuid(taskName);
+        String bootstrapGuard = UUID.randomUUID().toString();
+        List<String> expectedNodes = clusterCoordinator.getAllNodeIds();
+        if (localNodeId != null && !expectedNodes.contains(localNodeId)) {
+            expectedNodes.add(localNodeId);
+        }
+
+        boolean wonOwnership = taskStore.tryCreateDeleteBarrierWithGuardCas(taskName, observedGuard, bootstrapGuard,
+                localNodeId, expectedNodes, deadlineAt, currentTime);
+        if (!wonOwnership) {
+            // Another node has already claimed the guard CAS and will drive barrier finalize for this task.
+            log.warn("Bootstrap barrier ownership was not acquired by node [" + localNodeId + "] for task ["
+                    + taskName + "].");
+            return false;
+        }
+
+        // Worker bootstrap owner only opens and ACKs barrier state.
+        // Final delete is delegated to recovery path in this exception scenario.
+        taskStore.acknowledgeOpenDeleteBarrier(taskName, localNodeId, currentTime);
+        log.info("Node [" + localNodeId + "] created and acknowledged bootstrap delete barrier for task ["
+                + taskName + "] with guard [" + bootstrapGuard + "]. Finalization will be handled by recovery flow.");
+        return true;
     }
 
     /**

@@ -218,6 +218,38 @@ public class TaskStore {
     }
 
     /**
+     * Reads the current guard token for a task.
+     *
+     * @param taskName task name
+     * @return current guard token or null when no guard exists
+     * @throws TaskCoordinationException if operation fails
+     */
+    public String getCurrentDeleteGuardUuid(String taskName) throws TaskCoordinationException {
+        return rdmbsConnector.getCurrentDeleteGuardUuid(taskName);
+    }
+
+    /**
+     * Attempts worker bootstrap of delete barrier by compare and set claiming the guard token.
+     * Only one worker can win and create the barrier for a task wave.
+     *
+     * @param taskName task name
+     * @param expectedGuardUuid guard observed by worker before CAS (nullable)
+     * @param newGuardUuid candidate guard token for bootstrap owner
+     * @param ownerNodeId bootstrap owner node id
+     * @param expectedNodeIds expected nodes for acknowledgement
+     * @param deadlineAt barrier deadline in epoch millis
+     * @param updatedAt updated timestamp in epoch millis
+     * @return true if this worker won CAS and created barrier rows
+     * @throws TaskCoordinationException if operation fails
+     */
+    public boolean tryCreateDeleteBarrierWithGuardCas(String taskName, String expectedGuardUuid, String newGuardUuid,
+                                                      String ownerNodeId, List<String> expectedNodeIds, long deadlineAt,
+                                                      long updatedAt) throws TaskCoordinationException {
+        return rdmbsConnector.tryCreateDeleteBarrierWithGuardCas(taskName, expectedGuardUuid, newGuardUuid, ownerNodeId,
+                expectedNodeIds, deadlineAt, updatedAt);
+    }
+
+    /**
      * Acknowledges open barrier for a task from current node.
      *
      * @param taskName task name
