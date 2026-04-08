@@ -329,6 +329,7 @@ public class SynapseAppDeployer implements AppDeploymentHandler {
 
             JsonObject undeployedArtifact = createUpdatedArtifactInfoObject(artifact, artifactPath, false);
             ArtifactDeploymentListener.addToUndeployedArtifactsQueue(undeployedArtifact);
+            ArtifactDeploymentListener.removeArtifactFromDeployedQueue(undeployedArtifact);
         }
     }
 

@@ -65,6 +65,19 @@ public class ArtifactDeploymentListener {
         }
     }
 
+    public static void removeArtifactFromDeployedQueue(JsonObject artifact) {
+        if (HeartBeatComponent.isDashboardConfigured()) {
+            for (int i = 0; i < deployedArtifacts.size(); i++) {
+                JsonObject entry = deployedArtifacts.get(i).getAsJsonObject();
+                if (entry.get("type").equals(artifact.get("type")) &&
+                        entry.get("name").equals(artifact.get("name"))) {
+                    deployedArtifacts.remove(i);
+                    return;
+                }
+            }
+        }
+    }
+
     public static void removeFromUndeployedArtifactsQueue(int artifactsSize) {
         for (int i = 0; i < artifactsSize; i++) {
             undeployedArtifacts.remove(0);
