@@ -106,6 +106,19 @@ public class TaskStore {
     }
 
     /**
+     * Remove task entries only when their state does not match the excluded state.
+     *
+     * @param tasks         - List of tasks to be removed.
+     * @param excludedState - State value that should be skipped.
+     * @return list of task names that were skipped because their state matched the excluded state.
+     */
+    public List<String> deleteTasksIfStateNotMatch(List<String> tasks, String excludedState)
+            throws TaskCoordinationException {
+
+        return rdmbsConnector.deleteTasksIfStateNotMatch(tasks, excludedState);
+    }
+
+    /**
      * Activates the task.
      *
      * @param taskName - Name of the task.

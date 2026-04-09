@@ -164,6 +164,9 @@ public class TaskQueryHelper {
     static final String DELETE_TASK_IF_STATE_MATCH =
             "DELETE FROM " + TABLE_NAME + " WHERE " + TASK_NAME + " = ? AND " + TASK_STATE + " = ?";
 
+    static final String DELETE_TASK_IF_STATE_NOT_MATCH =
+            "DELETE FROM " + TABLE_NAME + " WHERE " + TASK_NAME + " = ? AND " + TASK_STATE + " <> ?";
+
     static final String SELECT_OPEN_TASK_DELETE_BARRIER_BY_TASK_AND_GUARD =
             "SELECT " + TASK_NAME + ", " + GUARD_UUID + ", " + OWNER_NODE_ID + ", " + STATUS + ", " + DEADLINE_AT
                     + ", " + UPDATED_AT + " FROM " + TASK_DELETE_BARRIER_TABLE + " WHERE " + TASK_NAME + " = ? AND "

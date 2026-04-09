@@ -148,16 +148,13 @@ public class TaskStoreCleaner {
         tasksList.removeIf(task -> deployedCoordinatedTasks.contains(task.getTaskName()));
         List<String> tasksToDelete = new ArrayList<>();
         for (CoordinatedTask task : tasksList) {
-            String taskName = task.getTaskName();
-            String taskState = taskStore.getTaskStateValue(taskName);
-            if (DELETE_PENDING_STATE.equals(taskState)) {
-                LOG.info("Skipping invalid task cleanup for task [" + taskName + "] because it is in ["
-                        + DELETE_PENDING_STATE + "] state.");
-                continue;
-            }
-            tasksToDelete.add(taskName);
+            tasksToDelete.add(task.getTaskName());
         }
-        taskStore.deleteTasks(tasksToDelete);
+        List<String> skippedTasks = taskStore.deleteTasksIfStateNotMatch(tasksToDelete, DELETE_PENDING_STATE);
+        for (String skippedTask : skippedTasks) {
+            LOG.info("Skipping invalid task cleanup for task [" + skippedTask + "] because it is in ["
+                    + DELETE_PENDING_STATE + "] state.");
+        }
         if (LOG.isDebugEnabled()) {
             tasksToDelete.forEach(removedTask -> LOG.debug("Removed invalid task :" + removedTask));
         }

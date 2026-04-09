@@ -45,6 +45,7 @@ import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.CLEAN_TASKS_OF_NODE;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.DELETE_TASK;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.DELETE_TASK_IF_STATE_MATCH;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.DELETE_TASK_IF_STATE_NOT_MATCH;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.DELETE_TASK_DELETE_BARRIER;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.DELETE_TASK_DELETE_BARRIER_ACKS;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.DELETE_TASK_DELETE_BARRIER_EXPECTED;
@@ -349,6 +350,43 @@ public class RDMBSConnector {
             }
             preparedStatement.executeBatch();
             printDebugLogs(new ArrayList<>(tasks), "Following list of tasks were deleted.");
+        } catch (SQLException ex) {
+            throw new TaskCoordinationException(ERROR_MSG, ex);
+        }
+    }
+
+    /**
+     * Remove task entries only when their state does not match the excluded state.
+     *
+     * @param tasks         - List of tasks to be removed.
+     * @param excludedState - State value that should be skipped.
+     * @return list of task names that were skipped because their state matched the excluded state.
+     */
+    public List<String> deleteTasksIfStateNotMatch(List<String> tasks, String excludedState)
+            throws TaskCoordinationException {
+
+        if (tasks.isEmpty()) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(EMPTY_LIST + " for deleting tasks with state exclusion.");
+            }
+            return new ArrayList<>();
+        }
+        try (Connection connection = getConnection(); PreparedStatement preparedStatement = connection.prepareStatement(
+                DELETE_TASK_IF_STATE_NOT_MATCH)) {
+            for (String task : tasks) {
+                preparedStatement.setString(1, task);
+                preparedStatement.setString(2, excludedState);
+                preparedStatement.addBatch();
+            }
+            int[] results = preparedStatement.executeBatch();
+            List<String> skippedTasks = new ArrayList<>();
+            for (int i = 0; i < results.length; i++) {
+                if (results[i] == 0) {
+                    skippedTasks.add(tasks.get(i));
+                }
+            }
+            printDebugLogs(new ArrayList<>(tasks), "Following list of tasks were conditionally deleted.");
+            return skippedTasks;
         } catch (SQLException ex) {
             throw new TaskCoordinationException(ERROR_MSG, ex);
         }
