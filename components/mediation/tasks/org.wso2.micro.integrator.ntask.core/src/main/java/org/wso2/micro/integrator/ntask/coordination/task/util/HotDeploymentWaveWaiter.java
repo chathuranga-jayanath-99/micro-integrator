@@ -57,10 +57,11 @@ public final class HotDeploymentWaveWaiter {
         }
 
         long startedAt = System.currentTimeMillis();
+        long maxWaitMillis = quietWindowMillis + 3 * heartbeatMaxRetryInterval;
         Long previousLatestGuardUpdatedAt = null;
 
         log.info("Waiting to start " + operationName + " until hot deployment wave is settled. "
-                + "Minimum wait [" + quietWindowMillis + "] ms.");
+                + "Minimum wait [" + quietWindowMillis + "] ms, max wait [" + maxWaitMillis + "] ms.");
         while (true) {
             long now = System.currentTimeMillis();
             long elapsed = now - startedAt;
@@ -80,6 +81,11 @@ public final class HotDeploymentWaveWaiter {
             if (minimumWaitSatisfied && guardQuietSatisfied) {
                 log.info("Hot deployment wave settled for " + operationName + ". Waited [" + elapsed
                         + "] ms. Latest guard updated at [" + latestGuardUpdatedAt + "].");
+                return;
+            }
+            if (elapsed >= maxWaitMillis) {
+                log.warn("Max wait time [" + maxWaitMillis + "] ms exceeded for " + operationName
+                        + ". Proceeding after [" + elapsed + "] ms despite unsettled hot deployment wave.");
                 return;
             }
             if (!sleepWithInterruptHandling(operationName, log)) {
