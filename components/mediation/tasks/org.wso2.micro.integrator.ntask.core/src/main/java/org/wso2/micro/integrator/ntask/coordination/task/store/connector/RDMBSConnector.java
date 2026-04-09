@@ -564,7 +564,7 @@ public class RDMBSConnector {
     }
 
     /**
-     * Opens a new delete barrier for a task and updates guard token.
+     * Opens a new delete barrier for a task, updates guard token, and marks task row as delete pending.
      *
      * @param taskName        name of the task
      * @param guardUuid       barrier/guard token
@@ -594,6 +594,8 @@ public class RDMBSConnector {
             }
 
             insertExpectedNodes(connection, taskName, guardUuid, expectedNodes);
+            // Leader path should also mark task as delete-pending so recovery can safely finalize if leader dies.
+            markTaskDeletePending(connection, taskName);
             connection.commit();
         } catch (SQLException ex) {
             rollbackQuietly(connection);
