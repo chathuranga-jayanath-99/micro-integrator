@@ -29,6 +29,7 @@ import org.wso2.micro.integrator.ntask.coordination.TaskCoordinationException;
 import org.wso2.micro.integrator.ntask.coordination.task.resolver.TaskLocationResolver;
 import org.wso2.micro.integrator.ntask.coordination.task.scehduler.CoordinatedTaskScheduler;
 import org.wso2.micro.integrator.ntask.coordination.task.store.TaskStore;
+import org.wso2.micro.integrator.ntask.coordination.task.util.HotDeploymentWaveWaiter;
 import org.wso2.micro.integrator.ntask.core.impl.standalone.ScheduledTaskManager;
 import org.wso2.micro.integrator.ntask.core.internal.CoordinatedTaskScheduleManager;
 import org.wso2.micro.integrator.ntask.core.internal.DataHolder;
@@ -43,8 +44,6 @@ import java.util.concurrent.ScheduledExecutorService;
 public class TaskEventListener extends MemberEventListener {
 
     private static final Log LOG = LogFactory.getLog(TaskEventListener.class);
-    private static final long MEMBER_REMOVED_WAIT_POLL_INTERVAL_MILLIS = 200L;
-    private static final long DELETE_GUARD_SETTLE_BUFFER_MILLIS = 5000L;
 
     private DataHolder dataHolder = DataHolder.getInstance();
     private ClusterCoordinator clusterCoordinator = dataHolder.getClusterCoordinator();
@@ -91,19 +90,12 @@ public class TaskEventListener extends MemberEventListener {
         }
         String nodeId = nodeDetail.getNodeId();
         if (taskDeleteBarrierEnabled) {
-            long delayMillis = 0L;
             try {
-                delayMillis = getMemberRemovedCleanupDelayMillis();
+                HotDeploymentWaveWaiter.waitForHotDeploymentWaveToSettle(taskStore, clusterCoordinator, LOG,
+                        "removed node [" + nodeId + "] task unassignment");
             } catch (TaskCoordinationException e) {
-                LOG.warn("Unable to compute member removed delay using delete guard timestamps for node ["
+                LOG.warn("Unable to wait for hot deployment wave settling before member removed cleanup for node ["
                         + nodeId + "]. Proceeding with immediate cleanup.");
-            }
-            if (delayMillis > 0) {
-                LOG.info("Delaying task unassignment for removed node [" + nodeId + "] by [" + delayMillis
-                        + "] ms based on latest delete guard update.");
-                waitBeforeCleanup(delayMillis);
-            } else {
-                LOG.info("No guard based delay applied for removed node [" + nodeId + "].");
             }
         }
         try {
@@ -167,45 +159,6 @@ public class TaskEventListener extends MemberEventListener {
             LOG.error("Error occurred while cleaning the tasks while rejoining of node " + nodeId, e);
             if (callBack != null) {
                 callBack.onExceptionThrown(nodeId, e);
-            }
-        }
-    }
-
-    /**
-     * Computes how long member-removed cleanup should wait based on latest task delete guard update.
-     *
-     * @return delay in millis before unassigning tasks
-     * @throws TaskCoordinationException when DB operations fail
-     */
-    private long getMemberRemovedCleanupDelayMillis() throws TaskCoordinationException {
-        long latestGuardUpdatedAt = taskStore.getLatestDeleteGuardUpdatedAt();
-        if (latestGuardUpdatedAt <= 0) {
-            return 0;
-        }
-        long waitUntil = latestGuardUpdatedAt + clusterCoordinator.getHeartbeatMaxRetryInterval()
-                + DELETE_GUARD_SETTLE_BUFFER_MILLIS;
-        long remaining = waitUntil - System.currentTimeMillis();
-        return Math.max(remaining, 0);
-    }
-
-    /**
-     * Waits until the computed delay elapses, while honoring thread interruption.
-     *
-     * @param delayMillis delay in millis
-     */
-    private void waitBeforeCleanup(long delayMillis) {
-        long waitUntil = System.currentTimeMillis() + delayMillis;
-        while (true) {
-            long remaining = waitUntil - System.currentTimeMillis();
-            if (remaining <= 0) {
-                return;
-            }
-            try {
-                Thread.sleep(Math.min(remaining, MEMBER_REMOVED_WAIT_POLL_INTERVAL_MILLIS));
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                LOG.warn("Interrupted while waiting to clean up tasks for removed member.");
-                return;
             }
         }
     }

@@ -24,13 +24,13 @@ import org.wso2.micro.integrator.coordination.ClusterCoordinator;
 import org.wso2.micro.integrator.ntask.coordination.TaskCoordinationException;
 import org.wso2.micro.integrator.ntask.coordination.task.CoordinatedTask;
 import org.wso2.micro.integrator.ntask.coordination.task.store.TaskStore;
+import org.wso2.micro.integrator.ntask.coordination.task.util.HotDeploymentWaveWaiter;
 import org.wso2.micro.integrator.ntask.core.impl.standalone.ScheduledTaskManager;
 import org.wso2.micro.integrator.ntask.core.internal.DataHolder;
 import org.wso2.micro.integrator.ntask.core.internal.TaskHandlingConfigUtils;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * The class which is responsible for cleaning the task store. This will remove the tasks if they are invalid and
@@ -39,8 +39,7 @@ import java.util.stream.Collectors;
 public class TaskStoreCleaner {
 
     private static final Log LOG = LogFactory.getLog(TaskStoreCleaner.class);
-    private static final long INVALID_NODE_CLEANUP_WAIT_POLL_INTERVAL_MILLIS = 200L;
-    private static final long DELETE_GUARD_SETTLE_BUFFER_MILLIS = 5000L;
+    private static final String DELETE_PENDING_STATE = "DELETE_PENDING";
 
     private DataHolder dataHolder = DataHolder.getInstance();
     private ClusterCoordinator clusterCoordinator = dataHolder.getClusterCoordinator();
@@ -116,13 +115,12 @@ public class TaskStoreCleaner {
             }
         });
         if (taskDeleteBarrierEnabled && !tasksToBeUpdated.isEmpty()) {
-            long delayMillis = getGuardBasedInvalidNodeCleanupDelayMillis();
-            if (delayMillis > 0) {
-                LOG.info("Delaying invalid-node unassignment by [" + delayMillis
-                        + "] ms based on latest delete guard update.");
-                waitBeforeInvalidNodeCleanup(delayMillis);
-            } else {
-                LOG.info("No guard-based delay applied before invalid-node unassignment.");
+            try {
+                HotDeploymentWaveWaiter.waitForHotDeploymentWaveToSettle(taskStore, clusterCoordinator, LOG,
+                        "invalid node unassignment");
+            } catch (TaskCoordinationException e) {
+                LOG.warn("Unable to wait for hot deployment wave settling before invalid-node unassignment. "
+                        + "Proceeding with immediate cleanup.");
             }
         }
         taskStore.unAssignAndUpdateState(tasksToBeUpdated);
@@ -148,9 +146,20 @@ public class TaskStoreCleaner {
         // which has valid node ids should be in the list, if not they are invalid entries.
         tasksList.removeIf(task -> allNodesAvailableInCluster.contains(task.getDestinedNodeId()));
         tasksList.removeIf(task -> deployedCoordinatedTasks.contains(task.getTaskName()));
-        taskStore.deleteTasks(tasksList.stream().map(CoordinatedTask::getTaskName).collect(Collectors.toList()));
+        List<String> tasksToDelete = new ArrayList<>();
+        for (CoordinatedTask task : tasksList) {
+            String taskName = task.getTaskName();
+            String taskState = taskStore.getTaskStateValue(taskName);
+            if (DELETE_PENDING_STATE.equals(taskState)) {
+                LOG.info("Skipping invalid task cleanup for task [" + taskName + "] because it is in ["
+                        + DELETE_PENDING_STATE + "] state.");
+                continue;
+            }
+            tasksToDelete.add(taskName);
+        }
+        taskStore.deleteTasks(tasksToDelete);
         if (LOG.isDebugEnabled()) {
-            tasksList.forEach(removedTask -> LOG.debug("Removed invalid task :" + removedTask));
+            tasksToDelete.forEach(removedTask -> LOG.debug("Removed invalid task :" + removedTask));
         }
     }
 
@@ -168,56 +177,13 @@ public class TaskStoreCleaner {
             return;
         }
         List<String> deployedCoordinatedTasks = taskManager.getAllCoordinatedTasksDeployed();
-        int reAdded = 0;
         for (String taskName : recoveredTaskNames) {
             if (!deployedCoordinatedTasks.contains(taskName)) {
                 continue;
             }
             taskStore.addTaskIfNotExist(taskName);
-            reAdded++;
-            LOG.info("Recovery flow re added coordinated task row for task [" + taskName
+            LOG.info("Recovery flow reinitialized coordinated task row for task [" + taskName
                     + "] after delete barrier recovery.");
-        }
-        LOG.info("Recovered [" + recoveredTaskNames.size() + "] expired or abandoned task delete barrier(s).");
-        LOG.info("Recovery flow re added [" + reAdded + "] coordinated task row(s) after barrier recovery.");
-    }
-
-    /**
-     * Computes wait time for invalid node unassignment based on latest delete guard update in DB.
-     *
-     * @return delay in millis before invalid-node unassignment
-     * @throws TaskCoordinationException when DB operations fail
-     */
-    private long getGuardBasedInvalidNodeCleanupDelayMillis() throws TaskCoordinationException {
-        long latestGuardUpdatedAt = taskStore.getLatestDeleteGuardUpdatedAt();
-        if (latestGuardUpdatedAt <= 0) {
-            return 0;
-        }
-        long waitUntil = latestGuardUpdatedAt + clusterCoordinator.getHeartbeatMaxRetryInterval()
-                + DELETE_GUARD_SETTLE_BUFFER_MILLIS;
-        long remaining = waitUntil - System.currentTimeMillis();
-        return Math.max(remaining, 0);
-    }
-
-    /**
-     * Waits until the computed invalid-node cleanup delay elapses, while honoring interruption.
-     *
-     * @param delayMillis delay in millis
-     */
-    private void waitBeforeInvalidNodeCleanup(long delayMillis) {
-        long waitUntil = System.currentTimeMillis() + delayMillis;
-        while (true) {
-            long remaining = waitUntil - System.currentTimeMillis();
-            if (remaining <= 0) {
-                return;
-            }
-            try {
-                Thread.sleep(Math.min(remaining, INVALID_NODE_CLEANUP_WAIT_POLL_INTERVAL_MILLIS));
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                LOG.warn("Interrupted while waiting to clean invalid-node task assignments.");
-                return;
-            }
         }
     }
 

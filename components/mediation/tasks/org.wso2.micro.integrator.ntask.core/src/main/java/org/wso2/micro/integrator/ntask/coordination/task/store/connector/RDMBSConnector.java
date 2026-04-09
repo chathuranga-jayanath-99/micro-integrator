@@ -303,13 +303,23 @@ public class RDMBSConnector {
      * @throws TaskCoordinationException if something goes wrong while doing db read
      */
     public CoordinatedTask.States getTaskState(String name) throws TaskCoordinationException {
+        return parseCoordinatedTaskState(getTaskStateValue(name), name);
+    }
+
+    /**
+     * Retrieve raw DB task state value.
+     *
+     * @param name name of the task
+     * @return raw state string or null if no row exists
+     * @throws TaskCoordinationException if something goes wrong while doing db read
+     */
+    public String getTaskStateValue(String name) throws TaskCoordinationException {
         try (Connection connection = getConnection(); PreparedStatement preparedStatement = connection.prepareStatement(
                 RETRIEVE_TASK_STATE)) {
             preparedStatement.setString(1, name);
-            preparedStatement.executeQuery();
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 if (resultSet.next()) {
-                    return parseCoordinatedTaskState(resultSet.getString(TASK_STATE), name);
+                    return resultSet.getString(TASK_STATE);
                 }
             }
         } catch (SQLException ex) {
@@ -783,9 +793,6 @@ public class RDMBSConnector {
             }
             String currentGuard = readGuardUuid(connection, taskName);
             if (!guardUuid.equals(currentGuard)) {
-                LOG.info("Detected stale delete barrier for task [" + taskName + "]. A newer delete wave exists "
-                        + "(current guard: [" + currentGuard + "], stale guard: [" + guardUuid
-                        + "]). Clearing stale barrier entries and skipping finalize.");
                 cleanupBarrierEntries(connection, taskName, guardUuid);
                 connection.commit();
                 return false;
@@ -823,8 +830,6 @@ public class RDMBSConnector {
                 guardMatchedRows = guardMatch.executeUpdate();
             }
             if (guardMatchedRows == 0) {
-                LOG.info("Skipping delete during finalize for task [" + taskName + "] because guard changed after "
-                        + "barrier checks. A newer wave exists for this task.");
                 cleanupBarrierEntries(connection, taskName, guardUuid);
                 connection.commit();
                 return false;
@@ -885,12 +890,13 @@ public class RDMBSConnector {
                 boolean finalized = finalizeDeleteBarrier(barrier.taskName, barrier.guardUuid, currentTime, true);
                 if (finalized) {
                     recoveredTaskNames.add(barrier.taskName);
-                    LOG.info("Recovery flow cleaned delete barrier for task [" + barrier.taskName + "] with guard ["
-                            + barrier.guardUuid + "] due to [" + recoveryReason + "].");
+                    LOG.info("Recovery flow finalized delete barrier for task [" + barrier.taskName + "]"
+                            + " with guard ["
+                            + barrier.guardUuid + "] due to [" + recoveryReason + "]. Task row deleted: true.");
                 } else {
-                    LOG.info("Recovery flow cleaned barrier metadata for task [" + barrier.taskName + "] with guard ["
-                            + barrier.guardUuid + "] due to [" + recoveryReason + "]. Task row delete was skipped "
-                            + "because task was not in [" + DELETE_PENDING_STATE + "] state.");
+                    LOG.info("Recovery flow finalized barrier metadata for task [" + barrier.taskName + "] "
+                            + "with guard ["
+                            + barrier.guardUuid + "] due to [" + recoveryReason + "]. Task row deleted: false.");
                 }
             }
         }

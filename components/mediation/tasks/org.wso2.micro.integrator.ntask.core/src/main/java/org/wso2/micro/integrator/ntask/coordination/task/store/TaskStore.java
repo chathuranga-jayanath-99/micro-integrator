@@ -188,6 +188,17 @@ public class TaskStore {
     }
 
     /**
+     * Retrieve raw task state value from DB.
+     *
+     * @param taskName name of the task
+     * @return raw state value or null when task row does not exist
+     * @throws TaskCoordinationException if something goes wrong while doing db read
+     */
+    public String getTaskStateValue(String taskName) throws TaskCoordinationException {
+        return rdmbsConnector.getTaskStateValue(taskName);
+    }
+
+    /**
      * Update the state of task.
      *
      * @param taskName     Name of the task.

@@ -427,8 +427,8 @@ public class ScheduledTaskManager extends AbstractQuartzTaskManager {
         taskStore.acknowledgeOpenDeleteBarrier(taskName, localNodeId, currentTime);
         waitForDeleteBarrier(taskName, guardUuid, deadlineAt);
         boolean deleted = taskStore.finalizeDeleteBarrier(taskName, guardUuid, System.currentTimeMillis());
-
-        log.info("Task [" + taskName + "] barrier finalization completed. Deleted from store : " + deleted);
+        log.info("Leader flow finalized delete barrier for task [" + taskName + "] with guard [" + guardUuid
+                + "]. Task row deleted: " + deleted);
 
     }
 
