@@ -34,6 +34,7 @@ public class ArtifactDeploymentListener {
 
     private static JsonArray deployedArtifacts = new JsonArray();
     private static JsonArray undeployedArtifacts = new JsonArray();
+    private static JsonArray faultyArtifacts = new JsonArray();
 
     public static void addToDeployedArtifactsQueue(JsonObject deployedArtifact) {
         if (HeartBeatComponent.isDashboardConfigured()) {
@@ -51,12 +52,24 @@ public class ArtifactDeploymentListener {
         }
     }
 
+    public static void addToFaultyArtifactsQueue(JsonObject faultyArtifact) {
+        if (HeartBeatComponent.isDashboardConfigured()) {
+            log.debug("Adding " + faultyArtifact.get("type").toString() + " " +
+                      faultyArtifact.get("name").toString() + " to faulty artifacts queue.");
+            faultyArtifacts.add(faultyArtifact);
+        }
+    }
+
     public static JsonArray getDeployedArtifacts() {
         return deployedArtifacts;
     }
 
     public static JsonArray getUndeployedArtifacts() {
         return undeployedArtifacts;
+    }
+
+    public static JsonArray getFaultyArtifacts() {
+        return faultyArtifacts;
     }
 
     public static void removeFromDeployedArtifactsQueue(int artifactsSize) {
@@ -81,6 +94,12 @@ public class ArtifactDeploymentListener {
     public static void removeFromUndeployedArtifactsQueue(int artifactsSize) {
         for (int i = 0; i < artifactsSize; i++) {
             undeployedArtifacts.remove(0);
+        }
+    }
+
+    public static void removeFromFaultyArtifactsQueue(int artifactsSize) {
+        for (int i = 0; i < artifactsSize; i++) {
+            faultyArtifacts.remove(0);
         }
     }
 

@@ -270,6 +270,11 @@ public class CappDeployer extends AbstractDeployer {
         currentApp.setFaultStackTrace(sw.toString());
         faultyCAppObjects.add(currentApp);
         faultyCapps.add(cAppName);
+        JsonObject faultyCarbonApp = createUpdatedCappInfoObject(currentApp);
+        if (currentApp.getFaultDescription() != null) {
+            faultyCarbonApp.addProperty("faultDescription", currentApp.getFaultDescription());
+        }
+        ArtifactDeploymentListener.addToFaultyArtifactsQueue(faultyCarbonApp);
     }
 
     /**
@@ -658,8 +663,12 @@ public class CappDeployer extends AbstractDeployer {
                     ArtifactDeploymentListener.addToUndeployedArtifactsQueue(undeployedDataService);
                 }
             }
-            JsonObject undeployedCarbonApp = createUpdatedCappInfoObject(carbonApp);
-            ArtifactDeploymentListener.addToUndeployedArtifactsQueue(undeployedCarbonApp);
+            // Faulty CApp notifications are sent via faultyArtifacts in handleDeployException.
+            // For user-triggered undeploys, the CApp is added to undeployedArtifacts below.
+            if (carbonApp.isDeploymentCompleted()) {
+                JsonObject undeployedCarbonApp = createUpdatedCappInfoObject(carbonApp);
+                ArtifactDeploymentListener.addToUndeployedArtifactsQueue(undeployedCarbonApp);
+            }
         } catch (Exception e) {
             log.error("Error occurred while trying to unDeploy  : " + carbonApp.getAppNameWithVersion(), e);
         }

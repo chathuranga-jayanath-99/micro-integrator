@@ -78,6 +78,7 @@ public class HeartBeatComponent {
     private static final String DEPLOYED_ARTIFACTS = "deployedArtifacts";
     private static final String UNDEPLOYED_ARTIFACTS = "undeployedArtifacts";
     private static final String STATE_CHANGED_ARTIFACTS = "stateChangedArtifacts";
+    private static final String FAULTY_ARTIFACTS = "faultyArtifacts";
     public static void invokeHeartbeatExecutorService() {
 
         String heartbeatApiUrl = configs.get(DASHBOARD_CONFIG_URL)  + "/heartbeat";
@@ -119,9 +120,12 @@ public class HeartBeatComponent {
                                                                     .get(UNDEPLOYED_ARTIFACTS).getAsJsonArray().size();
                     int updatedArtifactsCount = heartbeatPayload.get(CHANGE_NOTIFICATION).getAsJsonObject()
                                                                 .get(STATE_CHANGED_ARTIFACTS).getAsJsonArray().size();
+                    int faultyArtifactsCount = heartbeatPayload.get(CHANGE_NOTIFICATION).getAsJsonObject()
+                                                                .get(FAULTY_ARTIFACTS).getAsJsonArray().size();
                     ArtifactDeploymentListener.removeFromUndeployedArtifactsQueue(undeployedArtifactsCount);
                     ArtifactDeploymentListener.removeFromDeployedArtifactsQueue(deployedArtifactsCount);
                     ArtifactUpdateListener.removeFromUpdatedArtifactQueue(updatedArtifactsCount);
+                    ArtifactDeploymentListener.removeFromFaultyArtifactsQueue(faultyArtifactsCount);
                 }
             } catch (Exception e) {
                 log.debug("Error occurred while processing the heartbeat.", e);
@@ -194,9 +198,11 @@ public class HeartBeatComponent {
         JsonArray deployedArtifacts = ArtifactDeploymentListener.getDeployedArtifacts();
         JsonArray undeployedArtifacts = ArtifactDeploymentListener.getUndeployedArtifacts();
         JsonArray stateChangedArtifacts = ArtifactUpdateListener.getStateChangedArtifacts();
+        JsonArray faultyArtifacts = ArtifactDeploymentListener.getFaultyArtifacts();
         changeNotification.add(DEPLOYED_ARTIFACTS, deployedArtifacts);
         changeNotification.add(UNDEPLOYED_ARTIFACTS, undeployedArtifacts);
         changeNotification.add(STATE_CHANGED_ARTIFACTS, stateChangedArtifacts);
+        changeNotification.add(FAULTY_ARTIFACTS, faultyArtifacts);
         return changeNotification;
     }
 
