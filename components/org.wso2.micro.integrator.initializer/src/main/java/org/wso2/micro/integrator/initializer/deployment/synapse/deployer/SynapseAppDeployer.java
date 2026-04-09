@@ -329,6 +329,10 @@ public class SynapseAppDeployer implements AppDeploymentHandler {
 
             JsonObject undeployedArtifact = createUpdatedArtifactInfoObject(artifact, artifactPath, false);
             ArtifactDeploymentListener.addToUndeployedArtifactsQueue(undeployedArtifact);
+            // When a CApp deployment fails, already-deployed artifacts are rolled back via this method.
+            // If those artifacts were queued as deployed in the same heartbeat cycle (before the failure),
+            // cancel them out to avoid notifying the dashboard of a deployed+undeployed pair for an artifact
+            // that was never truly live.
             ArtifactDeploymentListener.removeArtifactFromDeployedQueue(undeployedArtifact);
         }
     }

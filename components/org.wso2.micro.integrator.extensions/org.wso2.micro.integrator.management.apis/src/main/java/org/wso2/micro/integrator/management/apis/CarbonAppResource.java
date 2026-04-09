@@ -478,7 +478,8 @@ public class CarbonAppResource extends APIResource {
         }
         Utils.setJsonPayLoad(axis2MessageContext,
                 Utils.createJsonError("Faulty carbon application not found for the given carbonAppName.",
-                        axis2MessageContext, NOT_FOUND));    }
+                        axis2MessageContext, NOT_FOUND));
+    }
 
     private void sendFaultResponse(org.apache.axis2.context.MessageContext axis2MessageContext) {
         axis2MessageContext.setProperty(Constants.NO_ENTITY_BODY, true);
