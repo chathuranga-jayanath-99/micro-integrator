@@ -62,6 +62,17 @@ public class TaskStore {
     }
 
     /**
+     * Retrieves latest delete guard updated time across all tasks.
+     *
+     * @return latest guard UPDATED_AT, or -1 when no guard row exists
+     * @throws TaskCoordinationException if operation fails
+     */
+    public long getLatestDeleteGuardUpdatedAt() throws TaskCoordinationException {
+
+        return rdmbsConnector.getLatestDeleteGuardUpdatedAt();
+    }
+
+    /**
      * Retrieves the list of tasks.
      *
      * @param nodeID - Id of the node, for which the tasks need to be retrieved.

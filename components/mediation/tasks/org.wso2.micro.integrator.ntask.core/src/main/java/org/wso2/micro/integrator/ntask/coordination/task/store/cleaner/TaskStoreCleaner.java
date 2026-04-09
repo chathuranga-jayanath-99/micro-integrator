@@ -39,6 +39,8 @@ import java.util.stream.Collectors;
 public class TaskStoreCleaner {
 
     private static final Log LOG = LogFactory.getLog(TaskStoreCleaner.class);
+    private static final long INVALID_NODE_CLEANUP_WAIT_POLL_INTERVAL_MILLIS = 200L;
+    private static final long DELETE_GUARD_SETTLE_BUFFER_MILLIS = 5000L;
 
     private DataHolder dataHolder = DataHolder.getInstance();
     private ClusterCoordinator clusterCoordinator = dataHolder.getClusterCoordinator();
@@ -108,9 +110,21 @@ public class TaskStoreCleaner {
                     LOG.debug("The node [" + nodeId + "] of task [" + taskName + "] is not found in cluster"
                                       + ". Hence the node assignment will be removed.");
                 }
+                LOG.info("The node [" + nodeId + "] of task [" + taskName + "] is not found in cluster."
+                        + " Hence the node assignment will be removed.");
                 tasksToBeUpdated.add(taskName);
             }
         });
+        if (taskDeleteBarrierEnabled && !tasksToBeUpdated.isEmpty()) {
+            long delayMillis = getGuardBasedInvalidNodeCleanupDelayMillis();
+            if (delayMillis > 0) {
+                LOG.info("Delaying invalid-node unassignment by [" + delayMillis
+                        + "] ms based on latest delete guard update.");
+                waitBeforeInvalidNodeCleanup(delayMillis);
+            } else {
+                LOG.info("No guard-based delay applied before invalid-node unassignment.");
+            }
+        }
         taskStore.unAssignAndUpdateState(tasksToBeUpdated);
     }
 
@@ -153,7 +167,58 @@ public class TaskStoreCleaner {
         if (recoveredTaskNames.isEmpty()) {
             return;
         }
+        List<String> deployedCoordinatedTasks = taskManager.getAllCoordinatedTasksDeployed();
+        int reAdded = 0;
+        for (String taskName : recoveredTaskNames) {
+            if (!deployedCoordinatedTasks.contains(taskName)) {
+                continue;
+            }
+            taskStore.addTaskIfNotExist(taskName);
+            reAdded++;
+            LOG.info("Recovery flow re added coordinated task row for task [" + taskName
+                    + "] after delete barrier recovery.");
+        }
         LOG.info("Recovered [" + recoveredTaskNames.size() + "] expired or abandoned task delete barrier(s).");
+        LOG.info("Recovery flow re added [" + reAdded + "] coordinated task row(s) after barrier recovery.");
+    }
+
+    /**
+     * Computes wait time for invalid node unassignment based on latest delete guard update in DB.
+     *
+     * @return delay in millis before invalid-node unassignment
+     * @throws TaskCoordinationException when DB operations fail
+     */
+    private long getGuardBasedInvalidNodeCleanupDelayMillis() throws TaskCoordinationException {
+        long latestGuardUpdatedAt = taskStore.getLatestDeleteGuardUpdatedAt();
+        if (latestGuardUpdatedAt <= 0) {
+            return 0;
+        }
+        long waitUntil = latestGuardUpdatedAt + clusterCoordinator.getHeartbeatMaxRetryInterval()
+                + DELETE_GUARD_SETTLE_BUFFER_MILLIS;
+        long remaining = waitUntil - System.currentTimeMillis();
+        return Math.max(remaining, 0);
+    }
+
+    /**
+     * Waits until the computed invalid-node cleanup delay elapses, while honoring interruption.
+     *
+     * @param delayMillis delay in millis
+     */
+    private void waitBeforeInvalidNodeCleanup(long delayMillis) {
+        long waitUntil = System.currentTimeMillis() + delayMillis;
+        while (true) {
+            long remaining = waitUntil - System.currentTimeMillis();
+            if (remaining <= 0) {
+                return;
+            }
+            try {
+                Thread.sleep(Math.min(remaining, INVALID_NODE_CLEANUP_WAIT_POLL_INTERVAL_MILLIS));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                LOG.warn("Interrupted while waiting to clean invalid-node task assignments.");
+                return;
+            }
+        }
     }
 
 }

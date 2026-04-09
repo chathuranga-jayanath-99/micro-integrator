@@ -44,6 +44,7 @@ import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.BARRIER_STATUS_OPEN;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.CLEAN_TASKS_OF_NODE;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.DELETE_TASK;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.DELETE_TASK_IF_STATE_MATCH;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.DELETE_TASK_DELETE_BARRIER;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.DELETE_TASK_DELETE_BARRIER_ACKS;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.DELETE_TASK_DELETE_BARRIER_EXPECTED;
@@ -65,11 +66,13 @@ import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.RETRIEVE_UNASSIGNED_NOT_COMPLETED_TASKS;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.SELECT_OPEN_TASK_DELETE_BARRIERS;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.SELECT_OPEN_TASK_DELETE_BARRIER_BY_TASK_AND_GUARD;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.SELECT_MAX_TASK_DELETE_GUARD_UPDATED_AT;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.SELECT_TASK_DELETE_BARRIER_ACK_NODES;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.SELECT_TASK_DELETE_BARRIER;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.SELECT_TASK_DELETE_BARRIER_EXPECTED_NODES;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.SELECT_TASK_DELETE_GUARD;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.TASK_NAME;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.TASK_DELETE_PENDING_STATE;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.TASK_STATE;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.UPDATE_ASSIGNMENT_AND_STATE;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.UPDATE_TASK_DELETE_BARRIER_ACK;
@@ -81,6 +84,7 @@ import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.UPDATE_TASK_STATE;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.UPDATE_TASK_STATE_FOR_DESTINED_NODE;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.UPDATE_TASK_STATUS_TO_DEACTIVATED;
+import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.UPDATE_TASK_STATUS_TO_DELETE_PENDING;
 import static org.wso2.micro.integrator.ntask.coordination.task.store.connector.TaskQueryHelper.UPDATED_AT;
 
 /**
@@ -92,6 +96,7 @@ public class RDMBSConnector {
     private static final String ERROR_MSG = "Error while doing data base operation.";
     private static final String EMPTY_LIST = "Provided list is empty ";
     private static final String SQL_INTEGRITY_VIOLATION_CODE = "23";
+    private static final String DELETE_PENDING_STATE = TASK_DELETE_PENDING_STATE;
     private static final Set<Integer> DUPLICATE_KEY_ERROR_CODES = Collections.unmodifiableSet(
             new HashSet<>(Arrays.asList(1, 1062, 2627, 2601, 803, -803)));
     private DataSource dataSource;
@@ -190,6 +195,31 @@ public class RDMBSConnector {
     }
 
     /**
+     * Reads latest task delete guard updated time across all tasks.
+     *
+     * @return latest UPDATED_AT value from TASK_DELETE_GUARD, or -1 if table has no rows
+     * @throws TaskCoordinationException when DB operations fail
+     */
+    public long getLatestDeleteGuardUpdatedAt() throws TaskCoordinationException {
+
+        try (Connection connection = getConnection();
+                PreparedStatement preparedStatement
+                        = connection.prepareStatement(SELECT_MAX_TASK_DELETE_GUARD_UPDATED_AT);
+                ResultSet resultSet = preparedStatement.executeQuery()) {
+            if (!resultSet.next()) {
+                return -1L;
+            }
+            long updatedAt = resultSet.getLong(1);
+            if (resultSet.wasNull()) {
+                return -1L;
+            }
+            return updatedAt;
+        } catch (SQLException ex) {
+            throw new TaskCoordinationException(ERROR_MSG, ex);
+        }
+    }
+
+    /**
      * Retrieves the list of task names.
      *
      * @param nodeID - Id of the node, for which the tasks need to be retrieved.
@@ -279,7 +309,7 @@ public class RDMBSConnector {
             preparedStatement.executeQuery();
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 if (resultSet.next()) {
-                    return CoordinatedTask.States.valueOf(resultSet.getString(TASK_STATE));
+                    return parseCoordinatedTaskState(resultSet.getString(TASK_STATE), name);
                 }
             }
         } catch (SQLException ex) {
@@ -364,9 +394,12 @@ public class RDMBSConnector {
         List<CoordinatedTask> tasks = new ArrayList<>();
         try (ResultSet resultSet = preparedStatement.executeQuery()) {
             while (resultSet.next()) {
-
-                tasks.add(new CoordinatedTask(resultSet.getString(TASK_NAME), resultSet.getString(DESTINED_NODE_ID),
-                                              CoordinatedTask.States.valueOf(resultSet.getString(TASK_STATE))));
+                String taskName = resultSet.getString(TASK_NAME);
+                CoordinatedTask.States taskState = parseCoordinatedTaskState(resultSet.getString(TASK_STATE), taskName);
+                if (taskState == null) {
+                    continue;
+                }
+                tasks.add(new CoordinatedTask(taskName, resultSet.getString(DESTINED_NODE_ID), taskState));
             }
         }
         printDebugLogs(new ArrayList<>(tasks),
@@ -622,6 +655,8 @@ public class RDMBSConnector {
                 insertBarrier.executeUpdate();
             }
             insertExpectedNodes(connection, taskName, newGuardUuid, expectedNodes);
+            // Bootstrap barrier path is an exception flow. Mark task row pending and let recovery own final cleanup.
+            markTaskDeletePending(connection, taskName);
             connection.commit();
             return true;
         } catch (SQLException ex) {
@@ -693,6 +728,21 @@ public class RDMBSConnector {
      * @throws TaskCoordinationException when DB operation fails
      */
     public boolean finalizeDeleteBarrier(String taskName, String guardUuid, long currentTime)
+            throws TaskCoordinationException {
+        return finalizeDeleteBarrier(taskName, guardUuid, currentTime, false);
+    }
+
+    /**
+     * Attempts to finalize barrier and remove coordinated task row atomically.
+     *
+     * @param taskName     task name
+     * @param guardUuid    barrier token
+     * @param currentTime  current time in epoch millis
+     * @param pendingOnly  when true, task row delete is allowed only if task state is DELETE_PENDING
+     * @return true if task row was deleted and barrier was finalized
+     * @throws TaskCoordinationException when DB operation fails
+     */
+    private boolean finalizeDeleteBarrier(String taskName, String guardUuid, long currentTime, boolean pendingOnly)
             throws TaskCoordinationException {
         Connection connection = null;
         try {
@@ -779,9 +829,17 @@ public class RDMBSConnector {
             }
 
             int deletedTaskRows;
-            try (PreparedStatement deleteTask = connection.prepareStatement(DELETE_TASK)) {
-                deleteTask.setString(1, taskName);
-                deletedTaskRows = deleteTask.executeUpdate();
+            if (pendingOnly) {
+                try (PreparedStatement deleteTask = connection.prepareStatement(DELETE_TASK_IF_STATE_MATCH)) {
+                    deleteTask.setString(1, taskName);
+                    deleteTask.setString(2, DELETE_PENDING_STATE);
+                    deletedTaskRows = deleteTask.executeUpdate();
+                }
+            } else {
+                try (PreparedStatement deleteTask = connection.prepareStatement(DELETE_TASK)) {
+                    deleteTask.setString(1, taskName);
+                    deletedTaskRows = deleteTask.executeUpdate();
+                }
             }
             cleanupBarrierEntries(connection, taskName, guardUuid);
             connection.commit();
@@ -822,15 +880,33 @@ public class RDMBSConnector {
             if (ownerMissing || deadlinePassed) {
                 String recoveryReason = ownerMissing && deadlinePassed ? "owner-missing-and-deadline-passed"
                         : ownerMissing ? "owner-missing" : "deadline-passed";
-                boolean finalized = finalizeDeleteBarrier(barrier.taskName, barrier.guardUuid, currentTime);
+                boolean finalized = finalizeDeleteBarrier(barrier.taskName, barrier.guardUuid, currentTime, true);
                 if (finalized) {
                     recoveredTaskNames.add(barrier.taskName);
                     LOG.info("Recovery flow cleaned delete barrier for task [" + barrier.taskName + "] with guard ["
                             + barrier.guardUuid + "] due to [" + recoveryReason + "].");
+                } else {
+                    LOG.info("Recovery flow cleaned barrier metadata for task [" + barrier.taskName + "] with guard ["
+                            + barrier.guardUuid + "] due to [" + recoveryReason + "]. Task row delete was skipped "
+                            + "because task was not in [" + DELETE_PENDING_STATE + "] state.");
                 }
             }
         }
         return new ArrayList<>(recoveredTaskNames);
+    }
+
+    /**
+     * Marks a task row as delete-pending during bootstrap barrier flow.
+     *
+     * @param connection transactional connection
+     * @param taskName task name
+     * @throws SQLException when query execution fails
+     */
+    private void markTaskDeletePending(Connection connection, String taskName) throws SQLException {
+        try (PreparedStatement markPending = connection.prepareStatement(UPDATE_TASK_STATUS_TO_DELETE_PENDING)) {
+            markPending.setString(1, taskName);
+            markPending.executeUpdate();
+        }
     }
 
     /**
@@ -1086,6 +1162,27 @@ public class RDMBSConnector {
             }
         }
         return !expectedNodes.isEmpty();
+    }
+
+    /**
+     * Parses a DB task state into coordinated state enum.
+     * Unknown/internal states are ignored by returning null.
+     *
+     * @param state task state value from DB
+     * @param taskName task name for logs
+     * @return parsed state or null when value is not part of CoordinatedTask.States
+     */
+    private CoordinatedTask.States parseCoordinatedTaskState(String state, String taskName) {
+        if (state == null) {
+            return null;
+        }
+        try {
+            return CoordinatedTask.States.valueOf(state);
+        } catch (IllegalArgumentException ex) {
+            LOG.info("Ignoring internal task state [" + state + "] for task [" + taskName
+                    + "] while resolving coordinated tasks.");
+            return null;
+        }
     }
 
     /**

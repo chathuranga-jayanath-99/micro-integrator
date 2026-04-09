@@ -462,15 +462,10 @@ public class ScheduledTaskManager extends AbstractQuartzTaskManager {
                 break;
             }
         }
-        boolean bootstrapOwner = false;
         if (!acked) {
-            bootstrapOwner = bootstrapDeleteBarrierIfMissing(taskName);
+            bootstrapDeleteBarrierIfMissing(taskName);
         }
         log.info("Barrier acknowledgement for task [" + taskName + "] by node [" + localNodeId + "] : " + acked);
-        if (bootstrapOwner) {
-            log.info("Node [" + localNodeId + "] became bootstrap owner and created delete barrier for task ["
-                    + taskName + "].");
-        }
 
     }
 
