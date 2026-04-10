@@ -713,6 +713,11 @@ public class CappDeployer extends AbstractDeployer {
             for (CarbonApplication application : faultyCAppObjects) {
                 if (application.getAppFilePath().equals(appFilePath)) {
                     faultyCAppObjects.remove(application);
+                    // Notify the dashboard that this faulty CApp has been removed so it can clear
+                    // the stale faulty entry. addToUndeployedArtifactsQueue is a no-op if dashboard
+                    // is not configured.
+                    JsonObject removedFaultyCApp = createUpdatedCappInfoObject(application);
+                    ArtifactDeploymentListener.addToUndeployedArtifactsQueue(removedFaultyCApp);
                     break;
                 }
             }
