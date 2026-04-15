@@ -94,6 +94,11 @@ public class CappDeployer extends AbstractDeployer {
     private static ArrayList<String> faultyCapps = new ArrayList<>();
     private final Object lock = new Object();
     private static final String ERROR_MESSAGE = "errorMessage";
+
+    /**
+     * Guards against running more than one retry pass per server startup.
+     */
+    private boolean retryPassCompleted = false;
     private static final String SWAGGER_SUBSTRING = "_swagger";
     private static final String METADATA_FOLDER_NAME = "metadata";
     private static final String ARTIFACT_FILE = "artifact.xml";
@@ -170,6 +175,10 @@ public class CappDeployer extends AbstractDeployer {
 
     public void setExtension(String extension) {
         this.extension = extension;
+    }
+
+    public boolean isRedeployOnFailureEnabled() {
+        return true;
     }
 
     /**
@@ -262,8 +271,18 @@ public class CappDeployer extends AbstractDeployer {
             throw e;
         }
 
-        // Initial execution of Service catalog Deployer at server startup when last CApp get deployed
         boolean isAllCAppsDeployed = getCAppFileList().length == cAppMap.size() + faultyCapps.size();
+
+        // After all CApps in the initial run are processed, retry any that failed.
+        // Guard with retryPassCompleted so this runs at most once per server startup.
+        if (isAllCAppsDeployed && !retryPassCompleted && !faultyCapps.isEmpty()) {
+            retryPassCompleted = true;
+            retryFaultyCApps();
+            // Recompute after retry so service catalog sees the final deployment state.
+            isAllCAppsDeployed = getCAppFileList().length == cAppMap.size() + faultyCapps.size();
+        }
+
+        // Initial execution of Service catalog Deployer at server startup when last CApp get deployed
         if (isServiceCatalogStartupExecutionPending && serviceCatalogConfiguration != null && isAllCAppsDeployed) {
             ServiceCatalogDeployer serviceDeployer = new ServiceCatalogDeployer(null,
                     ((CarbonAxisConfigurator) axisConfig.getAxisConfiguration().getConfigurator()).getRepoLocation(),
@@ -279,6 +298,29 @@ public class CappDeployer extends AbstractDeployer {
                     ((CarbonAxisConfigurator) axisConfig.getAxisConfiguration().getConfigurator()).getRepoLocation(),
                     serviceCatalogConfiguration, true);
             serviceCatalogExecutor.execute(serviceDeployer);
+        }
+    }
+
+    /**
+     * Retries deployment of all CApps that failed during the initial deployment pass.
+     * Faulty CApp lists are cleared before retrying so each CApp gets a clean attempt;
+     * on success it is added to {@code cAppMap}, on failure it is re-added to the faulty lists.
+     */
+    private void retryFaultyCApps() {
+        List<String> toRetry;
+        synchronized (lock) {
+            toRetry = new ArrayList<>(faultyCapps);
+            faultyCAppObjects.clear();
+            faultyCapps.clear();
+        }
+        log.info("Retrying deployment of " + toRetry.size() + " failed CApp(s): " + toRetry);
+        for (String cAppFileName : toRetry) {
+            String artifactPath = cAppDir + File.separator + cAppFileName;
+            try {
+                deployCarbonApps(artifactPath);
+            } catch (Exception e) {
+                log.error("Error while retrying deployment of carbon application: " + artifactPath, e);
+            }
         }
     }
 
