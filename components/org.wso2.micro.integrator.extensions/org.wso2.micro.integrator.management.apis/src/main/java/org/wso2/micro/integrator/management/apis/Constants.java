@@ -51,7 +51,6 @@ public class Constants {
     public static final String PREFIX_TRANSACTION = "/transactions";
     public static final String PREFIX_DATA_SOURCES = "/data-sources";
     public static final String PREFIX_ROLES = "/roles";
-    public static final String PREFIX_CARBON_APPS_FAULT_INFO = "/applications/faultInfo";
     public static final String PATH_PARAM_ROLE = "/" + "{role}";
     public static final String PATH_PARAM_TRANSACTION = "/" + "{param}";
     public static final String ROOT_CONTEXT = "/";
@@ -63,7 +62,7 @@ public class Constants {
     public static final String ACTIVE_LIST = "activeList";
     public static final String FAULTY_COUNT = "faultyCount";
     public static final String FAULTY_LIST = "faultyList";
-    public static final String FAULT_DESCRIPTION = "faultDescription";
+    public static final String ERROR_MESSAGE = "errorMessage";
     public static final String FAULT_STACK_TRACE = "faultStackTrace";
     public static final String NAME = "name";
     public static final String STATUS = "status";
