@@ -54,6 +54,8 @@ import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -83,6 +85,7 @@ public class CappDeployer extends AbstractDeployer {
     private static ArrayList<CarbonApplication> faultyCAppObjects = new ArrayList<>();
     private static ArrayList<String> faultyCapps = new ArrayList<>();
     private final Object lock = new Object();
+    private static final String ERROR_MESSAGE = "errorMessage";
     private static final String SWAGGER_SUBSTRING = "_swagger";
     private static final String METADATA_FOLDER_NAME = "metadata";
     private static final String ARTIFACT_FILE = "artifact.xml";
@@ -262,8 +265,17 @@ public class CappDeployer extends AbstractDeployer {
         undeployCarbonApp(currentApp, axisConfig);
         // Validate synapse config to remove half added swagger definitions in the case of a faulty CAPP.
         SynapseConfigUtils.getSynapseConfiguration(SUPER_TENANT_DOMAIN_NAME).validateSwaggerTable();
+        currentApp.setErrorMessage(e.getMessage());
+        StringWriter sw = new StringWriter();
+        e.printStackTrace(new PrintWriter(sw));
+        currentApp.setFaultStackTrace(sw.toString());
         faultyCAppObjects.add(currentApp);
         faultyCapps.add(cAppName);
+        JsonObject faultyCarbonApp = createUpdatedCappInfoObject(currentApp);
+        if (currentApp.getErrorMessage() != null) {
+            faultyCarbonApp.addProperty(ERROR_MESSAGE, currentApp.getErrorMessage());
+        }
+        ArtifactDeploymentListener.addToFaultyArtifactsQueue(faultyCarbonApp);
     }
 
     /**
@@ -652,8 +664,12 @@ public class CappDeployer extends AbstractDeployer {
                     ArtifactDeploymentListener.addToUndeployedArtifactsQueue(undeployedDataService);
                 }
             }
-            JsonObject undeployedCarbonApp = createUpdatedCappInfoObject(carbonApp);
-            ArtifactDeploymentListener.addToUndeployedArtifactsQueue(undeployedCarbonApp);
+            // Faulty CApp notifications are sent via faultyArtifacts in handleDeployException.
+            // For user-triggered undeploys, the CApp is added to undeployedArtifacts below.
+            if (carbonApp.isDeploymentCompleted()) {
+                JsonObject undeployedCarbonApp = createUpdatedCappInfoObject(carbonApp);
+                ArtifactDeploymentListener.addToUndeployedArtifactsQueue(undeployedCarbonApp);
+            }
         } catch (Exception e) {
             log.error("Error occurred while trying to unDeploy  : " + carbonApp.getAppNameWithVersion(), e);
         }
@@ -698,6 +714,11 @@ public class CappDeployer extends AbstractDeployer {
             for (CarbonApplication application : faultyCAppObjects) {
                 if (application.getAppFilePath().equals(appFilePath)) {
                     faultyCAppObjects.remove(application);
+                    // Notify the dashboard that this faulty CApp has been removed so it can clear
+                    // the stale faulty entry. addToUndeployedArtifactsQueue is a no-op if dashboard
+                    // is not configured.
+                    JsonObject removedFaultyCApp = createUpdatedCappInfoObject(application);
+                    ArtifactDeploymentListener.addToUndeployedArtifactsQueue(removedFaultyCApp);
                     break;
                 }
             }

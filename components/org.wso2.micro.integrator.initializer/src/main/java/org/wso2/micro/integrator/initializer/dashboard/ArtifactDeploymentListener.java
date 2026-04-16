@@ -34,6 +34,7 @@ public class ArtifactDeploymentListener {
 
     private static JsonArray deployedArtifacts = new JsonArray();
     private static JsonArray undeployedArtifacts = new JsonArray();
+    private static JsonArray faultyArtifacts = new JsonArray();
 
     public static void addToDeployedArtifactsQueue(JsonObject deployedArtifact) {
         if (HeartBeatComponent.isDashboardConfigured()) {
@@ -51,6 +52,14 @@ public class ArtifactDeploymentListener {
         }
     }
 
+    public static void addToFaultyArtifactsQueue(JsonObject faultyArtifact) {
+        if (HeartBeatComponent.isDashboardConfigured()) {
+            log.debug("Adding " + faultyArtifact.get("type").toString() + " " +
+                      faultyArtifact.get("name").toString() + " to faulty artifacts queue.");
+            faultyArtifacts.add(faultyArtifact);
+        }
+    }
+
     public static JsonArray getDeployedArtifacts() {
         return deployedArtifacts;
     }
@@ -59,15 +68,38 @@ public class ArtifactDeploymentListener {
         return undeployedArtifacts;
     }
 
+    public static JsonArray getFaultyArtifacts() {
+        return faultyArtifacts;
+    }
+
     public static void removeFromDeployedArtifactsQueue(int artifactsSize) {
         for (int i = 0; i < artifactsSize; i++) {
             deployedArtifacts.remove(0);
         }
     }
 
+    public static void removeArtifactFromDeployedQueue(JsonObject artifact) {
+        if (HeartBeatComponent.isDashboardConfigured()) {
+            for (int i = 0; i < deployedArtifacts.size(); i++) {
+                JsonObject entry = deployedArtifacts.get(i).getAsJsonObject();
+                if (entry.get("type").equals(artifact.get("type")) &&
+                        entry.get("name").equals(artifact.get("name"))) {
+                    deployedArtifacts.remove(i);
+                    return;
+                }
+            }
+        }
+    }
+
     public static void removeFromUndeployedArtifactsQueue(int artifactsSize) {
         for (int i = 0; i < artifactsSize; i++) {
             undeployedArtifacts.remove(0);
+        }
+    }
+
+    public static void removeFromFaultyArtifactsQueue(int artifactsSize) {
+        for (int i = 0; i < artifactsSize; i++) {
+            faultyArtifacts.remove(0);
         }
     }
 

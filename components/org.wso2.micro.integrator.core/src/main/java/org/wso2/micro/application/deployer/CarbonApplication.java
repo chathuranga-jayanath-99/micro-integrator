@@ -31,6 +31,8 @@ public class CarbonApplication {
     private String appFilePath;
     private String appVersion;
     private boolean deploymentCompleted;
+    private String errorMessage;
+    private String faultStackTrace;
 
     private ApplicationConfiguration appConfig;
 
@@ -99,6 +101,22 @@ public class CarbonApplication {
 
     public void setDeploymentCompleted(boolean deploymentCompleted) {
         this.deploymentCompleted = deploymentCompleted;
+    }
+
+    public String getErrorMessage() {
+        return errorMessage;
+    }
+
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage;
+    }
+
+    public String getFaultStackTrace() {
+        return faultStackTrace;
+    }
+
+    public void setFaultStackTrace(String faultStackTrace) {
+        this.faultStackTrace = faultStackTrace;
     }
 }
 
