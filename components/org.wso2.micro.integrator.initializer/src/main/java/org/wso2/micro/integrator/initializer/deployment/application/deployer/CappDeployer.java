@@ -85,6 +85,7 @@ public class CappDeployer extends AbstractDeployer {
     private static ArrayList<CarbonApplication> faultyCAppObjects = new ArrayList<>();
     private static ArrayList<String> faultyCapps = new ArrayList<>();
     private final Object lock = new Object();
+    private static final String ERROR_MESSAGE = "errorMessage";
     private static final String SWAGGER_SUBSTRING = "_swagger";
     private static final String METADATA_FOLDER_NAME = "metadata";
     private static final String ARTIFACT_FILE = "artifact.xml";
@@ -272,7 +273,7 @@ public class CappDeployer extends AbstractDeployer {
         faultyCapps.add(cAppName);
         JsonObject faultyCarbonApp = createUpdatedCappInfoObject(currentApp);
         if (currentApp.getErrorMessage() != null) {
-            faultyCarbonApp.addProperty("errorMessage", currentApp.getErrorMessage());
+            faultyCarbonApp.addProperty(ERROR_MESSAGE, currentApp.getErrorMessage());
         }
         ArtifactDeploymentListener.addToFaultyArtifactsQueue(faultyCarbonApp);
     }
