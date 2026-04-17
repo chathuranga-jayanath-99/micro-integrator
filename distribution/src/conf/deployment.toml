@@ -113,3 +113,9 @@ algorithm = "AES"
 
 # [dashboard_config]
 # dashboard_url = "https://localhost:9743/dashboard/api/"
+
+# [carbon_apps]
+# Enables priority-based CApp deployment ordering (class mediators, connectors, and registry
+# resources are deployed before other CApps) and automatic retry of failed CApps after all
+# CApps in the initial run have been processed. Defaults to false when absent.
+# enable_priority_deployment = true

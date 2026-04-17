@@ -23,6 +23,7 @@ import org.apache.axiom.om.OMException;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.axis2.context.ConfigurationContext;
 import org.apache.axis2.deployment.AbstractDeployer;
+import org.apache.axis2.deployment.Deployer;
 import org.apache.axis2.deployment.DeploymentException;
 import org.apache.axis2.deployment.repository.util.DeploymentFileData;
 import org.apache.axis2.engine.AxisConfiguration;
@@ -35,6 +36,7 @@ import org.apache.synapse.config.SynapseConfigUtils;
 import org.apache.synapse.config.SynapseConfiguration;
 import org.apache.synapse.api.API;
 import org.wso2.carbon.securevault.SecretCallbackHandlerService;
+import org.wso2.config.mapper.ConfigParser;
 import org.wso2.micro.application.deployer.AppDeployerUtils;
 import org.wso2.micro.application.deployer.CarbonApplication;
 import org.wso2.micro.application.deployer.config.ApplicationConfiguration;
@@ -95,13 +97,14 @@ public class CappDeployer extends AbstractDeployer {
     private final Object lock = new Object();
     private static final String ERROR_MESSAGE = "errorMessage";
 
+    private static final String SWAGGER_SUBSTRING = "_swagger";
+    private static final String METADATA_FOLDER_NAME = "metadata";
+    private static final String ARTIFACT_FILE = "artifact.xml";
+
     /**
      * Guards against running more than one retry pass per server startup.
      */
     private boolean retryPassCompleted = false;
-    private static final String SWAGGER_SUBSTRING = "_swagger";
-    private static final String METADATA_FOLDER_NAME = "metadata";
-    private static final String ARTIFACT_FILE = "artifact.xml";
 
     /**
      * Artifact type for class mediators. CApps containing this type are treated as high priority.
@@ -117,6 +120,13 @@ public class CappDeployer extends AbstractDeployer {
      * Artifact type for registry resources. CApps containing this type are treated as high priority.
      */
     private static final String REGISTRY_RESOURCE_TYPE = "registry/resource";
+    /**
+     * deployment.toml key that enables priority-based CApp sorting and faulty-CApp retry.
+     * When absent or false the deployer falls back to the default alphabetical ordering
+     * and skips the retry pass.
+     */
+    private static final String PRIORITY_DEPLOYMENT_CONFIG_KEY = "carbon_apps.enable_priority_deployment";
+
     /**
      * Carbon application repository directory.
      */
@@ -175,10 +185,6 @@ public class CappDeployer extends AbstractDeployer {
 
     public void setExtension(String extension) {
         this.extension = extension;
-    }
-
-    public boolean isRedeployOnFailureEnabled() {
-        return true;
     }
 
     /**
@@ -275,7 +281,9 @@ public class CappDeployer extends AbstractDeployer {
 
         // After all CApps in the initial run are processed, retry any that failed.
         // Guard with retryPassCompleted so this runs at most once per server startup.
-        if (isAllCAppsDeployed && !retryPassCompleted && !faultyCapps.isEmpty()) {
+        // Only active when priority deployment is enabled via deployment.toml.
+        if (isAllCAppsDeployed && !retryPassCompleted && !faultyCapps.isEmpty()
+                && isCAppPriorityDeploymentEnabled()) {
             retryPassCompleted = true;
             retryFaultyCApps();
             // Recompute after retry so service catalog sees the final deployment state.
@@ -299,6 +307,15 @@ public class CappDeployer extends AbstractDeployer {
                     serviceCatalogConfiguration, true);
             serviceCatalogExecutor.execute(serviceDeployer);
         }
+    }
+
+    /**
+     * Returns true when the {@code carbon_apps.enable_priority_deployment} key in
+     * deployment.toml is present and set to {@code true}. Defaults to false when absent.
+     */
+    private boolean isCAppPriorityDeploymentEnabled() {
+        Object value = ConfigParser.getParsedConfigs().get(PRIORITY_DEPLOYMENT_CONFIG_KEY);
+        return value != null && Boolean.parseBoolean(value.toString());
     }
 
     /**
@@ -858,6 +875,11 @@ public class CappDeployer extends AbstractDeployer {
      * @param toIndex       - end index (exclusive) of the range to sort
      */
     public void sort(List<DeploymentFileData> filesToDeploy, int startIndex, int toIndex) {
+        if (!isCAppPriorityDeploymentEnabled()) {
+            filesToDeploy.subList(startIndex, toIndex)
+                         .sort((a, b) -> a.getFile().getName().compareTo(b.getFile().getName()));
+            return;
+        }
         if (log.isDebugEnabled()) {
             log.debug("Sorting CApp files with priority order in range [" + startIndex + ", " + toIndex + ")");
         }
