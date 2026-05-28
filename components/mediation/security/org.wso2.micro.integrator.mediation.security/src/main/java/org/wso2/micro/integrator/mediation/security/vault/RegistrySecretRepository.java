@@ -69,17 +69,22 @@ public class RegistrySecretRepository implements SecretRepository {
 				}
 			}
 		}
+
+		if (propertyValue.isEmpty()) {
+			return null;
+		}
+
 		DecryptionProvider decyptProvider = CipherInitializer.getInstance().getDecryptionProvider();
 
 		if (decyptProvider == null) {
-			log.error("Can not proceed decyption due to the secret repository intialization error");
+			log.error("Can not proceed decryption due to the secret repository initialization error");
 			return null;
 		}
 
 		String decryptedText = new String(decyptProvider.decrypt(propertyValue.trim().getBytes()));
 
 		if (log.isDebugEnabled()) {
-			log.info("evaluation completed succesfully " + decryptedText);
+			log.debug("Registry vault lookup completed for alias: " + alias);
 		}
 		return decryptedText;
 

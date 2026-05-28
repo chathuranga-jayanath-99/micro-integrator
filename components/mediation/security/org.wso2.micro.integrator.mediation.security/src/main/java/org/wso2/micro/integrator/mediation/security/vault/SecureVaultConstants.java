@@ -59,5 +59,9 @@ public interface SecureVaultConstants {
 
 	String FILE_PROTOCOL_PREFIX = "file:";
 
-
+	/**
+	 * synapse.properties key to enable registry-backed vault lookup.
+	 * When false (default), vault-lookup falls back to cipher-text.properties only.
+	 */
+	String PROP_VAULT_REGISTRY_LOOKUP_ENABLED = "vault.registry.lookup.enabled";
 }

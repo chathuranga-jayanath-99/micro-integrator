@@ -63,6 +63,13 @@ public class MicroIntegratorRegistryConstants {
     public static final String DEFAULT_MEDIA_TYPE = "text/plain";
 
     public static final String CONNECTOR_SECURE_VAULT_CONFIG_REPOSITORY = "conf:/repository/components/secure-vault";
+
+    /**
+     * synapse.properties key that enables registry-backed vault lookup.
+     * When true, the secure-vault registry path is also write-protected against CAPP deployment.
+     */
+    public static final String PROP_VAULT_REGISTRY_LOOKUP_ENABLED = "vault.registry.lookup.enabled";
+
     public static final String TYPE_KEY = "type";
     public static final String NAME_KEY = "name";
     public static final String ERROR_KEY = "error";
