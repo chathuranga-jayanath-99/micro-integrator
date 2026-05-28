@@ -65,6 +65,7 @@ import static org.wso2.micro.integrator.management.apis.Constants.PREFIX_REGISTR
 import static org.wso2.micro.integrator.management.apis.Constants.PREFIX_REGISTRY_METADATA;
 import static org.wso2.micro.integrator.management.apis.Constants.PREFIX_REGISTRY_PROPERTIES;
 import static org.wso2.micro.integrator.management.apis.Constants.PREFIX_CONFIGS;
+import static org.wso2.micro.integrator.management.apis.Constants.PREFIX_CONSUMPTION;
 public class ManagementInternalApi implements InternalAPI {
 
     private String name;
@@ -110,6 +111,7 @@ public class ManagementInternalApi implements InternalAPI {
         resourcesList.add(new ApiResourceAdapter(PREFIX_ROLES, new RolesResource()));
         resourcesList.add(new ApiResourceAdapter(PREFIX_ROLES + PATH_PARAM_ROLE, new RoleResource()));
         resourcesList.add(new ApiResourceAdapter(PREFIX_CONFIGS, new ConfigsResource()));
+        resourcesList.add(new ApiResourceAdapter(PREFIX_CONSUMPTION, new ConsumptionDataResource()));
         resources = new APIResource[resourcesList.size()];
         resources = resourcesList.toArray(resources);
     }

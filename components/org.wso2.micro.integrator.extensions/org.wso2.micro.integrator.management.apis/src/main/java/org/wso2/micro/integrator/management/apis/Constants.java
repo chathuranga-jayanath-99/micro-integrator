@@ -60,6 +60,7 @@ public class Constants {
     public static final String PATH_PARAM_TRANSACTION = "/" + "{param}";
     public static final String ROOT_CONTEXT = "/";
     public static final String PREFIX_CONFIGS = "/configs";
+    public static final String PREFIX_CONSUMPTION = "/consumption";
     public static final String PREFIX_ICP = "/icp";
     public static final String PREFIX_ARTIFACTS = "/artifacts";
 

@@ -56,6 +56,24 @@
             <artifactId>log4j-api</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>org.apache.felix.scr.ds-annotations</artifactId>
+            <version>1.2.4</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.compendium</artifactId>
+            <version>5.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon</groupId>
+            <artifactId>org.wso2.carbon.usage.data.exporter</artifactId>
+            <version>${usage.data.exporter.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
             <scope>test</scope>
@@ -87,8 +105,11 @@
                             org.osgi.service.cm;version=${osgi.service.cm.version},
                             org.apache.commons.configuration2;version="${commons.configuration2.imp.pkg.version}",
                             org.wso2.micro.integrator.initializer.utils,
+                            org.osgi.service.component.annotations.*;resolution:=optional,
+                            org.wso2.carbon.usage.data.exporter;version="[1.0,2)";resolution:=optional,
                             *;resolution:=optional
                         </Import-Package>
+                        <_dsannotations>*</_dsannotations>
                     </instructions>
                 </configuration>
             </plugin>
