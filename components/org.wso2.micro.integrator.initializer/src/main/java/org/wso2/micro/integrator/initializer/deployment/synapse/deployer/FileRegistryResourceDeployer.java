@@ -103,14 +103,17 @@ public class FileRegistryResourceDeployer implements AppDeploymentHandler {
      * @param artifacts     - list of artifacts to be deployed
      * @param parentAppName - name of the parent cApp
      */
-    private void deployRegistryArtifacts(List<Artifact> artifacts, String parentAppName) {
-        artifacts.stream().filter(artifact -> REGISTRY_RESOURCE_TYPE.equals(artifact.getType())).forEach(artifact -> {
+    private void deployRegistryArtifacts(List<Artifact> artifacts, String parentAppName) throws DeploymentException {
+        for (Artifact artifact : artifacts) {
+            if (!REGISTRY_RESOURCE_TYPE.equals(artifact.getType())) {
+                continue;
+            }
             if (log.isDebugEnabled()) {
                 log.debug("Deploying registry artifact: " + artifact.getName());
             }
             RegistryConfig regConfig = buildRegistryConfig(artifact, parentAppName);
             writeArtifactToRegistry(regConfig);
-        });
+        }
     }
 
     /**
@@ -191,7 +194,7 @@ public class FileRegistryResourceDeployer implements AppDeploymentHandler {
      *
      * @param registryConfig - Artifact instance
      */
-    private void writeArtifactToRegistry(RegistryConfig registryConfig){
+    private void writeArtifactToRegistry(RegistryConfig registryConfig) throws DeploymentException {
 
         // write resources
         List<RegistryConfig.Resourse> resources = registryConfig.getResources();
@@ -208,9 +211,8 @@ public class FileRegistryResourceDeployer implements AppDeploymentHandler {
             }
             String resourcePath = AppDeployerUtils.computeResourcePath(createRegistryKey(resource), resource.getFileName(), registryConfig);
             if (MicroIntegratorRegistry.isWriteProtected(resourcePath)) {
-                log.warn("Skipping CAPP registry resource deployment: path '" + resourcePath
-                        + "' is write-protected.");
-                continue;
+                throw new DeploymentException("CAPP deployment rejected: registry path '" + resourcePath
+                        + "' is write-protected and cannot be overwritten by a CAPP.");
             }
             String mediaType = resource.getMediaType();
             ((MicroIntegratorRegistry)lightweightRegistry).addNewNonEmptyResource(resourcePath, false, mediaType,
@@ -232,9 +234,8 @@ public class FileRegistryResourceDeployer implements AppDeploymentHandler {
             }
             String directoryRegistryPath = createRegistryPath(collection.getPath());
             if (MicroIntegratorRegistry.isWriteProtected(directoryRegistryPath)) {
-                log.warn("Skipping CAPP registry collection deployment: path '" + directoryRegistryPath
-                        + "' is write-protected.");
-                continue;
+                throw new DeploymentException("CAPP deployment rejected: registry path '" + directoryRegistryPath
+                        + "' is write-protected and cannot be overwritten by a CAPP.");
             }
             ((MicroIntegratorRegistry)lightweightRegistry).addNewNonEmptyResource(
                     directoryRegistryPath, true, "", "",
