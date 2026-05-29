@@ -58,13 +58,13 @@
         <dependency>
             <groupId>org.apache.felix</groupId>
             <artifactId>org.apache.felix.scr.ds-annotations</artifactId>
-            <version>1.2.4</version>
+            <version>${apache.felix.scr.ds.annotations.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>org.osgi.compendium</artifactId>
-            <version>5.0.0</version>
+            <version>${osgi.compendium.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
