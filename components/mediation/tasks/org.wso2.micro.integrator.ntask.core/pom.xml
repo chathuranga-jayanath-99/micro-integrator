@@ -69,7 +69,7 @@
                         </Import-Package>
                         <Export-Package>
                             !org.wso2.micro.integrator.ntask.internal,
-                            org.wso2.micro.integrator.ntask.core.*; version="${project.version}",
+                            org.wso2.micro.integrator.ntask.core.*; version="${package.version}",
                         </Export-Package>
                         <Provide-Capability>
                             osgi.service;objectClass="org.wso2.micro.integrator.ntask.core.service.TaskService"

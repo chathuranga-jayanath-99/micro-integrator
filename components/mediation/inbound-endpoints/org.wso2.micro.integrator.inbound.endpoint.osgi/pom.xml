@@ -38,7 +38,7 @@
                         <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Name>${project.artifactId}</Bundle-Name>
                         <Export-Package>
-                            org.wso2.carbon.inbound.endpoint.osgi.service;version="${project.version}"
+                            org.wso2.carbon.inbound.endpoint.osgi.service;version="${package.version}"
                         </Export-Package>
                         <Import-Package>
                         </Import-Package>

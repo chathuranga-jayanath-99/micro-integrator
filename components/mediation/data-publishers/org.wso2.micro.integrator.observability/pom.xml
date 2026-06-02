@@ -103,7 +103,7 @@
                         <Axis2Module>${project.artifactId}-${project.version}</Axis2Module>
                         <_contract>!*</_contract>
                         <Export-Package>
-                            org.wso2.micro.integrator.observability.* ;version="${project.version}"
+                            org.wso2.micro.integrator.observability.* ;version="${package.version}"
                         </Export-Package>
                         <Private-Package>
                           io.prometheus.client.*,
@@ -115,7 +115,7 @@
                           io.prometheus.metrics.expositionformats.*
                         </Private-Package>
                         <Import-Package>
-                            org.wso2.carbon.inbound.endpoint.internal.http.api ;version="${project.version}",
+                            org.wso2.carbon.inbound.endpoint.internal.http.api ;version="${package.version}",
                             *;resolution:=optional
                         </Import-Package>
                         <DynamicImport-Package>*</DynamicImport-Package>
