@@ -66,7 +66,7 @@
                         </Import-Package>
                         <Export-Package>
                             !org.wso2.micro.integrator.crypto.impl.internal,
-                            org.wso2.micro.integrator.crypto.impl.*;version="${project.version}",
+                            org.wso2.micro.integrator.crypto.impl.*;version="${package.version}",
                         </Export-Package>
                     </instructions>
                 </configuration>

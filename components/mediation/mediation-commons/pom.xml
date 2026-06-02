@@ -88,7 +88,7 @@
                         <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
                         <Private-Package/>
                         <Export-Package>
-                            org.wso2.carbon.mediation.commons.*;version="${project.version}"
+                            org.wso2.carbon.mediation.commons.*;version="${package.version}"
                         </Export-Package>
                         <Import-Package>
                             javax.xml.stream.*; version="${javax.xml.stream.imp.pkg.version}"
