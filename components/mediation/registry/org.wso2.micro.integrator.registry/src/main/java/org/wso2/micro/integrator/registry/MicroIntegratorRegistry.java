@@ -192,6 +192,19 @@ public class MicroIntegratorRegistry extends AbstractRegistry {
 		}
     }
 
+    /**
+     * Returns true if the given registry path is write-protected against CAPP deployment.
+     * Protection is only enforced when {@code vault.registry.lookup.enabled=true}
+     * in synapse.properties, so that the constraint is inactive in the default deployment.
+     */
+    public static boolean isWriteProtected(String path) {
+        if (!org.apache.synapse.config.SynapsePropertiesLoader.getBooleanProperty(
+                MicroIntegratorRegistryConstants.PROP_VAULT_REGISTRY_LOOKUP_ENABLED, false)) {
+            return false;
+        }
+        return MicroIntegratorRegistryConstants.CONNECTOR_SECURE_VAULT_CONFIG_REPOSITORY.equals(path);
+    }
+
     private String getUri(String defaultFSRegRoot, String subDirectory) {
         return Paths.get(defaultFSRegRoot + subDirectory).toUri().normalize().toString()
                 + MicroIntegratorRegistryConstants.URL_SEPARATOR;

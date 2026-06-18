@@ -19,6 +19,8 @@ package org.wso2.micro.integrator.mediation.security.vault;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.synapse.config.SynapsePropertiesLoader;
+import org.apache.synapse.MessageContext;
 import org.apache.synapse.SynapseException;
 
 /**
@@ -31,7 +33,18 @@ class SecretCipherHander {
 	/* Root Secret Repository */
 	private CiphertextRepository parentRepository = CiphertextRepository.getInstance();
 	private FileSecretRepository fileSecretRepository = new FileSecretRepository();
-	private EnvironmentSecretRepository environmentSecretRepository =  new EnvironmentSecretRepository();
+	private EnvironmentSecretRepository environmentSecretRepository = new EnvironmentSecretRepository();
+	private RegistrySecretRepository registrySecretRepository;
+	private static final boolean registryEnabled = Boolean.parseBoolean(SynapsePropertiesLoader.getPropertyValue(
+					SecureVaultConstants.PROP_VAULT_REGISTRY_LOOKUP_ENABLED, "false"));
+
+	SecretCipherHander(MessageContext synCtx) {
+		super();
+		if (registryEnabled) {
+			registrySecretRepository = new RegistrySecretRepository();
+			registrySecretRepository.setSynCtx(synCtx);
+		}
+	}
 
 	/**
 	 * Returns the secret corresponding to the given alias name
@@ -58,7 +71,12 @@ class SecretCipherHander {
 			}
 			return environmentSecretRepository.getPlainTextSecret(alias);
 		} else if (VaultType.REG.equals(secretSrcData.getVaultType())) {
-			// For registry type we only support plain text
+			if (registryEnabled) {
+				String secret = registrySecretRepository.getSecret(alias);
+				if (secret != null) {
+					return secret;
+				}
+			}
 			return parentRepository.getSecret(alias);
 		} else {
 			// Will never reach here unless customized

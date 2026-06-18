@@ -110,6 +110,7 @@
   "mediation.internal_http_api_enable": "synapse_properties.'internal.http.api.enabled'",
   "mediation.internal_http_api_port": "synapse_properties.'internal.http.api.port'",
   "mediation.internal_https_api_port": "synapse_properties.'internal.https.api.port'",
+  "mediation.vault_registry_lookup_enabled": "synapse_properties.'vault.registry.lookup.enabled'",
 
   "mediation.http_client.global_connection_timeout": "synapse_properties.'http.client.global.connection.timeout'",
   "mediation.http_client.global_connection_request_timeout": "synapse_properties.'http.client.global.connection.request.timeout'",
