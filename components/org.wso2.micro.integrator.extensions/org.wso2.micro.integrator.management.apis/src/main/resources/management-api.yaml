@@ -1307,6 +1307,12 @@ paths:
           schema:
             type: string
           description: The name of the data service to retrieve information for.
+        - name: searchKey
+          in: query
+          required: false
+          schema:
+            type: string
+          description: A keyword to filter data services by name (case-insensitive).
       responses:
         '200':
           description: Successful response
@@ -1318,7 +1324,7 @@ paths:
                   count:
                     type: integer
                     example: 1
-                    description: The number of data services deployed.
+                    description: The number of successfully deployed data services.
                   list:
                     type: array
                     items:
@@ -1336,6 +1342,59 @@ paths:
                           type: string
                           example: http://Sachiths-MacBook-Pro.local:8290/services/StudentDataService?wsdl2
                           description: The WSDL 2.0 URL of the data service.
+                  faultyCount:
+                    type: integer
+                    example: 1
+                    description: The number of data services that failed to deploy.
+                  faultyList:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          example: FaultyDataService
+                          description: The name of the faulty data service.
+                        errorMessage:
+                          type: string
+                          example: "Cannot connect to the database."
+                          description: A short description of the deployment failure.
+      security:
+        - BearerAuth: []
+  /data-services/{name}/fault:
+    get:
+      summary: Get Faulty Data Service Details
+      description: Retrieves the full deployment failure details for a data service that failed to deploy.
+      tags:
+        - Data Services
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The name of the faulty data service.
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  serviceName:
+                    type: string
+                    example: FaultyDataService
+                    description: The name of the faulty data service.
+                  errorMessage:
+                    type: string
+                    example: "Cannot connect to the database."
+                    description: A short description of the deployment failure.
+                  faultStackTrace:
+                    type: string
+                    description: The full stack trace of the deployment failure.
+        '404':
+          description: No faulty data service found with the given name.
       security:
         - BearerAuth: []
   /data-sources:
