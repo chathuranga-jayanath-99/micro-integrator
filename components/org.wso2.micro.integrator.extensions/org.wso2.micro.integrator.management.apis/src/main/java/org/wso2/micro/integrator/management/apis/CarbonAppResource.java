@@ -52,10 +52,12 @@ import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import java.nio.file.StandardOpenOption;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.HashSet;
@@ -284,6 +286,13 @@ public class CarbonAppResource extends APIResource {
 
             File file = cAppPath.toFile();
             if (file.exists() && !file.isDirectory()) {
+
+                // Resolve symlinks on the final path and re-validate boundary
+                Path realCAppPath = cAppPath.toRealPath();
+                if (!realCAppPath.startsWith(cAppBasePath)) {
+                    log.error("Symlink traversal attempt detected for cApp : " + cAppName);
+                    return null;
+                }
                 try (InputStream is = new BufferedInputStream(new FileInputStream(file))) {
                     bytArrayDS = new ByteArrayDataSource(is, Constants.MEDIA_TYPE_APPLICATION_OCTET_STREAM);
                     return new DataHandler(bytArrayDS);
@@ -344,6 +353,15 @@ public class CarbonAppResource extends APIResource {
                                 // Enforce boundary — reject if resolved path escapes base dir
                                 if (!cAppDirectoryPath.startsWith(cAppBasePath)) {
                                     log.error("Path traversal attempt detected for file : " + fileName);
+                                    jsonResponse = Utils.createJsonError("Error when deploying the Carbon "
+                                            + "Application. Invalid file name.", axisMsgCtx, BAD_REQUEST);
+                                    Utils.setJsonPayLoad(axisMsgCtx, jsonResponse);
+                                    return;
+                                }
+
+                                // Reject if the target already exists and is a symlink
+                                if (Files.isSymbolicLink(cAppDirectoryPath)) {
+                                    log.error("Symlink detected at target path, rejecting write for file : " + fileName);
                                     jsonResponse = Utils.createJsonError("Error when deploying the Carbon "
                                             + "Application. Invalid file name.", axisMsgCtx, BAD_REQUEST);
                                     Utils.setJsonPayLoad(axisMsgCtx, jsonResponse);
