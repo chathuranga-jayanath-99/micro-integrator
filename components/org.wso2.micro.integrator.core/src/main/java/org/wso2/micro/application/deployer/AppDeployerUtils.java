@@ -694,11 +694,16 @@ public final class AppDeployerUtils {
 
         zipFile = new ZipFile(sourcePath);
         entries = zipFile.entries();
+        // Canonicalize the destination directory
         String canonicalDirPath = new File(destPath).getCanonicalPath();
+        // Append separator only if not already present
+        canonicalDirPath = canonicalDirPath.endsWith(File.separator)
+                ? canonicalDirPath
+                : canonicalDirPath + File.separator;
 
         while (entries.hasMoreElements()) {
             ZipEntry entry = (ZipEntry) entries.nextElement();
-            String canonicalEntryPath = new File(destPath + entry.getName()).getCanonicalPath();
+            String canonicalEntryPath = new File(destPath, entry.getName()).getCanonicalPath();
             if (!canonicalEntryPath.startsWith(canonicalDirPath)) {
                 throw new DeploymentException("Entry is outside of the target dir: " + entry.getName());
             }
