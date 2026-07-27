@@ -194,6 +194,13 @@ public class LogFilesResource extends APIResource {
 
             File file = logFilePath.toFile();
             if (file.exists() && !file.isDirectory()) {
+                // Resolve symlinks on the final path and re-validate boundary
+                Path realLogFilePath = logFilePath.toRealPath();
+                if (!realLogFilePath.startsWith(logsBasePath)) {
+                    log.error("Symlink traversal attempt detected for file : " + logFile);
+                    return null;
+                }
+
                 try (InputStream is = new BufferedInputStream(new FileInputStream(file))) {
                     bytArrayDS = new ByteArrayDataSource(is, "text/xml");
                     return new DataHandler(bytArrayDS);
