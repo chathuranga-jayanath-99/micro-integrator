@@ -102,6 +102,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
@@ -109,6 +111,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -165,6 +168,16 @@ public class DBDeployer extends AbstractDeployer {
 	private static final String secureVaultRegex = "\\{(.*?):vault-lookup\\('(.*?)'\\)\\}";
 	private static Pattern vaultLookupPattern = Pattern.compile(secureVaultRegex);
 
+	/**
+	 * Tracks data services that failed to deploy, keyed by absolute file path.
+	 * Entries are added on deploy failure and removed on undeploy.
+	 */
+	private static final Map<String, FaultyDataService> faultyDataServices = new ConcurrentHashMap<>();
+
+	public static Collection<FaultyDataService> getFaultyDataServices() {
+		return Collections.unmodifiableCollection(faultyDataServices.values());
+	}
+
 	public ConfigurationContext getConfigContext() {
 		return configCtx;
 	}
@@ -178,7 +191,9 @@ public class DBDeployer extends AbstractDeployer {
         /* If there's already a faulty service corresponding to this particular service,
            remove it */
         if (isFaultyService(deploymentFileData)) {
-            this.axisConfig.removeFaultyService(deploymentFileData.getFile().getAbsolutePath());
+            String path = deploymentFileData.getFile().getAbsolutePath();
+            this.axisConfig.removeFaultyService(path);
+            faultyDataServices.remove(path);
         }
 
 		String serviceHierarchy = Utils.getServiceHierarchy(
@@ -191,14 +206,20 @@ public class DBDeployer extends AbstractDeployer {
 		boolean successfullyDeployed = false;
 		/* used to store the error message if there is a problem in deploying */
 		String errorMessage = null;
+		/* full stack trace for the faulty service store and Axis2 fault map */
+		String faultStackTrace = null;
+		/* service name parsed from .dbs content; used to populate the faulty store */
+		String parsedServiceName = null;
+		/* effective deployed identifier (includes hierarchy/version prefix); used as the fault store key */
+		String serviceGroupName = null;
 		/* Axis2 service to be deployed */
 		AxisService service = null;
 
 		try {
 			/* In the context of dataservices one service group will only contain one dataservice.
             *  Hence assigning the service group as the service group name */
-            String serviceGroupName = serviceHierarchy +
-                    this.getServiceNameFromDSContents(deploymentFileData.getFile());
+            parsedServiceName = this.getServiceNameFromDSContents(deploymentFileData.getFile());
+            serviceGroupName = serviceHierarchy + parsedServiceName;
 
 			if (SynapsePropertiesLoader.getBooleanProperty(SynapseConstants.EXPOSE_VERSIONED_SERVICES, false)) {
 				if (deploymentFileData.isVersionedDeployment()) {
@@ -262,7 +283,8 @@ public class DBDeployer extends AbstractDeployer {
 			successfullyDeployed = true;
 
 		} catch (DataServiceFault e) {
-			errorMessage = DBUtils.getStacktraceFromException(e);
+			faultStackTrace = DBUtils.getStacktraceFromException(e);
+			errorMessage = e.getMessage();
 			log.error(Messages.getMessage(DeploymentErrorMsgs.INVALID_SERVICE, deploymentFileData.getName()), e);
 			/* if there is a request to re-schedule in the exception, do it .. */
 			if (DBConstants.FaultCodes.CONNECTION_UNAVAILABLE_ERROR.equals(e.getCode())) {
@@ -282,7 +304,8 @@ public class DBDeployer extends AbstractDeployer {
 					DeploymentErrorMsgs.INVALID_SERVICE,
 					deploymentFileData.getName()), e);
 		} catch (Throwable e) {
-			errorMessage = DBUtils.getStacktraceFromException(e);
+			faultStackTrace = DBUtils.getStacktraceFromException(e);
+			errorMessage = e.getMessage();
 			log.error(Messages.getMessage(DeploymentErrorMsgs.INVALID_SERVICE, deploymentFileData.getName()), e);
 			throw new DeploymentException(Messages.getMessage(
 					DeploymentErrorMsgs.INVALID_SERVICE,
@@ -291,13 +314,22 @@ public class DBDeployer extends AbstractDeployer {
 			if (!successfullyDeployed)	{
 				String deploymentFilePath = deploymentFileData.getFile().getAbsolutePath();
 				/* Register the faulty service */
-				this.axisConfig.getFaultyServices().put(deploymentFilePath, errorMessage);
+				this.axisConfig.getFaultyServices().put(deploymentFilePath, faultStackTrace);
                 try {
                 	CarbonUtils.registerFaultyService(deploymentFilePath,
                     		DBConstants.DB_SERVICE_TYPE, configCtx);
                 } catch (Exception e) {
                     log.error("Cannot register faulty service with Carbon", e);
                 }
+                /* Track in the dedicated faulty data service store for Management API exposure.
+                 * Use serviceGroupName (includes hierarchy/version prefix) so the stored name
+                 * matches what the list API returns and the fault endpoint can resolve it. */
+                String filename = deploymentFileData.getFile().getName();
+                String dsName = (serviceGroupName != null) ? serviceGroupName
+                        : (parsedServiceName != null) ? parsedServiceName
+                        : (filename.contains(".") ? filename.substring(0, filename.lastIndexOf('.')) : filename);
+                faultyDataServices.put(deploymentFilePath,
+                        new FaultyDataService(dsName, deploymentFilePath, errorMessage, faultStackTrace));
 			}
 		}
 	}
@@ -475,6 +507,7 @@ public class DBDeployer extends AbstractDeployer {
                    axisConfiguration itself.
                    */
                 this.axisConfig.removeFaultyService(servicePath);
+                faultyDataServices.remove(servicePath);
 				return;
 			}
 			String serviceHierarchy = Utils.getServiceHierarchy(servicePath, this.repoDir);
@@ -488,6 +521,7 @@ public class DBDeployer extends AbstractDeployer {
 //			CarbonContext cCtx = CarbonContextrbonContext.getThreadLocalCarbonContext();
 			if (serviceGroup == null) { /* must be a faulty service */
 				this.axisConfig.removeFaultyService(servicePath);
+				faultyDataServices.remove(servicePath);
 				for (String configID : dataService.getConfigs().keySet()) {
 					if (dataService.getConfig(configID).isODataEnabled()) {
 						removeODataHandler(org.wso2.micro.core.Constants.SUPER_TENANT_DOMAIN_NAME, dataService.getName() + configID);

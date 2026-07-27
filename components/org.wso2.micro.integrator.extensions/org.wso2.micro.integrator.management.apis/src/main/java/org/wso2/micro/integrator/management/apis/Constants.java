@@ -43,6 +43,8 @@ public class Constants {
     public static final String PREFIX_USERS = "/users";
     public static final String PATH_PARAM_USER = "/" + "{userId}";
     public static final String PREFIX_DATA_SERVICES = "/data-services";
+    public static final String PATH_PARAM_DATA_SERVICE_NAME = "/" + "{name}";
+    public static final String PATH_PARAM_DATA_SERVICE_FAULT = PATH_PARAM_DATA_SERVICE_NAME + "/fault";
     public static final String PREFIX_TEMPLATES = "/templates";
     public static final String PREFIX_MESSAGE_STORE = "/message-stores";
     public static final String PREFIX_MESSAGE_PROCESSORS = "/message-processors";

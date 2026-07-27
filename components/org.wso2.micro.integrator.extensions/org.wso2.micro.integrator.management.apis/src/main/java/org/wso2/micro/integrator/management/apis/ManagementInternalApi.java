@@ -31,6 +31,7 @@ import java.util.List;
 
 import static org.wso2.micro.integrator.management.apis.Constants.PATH_PARAM_CARBON_APP_FAULT;
 import static org.wso2.micro.integrator.management.apis.Constants.PATH_PARAM_CARBON_APP_NAME;
+import static org.wso2.micro.integrator.management.apis.Constants.PATH_PARAM_DATA_SERVICE_FAULT;
 import static org.wso2.micro.integrator.management.apis.Constants.PATH_PARAM_EXTERNAL_VAULT_NAME;
 import static org.wso2.micro.integrator.management.apis.Constants.PATH_PARAM_ROLE;
 import static org.wso2.micro.integrator.management.apis.Constants.PATH_PARAM_TRANSACTION;
@@ -90,6 +91,7 @@ public class ManagementInternalApi implements InternalAPI {
         resourcesList.add(new CoordinatedTaskStatusResource(PREFIX_TASK_STATUS));
         resourcesList.add(new SequenceResource(PREFIX_SEQUENCES));
         resourcesList.add(new DataServiceResource(PREFIX_DATA_SERVICES));
+        resourcesList.add(new DataServiceResource(PREFIX_DATA_SERVICES + PATH_PARAM_DATA_SERVICE_FAULT));
         resourcesList.add(new TemplateResource(PREFIX_TEMPLATES));
         resourcesList.add(new LoggingResource(PREFIX_LOGGING));
         resourcesList.add(new ApiResourceAdapter(PREFIX_MESSAGE_STORE, new MessageStoreResource()));
