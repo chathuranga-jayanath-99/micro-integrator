@@ -281,7 +281,7 @@ public class QuerySerializer {
         for (WithParam withParam : callQuery.getWithParams().values()) {
             withParamEl = fac.createOMElement(new QName(DBSFields.WITH_PARAM));
             withParamEl.addAttribute(DBSFields.NAME, withParam.getName(), null);
-            withParamEl.addAttribute(withParam.getParamType(), withParam.getParam(), null);
+            withParamEl.addAttribute(withParam.getParamType(), withParam.getOriginalName(), null);
             callQueryEl.addChild(withParamEl);
         }
         parentEl.addChild(callQueryEl);
