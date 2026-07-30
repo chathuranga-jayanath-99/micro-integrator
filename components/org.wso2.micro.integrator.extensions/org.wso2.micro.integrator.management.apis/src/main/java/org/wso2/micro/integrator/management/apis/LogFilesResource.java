@@ -175,7 +175,7 @@ public class LogFilesResource extends APIResource {
 
         try {
             // Reject if fileName contains path separators
-            if (logFile.contains("/") || logFile.contains("\\")) {
+            if (logFile.contains(Constants.UNIX_PATH_SEPARATOR) || logFile.contains(Constants.WINDOWS_PATH_SEPARATOR)) {
                 log.error("Invalid characters in file name : " + logFile);
                 return null;
             }

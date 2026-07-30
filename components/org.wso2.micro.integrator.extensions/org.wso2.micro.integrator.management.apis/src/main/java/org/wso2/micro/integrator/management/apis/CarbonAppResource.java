@@ -267,7 +267,8 @@ public class CarbonAppResource extends APIResource {
 
         try {
             // Reject if fileName contains path separators
-            if (cAppName.contains("/") || cAppName.contains("\\")) {
+            if (cAppName.contains(Constants.UNIX_PATH_SEPARATOR)
+                    || cAppName.contains(Constants.WINDOWS_PATH_SEPARATOR)) {
                 log.error("Invalid characters in cApp name : " + cAppName);
                 return null;
             }
@@ -335,7 +336,8 @@ public class CarbonAppResource extends APIResource {
                         if (fileName != null && fileName.endsWith(".car")) {
                             try {
                                 // Reject early before any filesystem operation
-                                if (fileName.contains("/") || fileName.contains("\\")) {
+                                if (fileName.contains(Constants.UNIX_PATH_SEPARATOR)
+                                        || fileName.contains(Constants.WINDOWS_PATH_SEPARATOR)) {
                                     log.error("Invalid characters in file name : " + fileName);
                                     jsonResponse = Utils.createJsonError("Error when deploying the Carbon "
                                             + "Application. Invalid file name.", axisMsgCtx, BAD_REQUEST);
