@@ -689,43 +689,35 @@ public final class AppDeployerUtils {
     }
 
     private static void extract(String sourcePath, String destPath) throws IOException {
-        Enumeration entries;
-        ZipFile zipFile;
-
-        zipFile = new ZipFile(sourcePath);
-        entries = zipFile.entries();
-        // Canonicalize the destination directory
         String canonicalDirPath = new File(destPath).getCanonicalPath();
-        // Append separator only if not already present
         canonicalDirPath = canonicalDirPath.endsWith(File.separator)
                 ? canonicalDirPath
                 : canonicalDirPath + File.separator;
 
-        while (entries.hasMoreElements()) {
-            ZipEntry entry = (ZipEntry) entries.nextElement();
-            String canonicalEntryPath = new File(destPath, entry.getName()).getCanonicalPath();
-            if (!canonicalEntryPath.startsWith(canonicalDirPath)) {
-                throw new DeploymentException("Entry is outside of the target dir: " + entry.getName());
+        try (ZipFile zipFile = new ZipFile(sourcePath)) {
+            Enumeration entries = zipFile.entries();
+            while (entries.hasMoreElements()) {
+                ZipEntry entry = (ZipEntry) entries.nextElement();
+                String canonicalEntryPath = new File(destPath, entry.getName()).getCanonicalPath();
+                if (!canonicalEntryPath.startsWith(canonicalDirPath)) {
+                    throw new DeploymentException("Entry is outside of the target dir: " + entry.getName());
+                }
+                if (entry.getName().startsWith("META-INF/")) {
+                    continue;
+                }
+                if (entry.getName().startsWith(DEPENDENCIES_DIR)) {
+                    continue;
+                }
+                if (entry.isDirectory()) {
+                    createDir(destPath + entry.getName());
+                    continue;
+                }
+                try (InputStream in = zipFile.getInputStream(entry);
+                     OutputStream out = new BufferedOutputStream(new FileOutputStream(destPath + entry.getName()))) {
+                    copyInputStream(in, out);
+                }
             }
-
-            // we don't need to copy the META-INF dir
-            if (entry.getName().startsWith("META-INF/")) {
-                continue;
-            }
-            // we don't need to copy the dependencies since it will be extracted as separate cApps
-            if (entry.getName().startsWith(DEPENDENCIES_DIR)) {
-                continue;
-            }
-            // if the entry is a directory, create a new dir
-            if (entry.isDirectory()) {
-                createDir(destPath + entry.getName());
-                continue;
-            }
-            // if the entry is a file, write the file
-            copyInputStream(zipFile.getInputStream(entry),
-                            new BufferedOutputStream(new FileOutputStream(destPath + entry.getName())));
         }
-        zipFile.close();
     }
 
     private static void extractFromZipInputStream(InputStream zipStream, Path destRoot) throws IOException {
