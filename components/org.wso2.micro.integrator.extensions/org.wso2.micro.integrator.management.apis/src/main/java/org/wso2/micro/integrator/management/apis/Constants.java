@@ -286,4 +286,7 @@ public class Constants {
     public static final String DATA_SERVICE = "data-service";
     public static final String TEMPLATE = "template";
 
+    public static final String UNIX_PATH_SEPARATOR = "/";
+    public static final String WINDOWS_PATH_SEPARATOR = "\\";
+
 }
