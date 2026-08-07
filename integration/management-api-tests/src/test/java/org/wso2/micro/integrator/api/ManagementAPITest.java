@@ -10,6 +10,8 @@ import org.wso2.esb.integration.common.utils.ESBIntegrationTest;
 import org.wso2.esb.integration.common.utils.clients.SimpleHttpClient;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -34,20 +36,32 @@ public abstract class ManagementAPITest extends ESBIntegrationTest {
     }
 
     protected JSONObject sendHttpRequestAndGetPayload(String resourcePath) throws IOException {
-        if (!isManagementApiAvailable) {
-            Awaitility.await().pollInterval(100, TimeUnit.MILLISECONDS).atMost(DEFAULT_TIMEOUT, TimeUnit.SECONDS).
-                    until(isManagementApiAvailable());
-        }
+        waitForManagementApi();
         Assert.assertNotNull(accessToken);
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Accept", "application/json");
-        headers.put("Authorization", "Bearer " + accessToken);
         SimpleHttpClient client = new SimpleHttpClient();
-        HttpResponse response = client.doGet(endpoint.concat(resourcePath), headers);
+        HttpResponse response = client.doGet(getManagementEndpoint(resourcePath), getHeaderMap());
         String responsePayload = client.getResponsePayload(response);
         Assert.assertEquals(response.getStatusLine().getStatusCode(), 200);
         JSONObject jsonResponse = new JSONObject(responsePayload);
         return jsonResponse;
+    }
+
+    protected void waitForManagementApi() {
+        if (!isManagementApiAvailable) {
+            Awaitility.await().pollInterval(100, TimeUnit.MILLISECONDS).atMost(DEFAULT_TIMEOUT, TimeUnit.SECONDS)
+                    .until(isManagementApiAvailable());
+        }
+    }
+
+    protected String getManagementEndpoint(String resource) {
+        return endpoint.concat(resource);
+    }
+
+    protected Map<String, String> getHeaderMap() {
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Accept", "application/json");
+        headers.put("Authorization", "Bearer ".concat(accessToken));
+        return headers;
     }
 
     protected void verifyResourceCount(JSONObject jsonResponse, int expectedCount) {
@@ -59,6 +73,14 @@ public abstract class ManagementAPITest extends ESBIntegrationTest {
         for (String expectedResourceName : expectedResourceNames) {
             Assert.assertTrue(jsonResponse.get(LIST).toString().contains(expectedResourceName), "Assert failed " +
                     "since expected resource name not found in the list");
+        }
+    }
+
+    protected String urlEncode(String value) {
+        try {
+            return URLEncoder.encode(value, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            throw new IllegalStateException("UTF-8 encoding is not supported", e);
         }
     }
 
