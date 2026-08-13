@@ -18,15 +18,20 @@
 
 package org.wso2.micro.integrator.api;
 
+import org.apache.http.HttpResponse;
 import org.json.JSONObject;
+import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
+import org.wso2.esb.integration.common.utils.clients.SimpleHttpClient;
 
 import java.io.IOException;
+import java.util.Map;
 
 public class LogFilesResourceTestCase extends ManagementAPITest {
 
     private static String resourcePath = "logs";
+    private static final String EXISTING_LOG_FILE_NAME = "wso2error.log";
 
     @Test(groups = {"wso2.esb"}, description = "Test get Logfiles resource")
     public void retrieveLogs() throws IOException {
@@ -40,6 +45,35 @@ public class LogFilesResourceTestCase extends ManagementAPITest {
         JSONObject jsonResponse = sendHttpRequestAndGetPayload(resourcePath.concat("?searchKey=error"));
         verifyResourceCount(jsonResponse, 1);
         verifyResourceInfo(jsonResponse, new String[]{"wso2error.log"});
+    }
+
+    @Test(groups = {"wso2.esb"}, description = "Test downloading an existing log file succeeds")
+    public void downloadExistingLogFile() throws IOException {
+        waitForManagementApi();
+        HttpResponse response = getLogFile(EXISTING_LOG_FILE_NAME);
+        Assert.assertEquals(response.getStatusLine().getStatusCode(), 200,
+                "Expected a successful download for an existing log file");
+    }
+
+    @Test(groups = {"wso2.esb"}, description = "Test downloading a log file with a path traversal name is rejected")
+    public void downloadLogFilePathTraversalRejected() throws IOException {
+        waitForManagementApi();
+        String[] maliciousNames = new String[] {
+                "../../conf/deployment.toml",
+                "..\\..\\conf\\deployment.toml"
+        };
+        for (String maliciousName : maliciousNames) {
+            HttpResponse response = getLogFile(maliciousName);
+            Assert.assertNotEquals(response.getStatusLine().getStatusCode(), 200,
+                    "Path traversal attempt should not return the requested file : " + maliciousName);
+        }
+    }
+
+    private HttpResponse getLogFile(String logFileName) throws IOException {
+        String endpoint = getManagementEndpoint(resourcePath.concat("?file=").concat(urlEncode(logFileName)));
+        Map<String, String> headers = getHeaderMap();
+        SimpleHttpClient client = new SimpleHttpClient();
+        return client.doGet(endpoint, headers);
     }
 
     @AfterClass(alwaysRun = true)

@@ -190,6 +190,30 @@ public class SimpleHttpClient {
         return client.execute(request);
     }
 
+    /**
+     * Posts a file's bytes as a "file" multipart part, using an explicit file name rather than deriving it
+     * from a local {@link File}. This allows tests to control the exact file name sent to the server
+     * (e.g. to verify handling of path-traversal sequences in an upload's file name) while still attaching
+     * request headers such as an Authorization token.
+     *
+     * @param url         target URL
+     * @param fileName    file name to advertise in the multipart Content-Disposition
+     * @param fileContent bytes of the file to upload
+     * @param header      request headers to add, e.g. Authorization
+     */
+    public HttpResponse doPostWithMultipart(String url, String fileName, byte[] fileContent,
+                                             Map<String, String> header) throws IOException {
+        MultipartEntityBuilder entitybuilder = MultipartEntityBuilder.create();
+        entitybuilder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
+        entitybuilder.addBinaryBody("file", fileContent, ContentType.APPLICATION_OCTET_STREAM, fileName);
+        HttpPost request = new HttpPost(url);
+        for (String headerKey : header.keySet()) {
+            request.addHeader(headerKey, header.get(headerKey));
+        }
+        request.setEntity(entitybuilder.build());
+        return client.execute(request);
+    }
+
     public HttpResponse doPutWithMultipart(String url, File file, Map<String, String> header)
             throws IOException {
         MultipartEntityBuilder entitybuilder = MultipartEntityBuilder.create();
