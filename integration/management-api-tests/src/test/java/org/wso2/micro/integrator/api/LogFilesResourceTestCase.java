@@ -59,8 +59,8 @@ public class LogFilesResourceTestCase extends ManagementAPITest {
     public void downloadLogFilePathTraversalRejected() throws IOException {
         waitForManagementApi();
         String[] maliciousNames = new String[] {
-                "../../../../conf/deployment.toml",
-                "..\\..\\..\\..\\conf\\deployment.toml"
+                "../../conf/deployment.toml",
+                "..\\..\\conf\\deployment.toml"
         };
         for (String maliciousName : maliciousNames) {
             HttpResponse response = getLogFile(maliciousName);
