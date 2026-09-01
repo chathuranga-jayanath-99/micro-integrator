@@ -110,11 +110,11 @@ if [ -n "$CLASSPATH_PREFIX" ] ; then
   CLASSPATH=$CLASSPATH_PREFIX:$CLASSPATH
 fi
 
-if [ -z "$JVM_MEM_OPTS" ]; then
+if [ -z "$DIAGNOSTICS_JVM_MEM_OPTS" ]; then
    java_version=$("$JAVACMD" -version 2>&1 | awk -F '"' '/version/ {print $2}')
-   JVM_MEM_OPTS="-Xms32m -Xmx128m"
+   DIAGNOSTICS_JVM_MEM_OPTS="-Xms32m -Xmx128m"
    if [ "$java_version" \< "1.8" ]; then
-      JVM_MEM_OPTS="$JVM_MEM_OPTS"
+      DIAGNOSTICS_JVM_MEM_OPTS="$DIAGNOSTICS_JVM_MEM_OPTS"
    fi
 fi
 
@@ -128,7 +128,7 @@ if $cygwin; then
 fi
 
 exec "$JAVACMD" $JAVA_OPTS  \
-$JVM_MEM_OPTS \
+$DIAGNOSTICS_JVM_MEM_OPTS \
   -classpath "$CLASSPATH" \
   -Dapp.name="runtime-diagnostics" \
   -Dapp.pid="$$" \
