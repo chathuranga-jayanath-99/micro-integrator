@@ -53,6 +53,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -131,6 +133,29 @@ public class Utils {
      */
     public static boolean isUserAuthenticated(MessageContext messageContext) {
         return !Objects.isNull(getStringPropertyFromMessageContext(messageContext, USERNAME_PROPERTY));
+    }
+
+    /**
+     * Returns the request's target, canonicalized to an origin-form path (no scheme/authority), for use in
+     * "/management"-prefix matching. HTTP/1.1 permits an absolute-form request target
+     * (e.g. "https://host:port/management/configs"); {@code MessageContext.getTo().getAddress()} then returns
+     * that full URI instead of just the path, which would never match a "/management" prefix check.
+     *
+     * @param messageContext the message context for the incoming request
+     * @return the origin-form path (including any query string), or {@code null} if it cannot be determined
+     */
+    public static String getNormalizedResourcePath(MessageContext messageContext) {
+        String rawTarget = messageContext.getTo() != null ? messageContext.getTo().getAddress() : null;
+        if (rawTarget == null || rawTarget.startsWith("/")) {
+            return rawTarget;
+        }
+        try {
+            String path = new URI(rawTarget).getRawPath();
+            return StringUtils.isEmpty(path) ? null : path;
+        } catch (URISyntaxException e) {
+            LOG.warn("Failed to parse request target as a URI: " + rawTarget, e);
+            return null;
+        }
     }
 
     public static void setJsonPayLoad(org.apache.axis2.context.MessageContext axis2MessageContext, Object jsonObject) {

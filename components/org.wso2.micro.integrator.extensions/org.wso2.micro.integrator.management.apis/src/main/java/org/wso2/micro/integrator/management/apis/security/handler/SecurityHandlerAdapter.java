@@ -27,6 +27,7 @@ import org.wso2.config.mapper.ConfigParser;
 import org.wso2.micro.core.util.CarbonException;
 import org.wso2.micro.integrator.management.apis.Constants;
 import org.wso2.micro.integrator.management.apis.ManagementApiUndefinedException;
+import org.wso2.micro.integrator.management.apis.Utils;
 import org.wso2.micro.integrator.security.user.core.file.FileBasedUserStoreManager;
 
 import java.io.IOException;
@@ -85,7 +86,14 @@ public abstract class SecurityHandlerAdapter implements InternalAPIHandler {
 
     protected boolean needsHandling(MessageContext messageContext) {
 
-        String resourcePath = messageContext.getTo().getAddress();
+        String resourcePath = Utils.getNormalizedResourcePath(messageContext);
+        if (resourcePath == null) {
+            // Request target could not be canonicalized to a path (e.g. a malformed absolute-form target).
+            // Fail closed rather than skipping authentication for a resource path we could not determine.
+            LOG.warn("Could not determine a normalized resource path for the incoming request; enforcing "
+                    + "authentication.");
+            return true;
+        }
         if (Constants.REST_API_CONTEXT.equals(resourcePath)) {
             LOG.debug("Authentication is skipped for management api root context.");
             return false;

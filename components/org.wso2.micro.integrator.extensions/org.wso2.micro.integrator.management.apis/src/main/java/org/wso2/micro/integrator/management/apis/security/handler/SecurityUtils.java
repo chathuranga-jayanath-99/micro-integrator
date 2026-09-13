@@ -204,7 +204,8 @@ public class SecurityUtils {
      */
     public static boolean canUserEdit(String userName) throws UserStoreException {
         if (userName == null) {
-            return true;
+            // No authenticated user: never grant edit access.
+            return false;
         }
         // Return true if non-admin users can edit, or if user is admin (short-circuits to avoid unnecessary lookup)
         return !isNonAdminUsersReadOnly() || isAdmin(userName);
@@ -225,7 +226,8 @@ public class SecurityUtils {
      */
     public static boolean canUserEdit(MessageContext messageContext, String userName) throws UserStoreException {
         if (userName == null) {
-            return true;
+            // No authenticated user: never grant edit access.
+            return false;
         }
         // Return true if non-admin users can edit, or if user is admin (short-circuits to avoid unnecessary lookup)
         return !isNonAdminUsersReadOnly() || isAdmin(messageContext, userName);

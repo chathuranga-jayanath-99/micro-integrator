@@ -59,14 +59,14 @@ public abstract class AuthorizationHandlerAdapter extends SecurityHandlerAdapter
 
         String userName = Utils.getStringPropertyFromMessageContext(messageContext, USERNAME_PROPERTY);
 
-        String resourcePath = messageContext.getTo().getAddress();
+        String resourcePath = Utils.getNormalizedResourcePath(messageContext);
         if (LOG.isDebugEnabled()) {
             LOG.debug("Authorizing user: " + userName + " for resource: " + resourcePath);
         }
         String resourceHttpMethod = String.valueOf(((Axis2MessageContext) messageContext).getAxis2MessageContext()
                 .getProperty(Constants.HTTP_METHOD_PROPERTY));
         // PATCH type requests are being skipped for the /users resource to allow users to update their passwords.
-        if (resourcePath.startsWith(context.concat(Constants.PREFIX_USERS)) &&
+        if (resourcePath != null && resourcePath.startsWith(context.concat(Constants.PREFIX_USERS)) &&
                 StringUtils.isNotBlank(resourceHttpMethod) && resourceHttpMethod.equals(Constants.HTTP_METHOD_PATCH)) {
             return true;
         }
