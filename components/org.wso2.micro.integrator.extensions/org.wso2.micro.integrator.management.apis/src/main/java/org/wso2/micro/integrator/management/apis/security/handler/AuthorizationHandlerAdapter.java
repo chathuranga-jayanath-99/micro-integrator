@@ -22,6 +22,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.synapse.MessageContext;
+import org.apache.synapse.api.ApiUtils;
 import org.apache.synapse.core.axis2.Axis2MessageContext;
 import org.wso2.micro.core.util.CarbonException;
 import org.wso2.micro.integrator.management.apis.Constants;
@@ -59,7 +60,7 @@ public abstract class AuthorizationHandlerAdapter extends SecurityHandlerAdapter
 
         String userName = Utils.getStringPropertyFromMessageContext(messageContext, USERNAME_PROPERTY);
 
-        String resourcePath = messageContext.getTo().getAddress();
+        String resourcePath = ApiUtils.getFullRequestPath(messageContext);
         if (LOG.isDebugEnabled()) {
             LOG.debug("Authorizing user: " + userName + " for resource: " + resourcePath);
         }

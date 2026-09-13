@@ -18,13 +18,20 @@
 
 package org.wso2.micro.integrator.management.apis.security.handler;
 
-import org.apache.axis2.addressing.EndpointReference;
 import org.apache.synapse.MessageContext;
+import org.apache.synapse.rest.RESTConstants;
 import org.junit.Assert;
 import org.junit.Test;
+import org.wso2.micro.integrator.management.apis.Constants;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * InternalAPIDispatcher resolves the request path and caches it under RESTConstants.REST_FULL_REQUEST_PATH
+ * before invoking any handler, and needsHandling() reads that same value back via
+ * ApiUtils.getFullRequestPath(). These tests therefore set the property directly instead of re-deriving it
+ * from the request target.
+ */
 public class SecurityHandlerAdapterTest {
 
     /**
@@ -36,11 +43,8 @@ public class SecurityHandlerAdapterTest {
     @Test
     public void testHandledWithNoResource() {
 
-        //set message context
         MessageContext messageContext = new TestMessageContext();
-        EndpointReference endpointReference = new EndpointReference();
-        endpointReference.setAddress("/sectest/resource1");
-        messageContext.setTo(endpointReference);
+        messageContext.setProperty(RESTConstants.REST_FULL_REQUEST_PATH, "/sectest/resource1");
 
         TestSecurityHandler internalAPIHandler = new TestSecurityHandler("/sectest");
 
@@ -65,10 +69,7 @@ public class SecurityHandlerAdapterTest {
     @Test
     public void testHandledWithCustomResources() {
 
-        //Create test message context
         MessageContext messageContext = new TestMessageContext();
-        EndpointReference endpointReference = new EndpointReference();
-        messageContext.setTo(endpointReference);
 
         TestSecurityHandler internalAPIHandler = new TestSecurityHandler("/sectest");
         List<String> resources = new ArrayList<>();
@@ -77,25 +78,25 @@ public class SecurityHandlerAdapterTest {
         internalAPIHandler.setResources(resources);
 
         //set message context with matching resource
-        endpointReference.setAddress("/sectest/resource1");
+        messageContext.setProperty(RESTConstants.REST_FULL_REQUEST_PATH, "/sectest/resource1");
         internalAPIHandler.invoke(messageContext);
         Assert.assertTrue("Handler should be engaged since resource 1 was defined, but it was not engaged.",
                           internalAPIHandler.isHandleTriggered());
 
         //set message context with matching resource
-        endpointReference.setAddress("/sectest/resource2");
+        messageContext.setProperty(RESTConstants.REST_FULL_REQUEST_PATH, "/sectest/resource2");
         internalAPIHandler.invoke(messageContext);
         Assert.assertTrue("Handler should be engaged since resource 2 was defined, but it was not engaged.",
                           internalAPIHandler.isHandleTriggered());
 
         //set message context with matching resource but containing a sub resource
-        endpointReference.setAddress("/sectest/resource2/resource22");
+        messageContext.setProperty(RESTConstants.REST_FULL_REQUEST_PATH, "/sectest/resource2/resource22");
         internalAPIHandler.invoke(messageContext);
         Assert.assertTrue("Handler should be engaged since resource 2 was defined, but it was not engaged.",
                           internalAPIHandler.isHandleTriggered());
 
         //set message context with a resource that is not matching
-        endpointReference.setAddress("/sectest/resource3");
+        messageContext.setProperty(RESTConstants.REST_FULL_REQUEST_PATH, "/sectest/resource3");
         internalAPIHandler.invoke(messageContext);
         Assert.assertFalse("Handler should not be engaged since resource 3 was not defined, but it was engaged.",
                            internalAPIHandler.isHandleTriggered());
@@ -115,10 +116,7 @@ public class SecurityHandlerAdapterTest {
     @Test
     public void testHandledWithAllResources() {
 
-        //Create test message context
         MessageContext messageContext = new TestMessageContext();
-        EndpointReference endpointReference = new EndpointReference();
-        messageContext.setTo(endpointReference);
 
         TestSecurityHandler internalAPIHandler = new TestSecurityHandler("/sectest");
         List<String> resources = new ArrayList<>();
@@ -126,9 +124,26 @@ public class SecurityHandlerAdapterTest {
         internalAPIHandler.setResources(resources);
 
         //set message context with matching resource
-        endpointReference.setAddress("/sectest/resource1");
+        messageContext.setProperty(RESTConstants.REST_FULL_REQUEST_PATH, "/sectest/resource1");
         internalAPIHandler.invoke(messageContext);
         Assert.assertTrue("Handler should be engaged since all resources are defined, but it was not engaged.",
                           internalAPIHandler.isHandleTriggered());
+    }
+
+    /**
+     * The bare management API root context ("/management") is not handled by the security handler.
+     */
+    @Test
+    public void testRootContextExemption() {
+
+        MessageContext messageContext = new TestMessageContext();
+
+        TestSecurityHandler internalAPIHandler = new TestSecurityHandler(Constants.REST_API_CONTEXT);
+        internalAPIHandler.setResources(new ArrayList<>());
+
+        messageContext.setProperty(RESTConstants.REST_FULL_REQUEST_PATH, Constants.REST_API_CONTEXT);
+        internalAPIHandler.invoke(messageContext);
+        Assert.assertFalse("The bare management API root context should not be handled by the security handler, but it was.",
+                            internalAPIHandler.isHandleTriggered());
     }
 }

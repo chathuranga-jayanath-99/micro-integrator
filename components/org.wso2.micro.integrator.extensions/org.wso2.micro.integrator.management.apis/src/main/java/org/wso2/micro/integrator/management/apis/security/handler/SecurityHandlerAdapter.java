@@ -21,6 +21,7 @@ package org.wso2.micro.integrator.management.apis.security.handler;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.synapse.MessageContext;
+import org.apache.synapse.api.ApiUtils;
 import org.apache.synapse.rest.RESTConstants;
 import org.wso2.carbon.inbound.endpoint.internal.http.api.InternalAPIHandler;
 import org.wso2.config.mapper.ConfigParser;
@@ -85,7 +86,7 @@ public abstract class SecurityHandlerAdapter implements InternalAPIHandler {
 
     protected boolean needsHandling(MessageContext messageContext) {
 
-        String resourcePath = messageContext.getTo().getAddress();
+        String resourcePath = ApiUtils.getFullRequestPath(messageContext);
         if (Constants.REST_API_CONTEXT.equals(resourcePath)) {
             LOG.debug("Authentication is skipped for management api root context.");
             return false;
