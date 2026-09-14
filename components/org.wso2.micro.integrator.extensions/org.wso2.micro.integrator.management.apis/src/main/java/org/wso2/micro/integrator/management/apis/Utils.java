@@ -137,12 +137,15 @@ public class Utils {
 
     /**
      * Returns the request's target, canonicalized to an origin-form path (no scheme/authority), for use in
-     * "/management"-prefix matching. HTTP/1.1 permits an absolute-form request target
-     * (e.g. "https://host:port/management/configs"); {@code MessageContext.getTo().getAddress()} then returns
-     * that full URI instead of just the path, which would never match a "/management" prefix check.
+     * resource-path prefix matching (e.g. against "/management" or "/management/users"). HTTP/1.1 permits an
+     * absolute-form request target (e.g. "https://host:port/management/configs");
+     * {@code MessageContext.getTo().getAddress()} then returns that full URI instead of just the path, which
+     * would never match a path-prefix check.
      *
      * @param messageContext the message context for the incoming request
-     * @return the origin-form path (including any query string), or {@code null} if it cannot be determined
+     * @return the origin-form path, or {@code null} if it cannot be determined. Any query string is preserved
+     *         only when the original target was already origin-form; it is stripped when derived from an
+     *         absolute-form target, since only the path is needed for prefix matching.
      */
     public static String getNormalizedResourcePath(MessageContext messageContext) {
         String rawTarget = messageContext.getTo() != null ? messageContext.getTo().getAddress() : null;

@@ -22,6 +22,7 @@ import org.apache.axis2.addressing.EndpointReference;
 import org.apache.synapse.MessageContext;
 import org.junit.Assert;
 import org.junit.Test;
+import org.wso2.micro.integrator.management.apis.Constants;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -130,5 +131,60 @@ public class SecurityHandlerAdapterTest {
         internalAPIHandler.invoke(messageContext);
         Assert.assertTrue("Handler should be engaged since all resources are defined, but it was not engaged.",
                           internalAPIHandler.isHandleTriggered());
+    }
+
+    /**
+     * An HTTP/1.1 absolute-form request target (e.g. "https://host:port/management/configs") must be recognized
+     * as matching the handler's context the same way the equivalent origin-form path would -- not fail a raw
+     * prefix check and skip authentication merely because the target starts with "https://" instead of "/".
+     * This is the exact request shape used to bypass authentication on the management API (MI-460).
+     */
+    @Test
+    public void testHandledWithAbsoluteFormTarget() {
+
+        //Create test message context
+        MessageContext messageContext = new TestMessageContext();
+        EndpointReference endpointReference = new EndpointReference();
+        messageContext.setTo(endpointReference);
+
+        TestSecurityHandler internalAPIHandler = new TestSecurityHandler(Constants.REST_API_CONTEXT);
+        internalAPIHandler.setResources(new ArrayList<>());
+
+        //absolute-form target resolving to a path under the management API context
+        endpointReference.setAddress("https://localhost:9164/management/configs");
+        internalAPIHandler.invoke(messageContext);
+        Assert.assertTrue("Handler should be engaged for an absolute-form request target that resolves to a "
+                           + "matching path, but it was not engaged.", internalAPIHandler.isHandleTriggered());
+
+        //absolute-form target resolving to a path outside the management API context
+        endpointReference.setAddress("https://localhost:9164/othercontext/resource1");
+        internalAPIHandler.invoke(messageContext);
+        Assert.assertFalse("Handler should not be engaged for an absolute-form request target that resolves to "
+                            + "a non-matching path, but it was engaged.", internalAPIHandler.isHandleTriggered());
+    }
+
+    /**
+     * needsHandling() is only ever reached for a request target that the internal dispatcher (via
+     * {@code ApiUtils.getFullRequestPath()}, which uses the lenient {@code java.net.URL}) has already resolved
+     * to a path under "/management" -- e.g. "https://localhost:9164/management/%zz" resolves to
+     * "/management/%zz" there and gets routed to this handler. But {@code Utils.getNormalizedResourcePath()}
+     * parses the same target with the strict {@code java.net.URI}, which rejects the malformed "%zz"
+     * percent-escape. This divergence must fail closed, i.e. still be treated as needing authentication,
+     * rather than being silently skipped because its path could not be determined here.
+     */
+    @Test
+    public void testFailsClosedForUnparseableTarget() {
+
+        MessageContext messageContext = new TestMessageContext();
+        EndpointReference endpointReference = new EndpointReference();
+        messageContext.setTo(endpointReference);
+
+        TestSecurityHandler internalAPIHandler = new TestSecurityHandler(Constants.REST_API_CONTEXT);
+        internalAPIHandler.setResources(new ArrayList<>());
+
+        endpointReference.setAddress("https://localhost:9164/management/%zz");
+        internalAPIHandler.invoke(messageContext);
+        Assert.assertTrue("A request target that cannot be parsed as a URI must fail closed (be treated as "
+                           + "needing authentication), but it was not.", internalAPIHandler.isHandleTriggered());
     }
 }
