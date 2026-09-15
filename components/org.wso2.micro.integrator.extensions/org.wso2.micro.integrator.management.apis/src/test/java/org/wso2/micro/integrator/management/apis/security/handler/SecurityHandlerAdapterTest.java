@@ -187,4 +187,32 @@ public class SecurityHandlerAdapterTest {
         Assert.assertTrue("A request target that cannot be parsed as a URI must fail closed (be treated as "
                            + "needing authentication), but it was not.", internalAPIHandler.isHandleTriggered());
     }
+
+    /**
+     * The bare management API root ("/management") is exempt from authentication. This must hold regardless
+     * of whether the request arrives in origin-form or absolute-form.
+     */
+    @Test
+    public void testRootContextExemptionAppliesRegardlessOfTargetForm() {
+
+        MessageContext messageContext = new TestMessageContext();
+        EndpointReference endpointReference = new EndpointReference();
+        messageContext.setTo(endpointReference);
+
+        TestSecurityHandler internalAPIHandler = new TestSecurityHandler(Constants.REST_API_CONTEXT);
+        internalAPIHandler.setResources(new ArrayList<>());
+
+        //origin-form root request -- exempt from authentication
+        endpointReference.setAddress(Constants.REST_API_CONTEXT);
+        internalAPIHandler.invoke(messageContext);
+        Assert.assertFalse("The bare management API root should be exempt from authentication, but it was not.",
+                            internalAPIHandler.isHandleTriggered());
+
+        //absolute-form root request must resolve the same way as the origin-form case above
+        endpointReference.setAddress("https://localhost:9164" + Constants.REST_API_CONTEXT);
+        internalAPIHandler.invoke(messageContext);
+        Assert.assertFalse("An absolute-form root request should be exempt from authentication the same way "
+                            + "the equivalent origin-form request is, but authentication was required.",
+                            internalAPIHandler.isHandleTriggered());
+    }
 }

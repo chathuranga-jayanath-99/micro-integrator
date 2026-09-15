@@ -137,15 +137,16 @@ public class Utils {
 
     /**
      * Returns the request's target, canonicalized to an origin-form path (no scheme/authority), for use in
-     * resource-path prefix matching (e.g. against "/management" or "/management/users"). HTTP/1.1 permits an
-     * absolute-form request target (e.g. "https://host:port/management/configs");
+     * resource-path prefix/equality matching (e.g. against "/management" or "/management/users"). HTTP/1.1
+     * permits an absolute-form request target (e.g. "https://host:port/management/configs");
      * {@code MessageContext.getTo().getAddress()} then returns that full URI instead of just the path, which
-     * would never match a path-prefix check.
+     * would never match a path-prefix check. An origin-form target is returned unchanged, query string
+     * included, exactly as before; an absolute-form target has its scheme and authority stripped but its
+     * query string re-attached, so both forms of the same logical request normalize to the identical string
+     * rather than an absolute-form request being treated more leniently than its origin-form equivalent.
      *
      * @param messageContext the message context for the incoming request
-     * @return the origin-form path, or {@code null} if it cannot be determined. Any query string is preserved
-     *         only when the original target was already origin-form; it is stripped when derived from an
-     *         absolute-form target, since only the path is needed for prefix matching.
+     * @return the origin-form path (with any query string), or {@code null} if it cannot be determined
      */
     public static String getNormalizedResourcePath(MessageContext messageContext) {
         String rawTarget = messageContext.getTo() != null ? messageContext.getTo().getAddress() : null;
@@ -153,8 +154,13 @@ public class Utils {
             return rawTarget;
         }
         try {
-            String path = new URI(rawTarget).getRawPath();
-            return StringUtils.isEmpty(path) ? null : path;
+            URI uri = new URI(rawTarget);
+            String path = uri.getRawPath();
+            if (StringUtils.isEmpty(path)) {
+                return null;
+            }
+            String query = uri.getRawQuery();
+            return query == null ? path : path + "?" + query;
         } catch (URISyntaxException e) {
             LOG.warn("Failed to parse request target as a URI: " + rawTarget, e);
             return null;
