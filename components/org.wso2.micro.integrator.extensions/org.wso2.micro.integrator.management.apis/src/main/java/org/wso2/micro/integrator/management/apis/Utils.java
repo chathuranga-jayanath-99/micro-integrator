@@ -140,18 +140,17 @@ public class Utils {
      * resource-path prefix/equality matching (e.g. against "/management" or "/management/users"). HTTP/1.1
      * permits an absolute-form request target (e.g. "https://host:port/management/configs");
      * {@code MessageContext.getTo().getAddress()} then returns that full URI instead of just the path, which
-     * would never match a path-prefix check. An origin-form target is returned unchanged, query string
-     * included, exactly as before; an absolute-form target has its scheme and authority stripped but its
-     * query string re-attached, so both forms of the same logical request normalize to the identical string
-     * rather than an absolute-form request being treated more leniently than its origin-form equivalent.
+     * would never match a path-prefix check. Both origin-form and absolute-form targets are parsed the same
+     * way, so they normalize to the identical string for the same logical request (scheme/authority stripped,
+     * path and query string preserved) rather than one form being treated more leniently than the other.
      *
      * @param messageContext the message context for the incoming request
      * @return the origin-form path (with any query string), or {@code null} if it cannot be determined
      */
     public static String getNormalizedResourcePath(MessageContext messageContext) {
         String rawTarget = messageContext.getTo() != null ? messageContext.getTo().getAddress() : null;
-        if (rawTarget == null || rawTarget.startsWith("/")) {
-            return rawTarget;
+        if (StringUtils.isEmpty(rawTarget)) {
+            return null;
         }
         try {
             URI uri = new URI(rawTarget);
@@ -162,7 +161,7 @@ public class Utils {
             String query = uri.getRawQuery();
             return query == null ? path : path + "?" + query;
         } catch (URISyntaxException e) {
-            LOG.warn("Failed to parse request target as a URI: " + rawTarget, e);
+            LOG.warn("Failed to parse request target as a URI: " + rawTarget);
             return null;
         }
     }

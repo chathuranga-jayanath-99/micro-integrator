@@ -189,6 +189,28 @@ public class SecurityHandlerAdapterTest {
     }
 
     /**
+     * getNormalizedResourcePath() parses origin-form targets the same way as absolute-form ones (both go
+     * through java.net.URI). A malformed origin-form target (e.g. a bad percent-escape) must therefore also
+     * fail closed, exactly like the equivalent absolute-form case above.
+     */
+    @Test
+    public void testFailsClosedForUnparseableOriginFormTarget() {
+
+        MessageContext messageContext = new TestMessageContext();
+        EndpointReference endpointReference = new EndpointReference();
+        messageContext.setTo(endpointReference);
+
+        TestSecurityHandler internalAPIHandler = new TestSecurityHandler(Constants.REST_API_CONTEXT);
+        internalAPIHandler.setResources(new ArrayList<>());
+
+        endpointReference.setAddress("/management/%zz");
+        internalAPIHandler.invoke(messageContext);
+        Assert.assertTrue("A malformed origin-form request target that cannot be parsed as a URI must fail "
+                           + "closed (be treated as needing authentication), but it was not.",
+                           internalAPIHandler.isHandleTriggered());
+    }
+
+    /**
      * The bare management API root ("/management") is exempt from authentication. This must hold regardless
      * of whether the request arrives in origin-form or absolute-form.
      */
