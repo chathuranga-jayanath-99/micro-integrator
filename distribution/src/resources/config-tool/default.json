@@ -11,6 +11,7 @@
   "server.cache_attachments": false,
   "server.attachment_dir": "work/mtom",
   "server.size_threshold": "4000",
+  "server.drop_attachment_headers": false,
   "server.disable_rest": false,
   "server.sandesha2_storage_manager": "inmemory",
   "server.service_path": "services",

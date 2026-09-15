@@ -38,6 +38,13 @@
     <parameter name="attachmentDIR" locked="false">{{server.attachment_dir}}</parameter>
     <!-- Attachment file cache threshold size -->
     <parameter name="sizeThreshold" locked="false">{{server.size_threshold}}</parameter>
+    
+    <!-- Drop all attachment MIME headers when serializing SwA responses.                       -->
+    <!-- Restores pre-EI-5440 / ESB 4.9.0 behavior. Use this only when non-ASCII or otherwise   -->
+    <!-- malformed attachment headers in inbound messages cause downstream serialization to    -->
+    <!-- fail. When false (default), invalid (non-ASCII) headers are dropped individually with -->
+    <!-- a WARN log and valid headers are still forwarded.                                     -->
+    <parameter name="drop_attachment_headers" locked="false">{{server.drop_attachment_headers}}</parameter>
 
     <!-- Completely disable REST handling in Axis2/Synapse if the value is true -->
     <parameter name="disableREST" locked="false">{{server.disable_rest}}</parameter>
