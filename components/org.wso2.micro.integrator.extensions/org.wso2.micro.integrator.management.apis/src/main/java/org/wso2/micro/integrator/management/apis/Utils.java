@@ -137,17 +137,25 @@ public class Utils {
 
     /**
      * Returns the request's target, canonicalized to an origin-form path (no scheme/authority), for use in
-     * resource-path prefix/equality matching (e.g. against "/management" or "/management/users"). HTTP/1.1
-     * permits an absolute-form request target (e.g. "https://host:port/management/configs");
-     * {@code MessageContext.getTo().getAddress()} then returns that full URI instead of just the path, which
-     * would never match a path-prefix check. Both origin-form and absolute-form targets are parsed the same
-     * way, so they normalize to the identical string for the same logical request (scheme/authority stripped,
-     * path and query string preserved) rather than one form being treated more leniently than the other.
+     * resource-path prefix/equality matching (e.g. against "/management" or "/management/users"). Prefers the
+     * {@code RESTConstants.REST_FULL_REQUEST_PATH} property that {@code InternalAPIDispatcher.dispatch()}
+     * already computes and caches before invoking any {@code InternalAPIHandler}, so this matches dispatch's own
+     * resource-path exactly rather than re-deriving one from {@code MessageContext.getTo().getAddress()}. Falls
+     * back to parsing raw target when the property isn't cached.
      *
      * @param messageContext the message context for the incoming request
      * @return the origin-form path (with any query string), or {@code null} if it cannot be determined
      */
     public static String getNormalizedResourcePath(MessageContext messageContext) {
+        Object cachedPath = messageContext.getProperty(RESTConstants.REST_FULL_REQUEST_PATH);
+        if (cachedPath instanceof String && StringUtils.isNotEmpty((String) cachedPath)) {
+            return (String) cachedPath;
+        }
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Message context has no cached REST_FULL_REQUEST_PATH (request likely did not go through "
+                    + "InternalAPIDispatcher); deriving the resource path directly from the request target "
+                    + "instead.");
+        }
         String rawTarget = messageContext.getTo() != null ? messageContext.getTo().getAddress() : null;
         if (StringUtils.isEmpty(rawTarget)) {
             return null;
