@@ -17,6 +17,10 @@ password = "wso2carbon"
 alias = "symmetric.key.value"
 algorithm = "AES"
 
+# Allow anonymous management API access for the integration test helpers.
+[management_api]
+allow_anonymous_users = true
+
 [management_api.jwt_token_security_handler]
 enable = false
 

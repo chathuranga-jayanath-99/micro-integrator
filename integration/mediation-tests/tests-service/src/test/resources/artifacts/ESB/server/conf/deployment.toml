@@ -13,5 +13,9 @@ type = "database"
 [mediation]
 synapse.preserve_namespace_on_xml_to_json=true
 
+# Allow anonymous management API access for the integration test helpers.
+[management_api]
+allow_anonymous_users = true
+
 [management_api.jwt_token_security_handler]
 enable = false
