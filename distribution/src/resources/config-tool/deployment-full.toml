@@ -1043,6 +1043,7 @@ path = "/resource1"
 
 [management_api]
 protocols = "http"
+allow_anonymous_users = false
 
 [management_api.cors]
 enabled = true

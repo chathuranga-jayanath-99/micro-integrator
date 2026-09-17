@@ -193,10 +193,39 @@ public class SecurityUtils {
     }
 
     /**
+     * Reads the {@code management_api.allow_anonymous_users} configuration flag.
+     *
+     * A value that is not a valid boolean is treated as {@code false}.
+     *
+     * @return {@code true} if the flag is enabled in the config, {@code false} otherwise.
+     */
+    private static boolean isAnonymousUsersAllowed() {
+        Object allowAnonymousUsers = ConfigParser.getParsedConfigs().get(Constants.ALLOW_ANONYMOUS_USERS);
+        return allowAnonymousUsers != null && Boolean.parseBoolean(allowAnonymousUsers.toString());
+    }
+
+    /**
+     * Returns the edit permission for a request with no associated user, based on the
+     * {@code management_api.allow_anonymous_users} configuration flag.
+     *
+     * @return {@code true} if permitted by configuration, {@code false} otherwise
+     */
+    private static boolean canAnonymousUserEdit() {
+        if (isAnonymousUsersAllowed()) {
+            return true;
+        }
+        LOG.warn("Edit access is not permitted for this request. To permit it, set 'allow_anonymous_users = true' "
+                + "under the [management_api] section of deployment.toml.");
+        return false;
+    }
+
+    /**
      * Determines if the specified user has permission to edit.
      *
-     * Admin users always have edit permissions. For non-admin users, the edit permission depends
-     * on the configuration: if make_non_admin_users_read_only == true, they cannot edit; otherwise, they can.
+     * When no user is set, edit permission follows the {@code management_api.allow_anonymous_users}
+     * configuration flag. Admin users always have edit permissions. For non-admin users, the edit permission
+     * depends on the configuration: if make_non_admin_users_read_only == true, they cannot edit; otherwise,
+     * they can.
      *
      * @param userName the name of the user to check for edit permissions
      * @return {@code true} if the user has edit permissions, {@code false} otherwise
@@ -204,8 +233,8 @@ public class SecurityUtils {
      */
     public static boolean canUserEdit(String userName) throws UserStoreException {
         if (userName == null) {
-            // No user set.
-            return false;
+            // No user set: follow the allow_anonymous_users configuration flag.
+            return canAnonymousUserEdit();
         }
         // Return true if non-admin users can edit, or if user is admin (short-circuits to avoid unnecessary lookup)
         return !isNonAdminUsersReadOnly() || isAdmin(userName);
