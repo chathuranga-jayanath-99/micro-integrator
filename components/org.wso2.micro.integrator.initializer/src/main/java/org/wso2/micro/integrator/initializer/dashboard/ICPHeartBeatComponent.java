@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
@@ -172,16 +173,71 @@ public class ICPHeartBeatComponent {
             t.setDaemon(true);
             return t;
         });
-        Runnable runnableTask = () -> {
-            try {
-                sendDeltaHeartbeat(icpUrl, managementEndpoint);
-            } catch (Exception e) {
-                log.error("Error occurred while sending delta heartbeat to ICP.", e);
-            }
-        };
 
-        // Initial delay of 5 seconds, then send at configured interval
-        heartbeatExecutor.scheduleAtFixedRate(runnableTask, 5, interval, TimeUnit.SECONDS);
+        // Self-rescheduling rather than scheduleAtFixedRate: the ICP asks for a faster
+        // cadence while a user is working with a management view, and a fixed-rate task
+        // cannot honour that. See heartbeatRound.
+        scheduleHeartbeat(icpUrl, managementEndpoint, 5);
+    }
+
+    private static synchronized void scheduleHeartbeat(String icpUrl,
+                                                       ManagementEndpoint managementEndpoint,
+                                                       long delaySeconds) {
+        ScheduledExecutorService executor = heartbeatExecutor;
+        if (executor == null || executor.isShutdown() || executor.isTerminated()) {
+            return;
+        }
+        executor.schedule(() -> {
+            long next = getInterval();
+            try {
+                next = heartbeatRound(icpUrl, managementEndpoint);
+            } catch (Throwable t) {
+                // Throwable, and rescheduled in `finally`: a self-rescheduling loop that skips
+                // its own reschedule is a runtime that never reports again, and the operator
+                // sees a healthy MI that the console calls offline.
+                log.error("Error occurred while sending heartbeat to ICP.", t);
+            } finally {
+                scheduleHeartbeat(icpUrl, managementEndpoint, next);
+            }
+        }, delaySeconds, TimeUnit.SECONDS);
+    }
+
+    /**
+     * One heartbeat, its tunneled commands handed to the command executor, and how long to
+     * wait before the next.
+     *
+     * @return seconds until the next heartbeat: the cadence the ICP asked for while someone is
+     *         working with this runtime, otherwise its own interval
+     */
+    private static long heartbeatRound(String icpUrl, ManagementEndpoint managementEndpoint) {
+        long interval = getInterval();
+        JsonObject response = sendDeltaHeartbeat(icpUrl, managementEndpoint);
+        if (response == null) {
+            return interval;
+        }
+        String token;
+        String runtimeId;
+        try {
+            token = generateOrGetCachedJwtToken();
+            runtimeId = getRuntimeId();
+        } catch (Exception e) {
+            log.error("Cannot execute ICP commands without a token and runtime id.", e);
+            return interval;
+        }
+        JsonElement commands = response.get("commands");
+        if (commands != null && commands.isJsonArray()) {
+            // Handed over, not run here: execution happens on its own thread so a slow
+            // management resource cannot stop this runtime from heartbeating.
+            ICPCommandExecutor.execute(commands.getAsJsonArray(), icpUrl, runtimeId, token);
+        }
+        JsonElement hint = response.get("nextHeartbeatInSeconds");
+        if (hint != null && hint.isJsonPrimitive()) {
+            long boosted = hint.getAsLong();
+            if (boosted > 0 && boosted < interval) {
+                return boosted;
+            }
+        }
+        return interval;
     }
 
     /**
@@ -223,8 +279,11 @@ public class ICPHeartBeatComponent {
      * Sends a delta heartbeat to ICP with only runtime hash.
      * If ICP detects a hash mismatch, it will respond with
      * fullHeartbeatRequired=true.
+     *
+     * @return the acknowledged response whose commands are to be executed — the full
+     *         heartbeat's when one was demanded — or null when the round produced none
      */
-    private static void sendDeltaHeartbeat(String icpUrl, ManagementEndpoint managementEndpoint) {
+    private static JsonObject sendDeltaHeartbeat(String icpUrl, ManagementEndpoint managementEndpoint) {
         try {
             // Build full payload to calculate hash
             JsonObject fullPayload = buildFullHeartbeatPayload(false, managementEndpoint);
@@ -245,22 +304,26 @@ public class ICPHeartBeatComponent {
             if (response != null && response.has("fullHeartbeatRequired")
                     && response.get("fullHeartbeatRequired").getAsBoolean()) {
                 log.info("ICP requested full heartbeat. Sending full heartbeat with all artifacts.");
-                sendFullHeartbeat(icpUrl, managementEndpoint);
+                return sendFullHeartbeat(icpUrl, managementEndpoint);
             } else if (response != null && response.has("acknowledged")
                     && response.get("acknowledged").getAsBoolean()) {
                 if (log.isDebugEnabled()) {
                     log.debug("Delta heartbeat acknowledged by ICP.");
                 }
+                return response;
             }
         } catch (Exception e) {
             log.error("Error sending delta heartbeat to ICP.", e);
         }
+        return null;
     }
 
     /**
      * Sends a full heartbeat to ICP with all artifact metadata.
+     *
+     * @return the acknowledged response, or null
      */
-    private static void sendFullHeartbeat(String icpUrl, ManagementEndpoint managementEndpoint) {
+    private static JsonObject sendFullHeartbeat(String icpUrl, ManagementEndpoint managementEndpoint) {
         try {
             JsonObject fullPayload = buildFullHeartbeatPayload(true, managementEndpoint);
             String fullEndpoint = icpUrl + ICP_HEARTBEAT_ENDPOINT;
@@ -269,18 +332,20 @@ public class ICPHeartBeatComponent {
 
             if (response == null) {
                 if (heartbeatExecutor == null || heartbeatExecutor.isShutdown()) {
-                    return;
+                    return null;
                 }
                 log.error("Unexpected null response from ICP full heartbeat.");
             } else if (response.has("acknowledged")
                     && response.get("acknowledged").getAsBoolean()) {
                 log.info("Full heartbeat acknowledged by ICP.");
+                return response;
             } else {
                 log.error("Unexpected response from ICP full heartbeat." + response.toString());
             }
         } catch (Exception e) {
             log.error("Error sending full heartbeat to ICP.", e);
         }
+        return null;
     }
 
     /**
@@ -748,7 +813,14 @@ public class ICPHeartBeatComponent {
      * server certificate validation and hostname verification are skipped.
      * This should only be used in development or testing environments.
      */
-    private static CloseableHttpClient createHttpClient() throws Exception {
+    static CloseableHttpClient createHttpClient() throws Exception {
+        // Bounded on purpose: an ICP that accepts a connection and never answers would
+        // otherwise block this runtime's only heartbeat thread indefinitely.
+        RequestConfig timeouts = RequestConfig.custom()
+                .setConnectTimeout(5_000)
+                .setConnectionRequestTimeout(5_000)
+                .setSocketTimeout(30_000)
+                .build();
         boolean sslVerify = !"false".equalsIgnoreCase(getConfigValue(ICP_CONFIG_SSL_VERIFY, "true"));
         if (!sslVerify) {
             if (!sslWarnLogged) {
@@ -759,11 +831,13 @@ public class ICPHeartBeatComponent {
                     .loadTrustMaterial(null, (chain, authType) -> true)
                     .build();
             return HttpClients.custom()
+                    .setDefaultRequestConfig(timeouts)
                     .setSSLContext(trustAllContext)
                     .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
                     .build();
         }
         return HttpClients.custom()
+                .setDefaultRequestConfig(timeouts)
                 .setSSLContext(SSLContexts.createDefault())
                 .build();
     }
