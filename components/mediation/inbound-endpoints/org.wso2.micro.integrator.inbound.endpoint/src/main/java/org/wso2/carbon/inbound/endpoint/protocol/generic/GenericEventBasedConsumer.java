@@ -49,6 +49,8 @@ public abstract class GenericEventBasedConsumer {
 
     private static final Log log = LogFactory.getLog(GenericEventBasedConsumer.class);
 
+    private volatile GenericOneTimeTask oneTimeTask;
+
     public GenericEventBasedConsumer(Properties properties, String name, SynapseEnvironment synapseEnvironment,
                                      String injectingSeq, String onErrorSeq, boolean coordination, boolean sequential) {
         this.properties = properties;
@@ -79,6 +81,20 @@ public abstract class GenericEventBasedConsumer {
      * This method needs to be implemented when pausing the inbound.
      */
     public abstract void pause();
+
+    void setOneTimeTask(GenericOneTimeTask oneTimeTask) {
+        this.oneTimeTask = oneTimeTask;
+    }
+
+    /**
+     * Asks the framework to call {@link #listen()} again on the next task cycle, retrying with a capped backoff
+     * until listen() returns normally. A consumer calls this after tearing itself down because of an
+     * unrecoverable failure. The request is served only on the node that currently runs this inbound endpoint's
+     * task and not while the endpoint is deactivated, so listen() must be safe to call when already listening.
+     */
+    protected void requestRelisten() {
+        oneTimeTask.requestRelisten();
+    }
 
     protected boolean injectMessage(String strMessage, String contentType) {
         InputStream in = new AutoCloseInputStream(new ByteArrayInputStream(strMessage.getBytes()));

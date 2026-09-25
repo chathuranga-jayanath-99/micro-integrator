@@ -30,8 +30,8 @@ public abstract class OneTimeTriggerInboundTask implements org.apache.synapse.ta
     private static final Log logger = LogFactory.getLog(InboundTask.class.getName());
     private boolean isOneTimeTriggered = false;
     private OneTimeTriggerAbstractCallback callback;
-    // boolean used to identify the re-trigger of the task.
-    private boolean reTrigger = false;
+    // boolean used to identify the re-trigger of the task. Volatile as it may be set from a non-scheduler thread.
+    private volatile boolean reTrigger = false;
 
     public void execute() {
         //this check is there to synchronize task cycle round hit and connection lost reconnection

@@ -26,16 +26,50 @@ import org.wso2.micro.integrator.ntask.core.impl.LocalTaskActionListener;
 public class GenericOneTimeTask extends OneTimeTriggerInboundTask implements LocalTaskActionListener {
 
     private static final Log logger = LogFactory.getLog(GenericOneTimeTask.class.getName());
+    private static final long MIN_RELISTEN_DELAY_MS = 1000;
+    private static final long MAX_RELISTEN_DELAY_MS = 60000;
     private GenericEventBasedConsumer eventBasedConsumer;
+    // Set when the consumer asks to be listened again; cleared while a re-listen attempt runs.
+    private volatile boolean relistenRequested = false;
+    // Backoff state, only touched on the task scheduler thread.
+    private long relistenDelay = MIN_RELISTEN_DELAY_MS;
+    private long nextRelistenTime = 0;
 
     public GenericOneTimeTask(GenericEventBasedConsumer waitingConsumer) {
         logger.debug("Generic One time Task initalize.");
         this.eventBasedConsumer = waitingConsumer;
+        waitingConsumer.setOneTimeTask(this);
     }
 
     protected void taskExecute() {
         logger.debug("One time task executing.");
-        eventBasedConsumer.listen();
+        if (!relistenRequested) {
+            eventBasedConsumer.listen();
+            return;
+        }
+        if (System.currentTimeMillis() < nextRelistenTime) {
+            setReTrigger();
+            return;
+        }
+        // Cleared before listen() so that a request raised during this attempt is not lost.
+        relistenRequested = false;
+        try {
+            eventBasedConsumer.listen();
+            relistenDelay = MIN_RELISTEN_DELAY_MS;
+            nextRelistenTime = 0;
+        } catch (Exception e) {
+            logger.error("Failed to restart the event based consumer. Retrying in " + relistenDelay + " ms.", e);
+            nextRelistenTime = System.currentTimeMillis() + relistenDelay;
+            relistenDelay = Math.min(relistenDelay * 2, MAX_RELISTEN_DELAY_MS);
+            relistenRequested = true;
+            setReTrigger();
+        }
+    }
+
+    void requestRelisten() {
+        logger.info("Event based consumer requested a restart. It will be listened again on the next task cycle.");
+        relistenRequested = true;
+        setReTrigger();
     }
 
     public void init(SynapseEnvironment synapseEnvironment) {
