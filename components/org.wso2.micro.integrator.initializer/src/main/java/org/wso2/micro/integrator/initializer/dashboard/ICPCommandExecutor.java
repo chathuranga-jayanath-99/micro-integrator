@@ -48,6 +48,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Instant;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -249,7 +250,7 @@ class ICPCommandExecutor {
                 Header contentType = response.getFirstHeader("Content-Type");
                 boolean isJson = contentType != null
                         && contentType.getValue() != null
-                        && contentType.getValue().toLowerCase().contains("json");
+                        && contentType.getValue().toLowerCase(Locale.ROOT).contains("json");
                 return result(runtimeId, commandId, "COMPLETED", status, asJson(text, isJson));
             }
         } catch (Exception e) {
@@ -327,13 +328,13 @@ class ICPCommandExecutor {
 
     /** The verb, if this class performs it at all. `null` is the only refusal it reports. */
     static String methodFor(String method) {
-        switch (method.toUpperCase()) {
+        switch (method.toUpperCase(Locale.ROOT)) {
             case "GET":
             case "POST":
             case "PUT":
             case "PATCH":
             case "DELETE":
-                return method.toUpperCase();
+                return method.toUpperCase(Locale.ROOT);
             default:
                 return null;
         }
