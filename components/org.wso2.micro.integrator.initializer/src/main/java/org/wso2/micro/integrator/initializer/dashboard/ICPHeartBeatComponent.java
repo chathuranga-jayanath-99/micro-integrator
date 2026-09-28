@@ -879,7 +879,11 @@ public class ICPHeartBeatComponent {
         Object configuredInterval = configs.get(ICP_CONFIG_HEARTBEAT_INTERVAL);
         if (configuredInterval != null) {
             try {
-                interval = Integer.parseInt(configuredInterval.toString());
+                long parsed = Integer.parseInt(configuredInterval.toString());
+                // A non-positive delay would reschedule the heartbeat in a tight loop.
+                if (parsed > 0) {
+                    interval = parsed;
+                }
             } catch (IllegalArgumentException e) {
                 log.warn("Invalid config for '" + ICP_CONFIG_HEARTBEAT_INTERVAL + "': "
                         + configuredInterval + ". Using default: " + DEFAULT_HEARTBEAT_INTERVAL);
