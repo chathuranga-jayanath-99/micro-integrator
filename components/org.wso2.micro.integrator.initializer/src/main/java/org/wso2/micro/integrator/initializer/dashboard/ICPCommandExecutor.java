@@ -44,6 +44,8 @@ import org.apache.http.ssl.SSLContexts;
 import org.apache.http.util.EntityUtils;
 import org.wso2.carbon.inbound.endpoint.internal.http.api.ConfigurationLoader;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -220,8 +222,8 @@ class ICPCommandExecutor {
     private static JsonObject invokeManagementApi(JsonObject params, String runtimeId,
                                                   String commandId, String jwtToken) {
         String method = optString(params, "method");
-        String path = optString(params, "path");
-        if (method == null || path == null || !path.startsWith(MANAGEMENT_PATH_PREFIX)) {
+        String path = confinedPath(optString(params, "path"));
+        if (method == null || path == null) {
             return failure(runtimeId, commandId, 403, "Refused a path outside /management/");
         }
         if (methodFor(method) == null) {
@@ -254,6 +256,42 @@ class ICPCommandExecutor {
             log.error("ICP management command " + commandId + " failed against " + url, e);
             return failure(runtimeId, commandId, 500, e.getMessage());
         }
+    }
+
+    /**
+     * The path to forward, or {@code null} when it does not stay inside {@code /management/}.
+     * <p>
+     * A plain prefix check is not enough: {@code /management/../internal} passes it, and the
+     * listener resolves the dot segments (percent-encoded or not) before routing. So the
+     * prefix is checked on the decoded, normalized path, and the normalized form is what
+     * gets forwarded.
+     */
+    static String confinedPath(String path) {
+        if (path == null) {
+            return null;
+        }
+        URI uri;
+        try {
+            uri = new URI(path).normalize();
+        } catch (URISyntaxException e) {
+            return null;
+        }
+        String decoded = uri.getPath();
+        if (uri.isAbsolute() || uri.getRawAuthority() != null || uri.getRawFragment() != null
+                || decoded == null || decoded.indexOf('\\') >= 0) {
+            return null;
+        }
+        try {
+            // Decoding can surface dot segments (%2e%2e) that the raw normalization above
+            // could not see.
+            String normalized = new URI(null, null, decoded, null).normalize().getPath();
+            if (!normalized.startsWith(MANAGEMENT_PATH_PREFIX)) {
+                return null;
+            }
+        } catch (URISyntaxException e) {
+            return null;
+        }
+        return uri.toString();
     }
 
     /** Posts one outcome. A lost result is not retried here — the ICP redelivers, and the

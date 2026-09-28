@@ -63,6 +63,34 @@ public class ICPCommandExecutorTest {
     }
 
     @Test
+    public void testRunOne_DotSegmentsOutOfManagement_AreRefused() {
+        // Each passes a plain startsWith("/management/") and resolves outside it.
+        String[] escapes = {
+                "/management/../internal/apis",
+                "/management/./../internal",
+                "/management/%2e%2e/internal",
+                "/management/%2E%2E%2Finternal",
+                "/management/..%5cinternal",
+                "https://evil.example/management/apis",
+                "//evil.example/management/apis",
+        };
+        for (String path : escapes) {
+            JsonObject result = ICPCommandExecutor.runOne(
+                    command("cmd-" + path, "GET", path), RUNTIME_ID, TOKEN);
+            assertEquals(path, 403, result.get("httpStatus").getAsInt());
+        }
+    }
+
+    @Test
+    public void testConfinedPath_KeepsPathsInsideManagementAndTheirQuery() {
+        assertEquals("/management/apis?apiName=a%20b",
+                ICPCommandExecutor.confinedPath("/management/apis?apiName=a%20b"));
+        assertEquals("/management/logging",
+                ICPCommandExecutor.confinedPath("/management/apis/../logging"));
+        assertNull(ICPCommandExecutor.confinedPath("/management"));
+    }
+
+    @Test
     public void testRunOne_UnsupportedMethod_IsRefusedWithoutTouchingTheListener() {
         JsonObject result = ICPCommandExecutor.runOne(
                 command("cmd-verb", "TRACE", "/management/logging"), RUNTIME_ID, TOKEN);
