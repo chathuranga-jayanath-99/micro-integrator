@@ -140,9 +140,9 @@ public class ICPCommandExecutorTest {
         long chars = result.toString().length();
         ICPCommandExecutor.ResultCache cache = new ICPCommandExecutor.ResultCache(256, chars * 2);
 
-        cache.put("a", result);
-        cache.put("b", resultOfLength(100));
-        cache.put("c", resultOfLength(100));
+        cache.put("a", result, true);
+        cache.put("b", resultOfLength(100), true);
+        cache.put("c", resultOfLength(100), true);
 
         assertNull("The oldest goes first", cache.get("a"));
         assertNotNull(cache.get("b"));
@@ -154,23 +154,54 @@ public class ICPCommandExecutorTest {
     public void testResultCache_EvictsOldestOnceTheCountIsPassed() {
         ICPCommandExecutor.ResultCache cache = new ICPCommandExecutor.ResultCache(2, Long.MAX_VALUE);
 
-        cache.put("a", resultOfLength(1));
-        cache.put("b", resultOfLength(1));
-        cache.put("c", resultOfLength(1));
+        cache.put("a", resultOfLength(1), true);
+        cache.put("b", resultOfLength(1), true);
+        cache.put("c", resultOfLength(1), true);
 
         assertEquals(2, cache.size());
         assertNull(cache.get("a"));
     }
 
     @Test
-    public void testResultCache_OversizedResultIsNotKeptAndEvictsNothing() {
+    public void testResultCache_OversizedReadIsNotKeptAndEvictsNothing() {
         ICPCommandExecutor.ResultCache cache = new ICPCommandExecutor.ResultCache(256, 500);
 
-        cache.put("small", resultOfLength(10));
-        cache.put("huge", resultOfLength(10_000));
+        cache.put("small", resultOfLength(10), true);
+        cache.put("huge", resultOfLength(10_000), true);
 
-        assertNull("A result over the whole budget is not held for replay", cache.get("huge"));
+        assertNull("A read over the whole budget is simply performed again", cache.get("huge"));
         assertNotNull("and does not push out what is already held", cache.get("small"));
+    }
+
+    @Test
+    public void testResultCache_OversizedMutationKeepsItsOutcomeWithoutTheBody() {
+        ICPCommandExecutor.ResultCache cache = new ICPCommandExecutor.ResultCache(256, 500);
+
+        cache.put("delete", resultOfLength(10_000), false);
+
+        JsonObject replay = cache.get("delete");
+        assertNotNull("A redelivered mutation must still replay rather than run again", replay);
+        assertEquals("COMPLETED", replay.get("status").getAsString());
+        assertEquals(200, replay.get("httpStatus").getAsInt());
+        assertTrue(cache.totalChars() <= 500);
+    }
+
+    @Test
+    public void testResultCache_SizePressureSlimsMutationsAndDropsReads() {
+        JsonObject sample = resultOfLength(1_000);
+        long chars = sample.toString().length();
+        ICPCommandExecutor.ResultCache cache = new ICPCommandExecutor.ResultCache(256, chars * 2);
+
+        cache.put("mutation", sample, false);
+        cache.put("read", resultOfLength(1_000), true);
+        cache.put("newest", resultOfLength(1_000), true);
+
+        JsonObject mutation = cache.get("mutation");
+        assertNotNull("The oldest mutation keeps its record", mutation);
+        assertTrue("but gives up its body", mutation.toString().length() < chars);
+        assertNull("A read goes entirely once slimming the mutation is not enough", cache.get("read"));
+        assertNotNull(cache.get("newest"));
+        assertTrue(cache.totalChars() <= chars * 2);
     }
 
     @Test
@@ -240,6 +271,8 @@ public class ICPCommandExecutorTest {
 
     private static JsonObject resultOfLength(int bodyChars) {
         JsonObject result = new JsonObject();
+        result.addProperty("status", "COMPLETED");
+        result.addProperty("httpStatus", 200);
         result.addProperty("body", new String(new char[bodyChars]).replace('\0', 'x'));
         return result;
     }

@@ -107,7 +107,8 @@ class ICPCommandExecutor {
     /**
      * Outcomes of recently executed commands, so a redelivered commandId — one whose result
      * was lost in flight — replays its stored result instead of performing the operation a
-     * second time. Bounded by count and by size; the oldest goes first.
+     * second time. Bounded by count and by size; see {@link ResultCache} for what each bound
+     * gives up.
      * <p>
      * The size bound is what matters: a result carries the whole response body, and a few
      * hundred downloaded log files held for replay would otherwise sit on the heap. It is
@@ -207,7 +208,8 @@ class ICPCommandExecutor {
         JsonObject result = params == null
                 ? failure(runtimeId, commandId, 400, "Command carried no params")
                 : invokeManagementApi(params, runtimeId, commandId, jwtToken);
-        executedResults.put(commandId, result);
+        boolean rerunnable = params != null && "GET".equalsIgnoreCase(optString(params, "method"));
+        executedResults.put(commandId, result, rerunnable);
         return result;
     }
 
@@ -432,12 +434,14 @@ class ICPCommandExecutor {
     }
 
     /**
-     * Insertion-ordered results, evicted oldest first once there are more than
-     * {@code maxEntries} of them or their serialized length passes {@code maxChars}.
+     * Insertion-ordered results, bounded by {@code maxEntries} and by {@code maxChars} of
+     * serialized length.
      * <p>
-     * A single result longer than {@code maxChars} is not kept at all. Those are large reads,
-     * a log file download for instance, and performing a read again on a redelivery is
-     * harmless; holding it would evict everything else.
+     * Only the count bound forgets a command id. The size bound sheds response bodies, oldest
+     * first: a rerunnable result (a read) goes entirely, since performing it again on a
+     * redelivery is harmless and answers with the full body; any other keeps its outcome
+     * without the body, so a redelivered mutation replays that outcome instead of running a
+     * second time.
      */
     static final class ResultCache {
 
@@ -456,25 +460,44 @@ class ICPCommandExecutor {
             return stored == null ? null : stored.result;
         }
 
-        synchronized void put(String commandId, JsonObject result) {
-            long chars = result.toString().length();
+        synchronized void put(String commandId, JsonObject result, boolean rerunnable) {
             Stored previous = results.remove(commandId);
             if (previous != null) {
                 totalChars -= previous.chars;
             }
-            if (chars > maxChars) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Not keeping the " + chars + "-character result of ICP command "
-                            + commandId + " for replay");
+            Stored stored = new Stored(result, rerunnable, false);
+            if (stored.chars > maxChars) {
+                if (rerunnable) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Not keeping the " + stored.chars + "-character result of ICP command "
+                                + commandId + " for replay");
+                    }
+                    return;
                 }
-                return;
+                stored = stored.withoutBody();
             }
-            results.put(commandId, new Stored(result, chars));
-            totalChars += chars;
-            Iterator<Stored> oldestFirst = results.values().iterator();
-            while (results.size() > maxEntries || totalChars > maxChars) {
-                totalChars -= oldestFirst.next().chars;
+            results.put(commandId, stored);
+            totalChars += stored.chars;
+
+            Iterator<Map.Entry<String, Stored>> oldestFirst = results.entrySet().iterator();
+            while (results.size() > maxEntries) {
+                totalChars -= oldestFirst.next().getValue().chars;
                 oldestFirst.remove();
+            }
+            oldestFirst = results.entrySet().iterator();
+            while (totalChars > maxChars && oldestFirst.hasNext()) {
+                Map.Entry<String, Stored> entry = oldestFirst.next();
+                Stored held = entry.getValue();
+                if (held.rerunnable) {
+                    totalChars -= held.chars;
+                    oldestFirst.remove();
+                } else if (!held.bodyless) {
+                    Stored slim = held.withoutBody();
+                    if (slim.chars < held.chars) {
+                        totalChars -= held.chars - slim.chars;
+                        entry.setValue(slim);
+                    }
+                }
             }
         }
 
@@ -488,12 +511,32 @@ class ICPCommandExecutor {
 
         private static final class Stored {
 
+            private static final JsonPrimitive BODY_NOT_KEPT = new JsonPrimitive(
+                    "The response body was too large to keep for replay. The command was"
+                            + " performed once and is not performed again.");
+
             private final JsonObject result;
+            private final boolean rerunnable;
+            private final boolean bodyless;
             private final long chars;
 
-            private Stored(JsonObject result, long chars) {
+            private Stored(JsonObject result, boolean rerunnable, boolean bodyless) {
                 this.result = result;
-                this.chars = chars;
+                this.rerunnable = rerunnable;
+                this.bodyless = bodyless;
+                this.chars = result.toString().length();
+            }
+
+            /** The same outcome (status, HTTP status, ids) with the body replaced by a note. */
+            private Stored withoutBody() {
+                JsonObject slim = new JsonObject();
+                for (Map.Entry<String, JsonElement> member : result.entrySet()) {
+                    if (!"body".equals(member.getKey())) {
+                        slim.add(member.getKey(), member.getValue());
+                    }
+                }
+                slim.add("body", BODY_NOT_KEPT);
+                return new Stored(slim, rerunnable, true);
             }
         }
     }
