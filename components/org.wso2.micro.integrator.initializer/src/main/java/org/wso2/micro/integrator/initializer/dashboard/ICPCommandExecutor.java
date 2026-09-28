@@ -43,10 +43,12 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.ssl.SSLContexts;
 import org.apache.http.util.EntityUtils;
 import org.wso2.carbon.inbound.endpoint.internal.http.api.ConfigurationLoader;
+import org.wso2.config.mapper.ConfigParser;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Instant;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -105,16 +107,16 @@ class ICPCommandExecutor {
     /**
      * Outcomes of recently executed commands, so a redelivered commandId — one whose result
      * was lost in flight — replays its stored result instead of performing the operation a
-     * second time. Bounded and insertion-ordered; the oldest goes first.
+     * second time. Bounded by count and by size; the oldest goes first.
+     * <p>
+     * The size bound is what matters: a result carries the whole response body, and a few
+     * hundred downloaded log files held for replay would otherwise sit on the heap. It is
+     * {@code icp_config.command_result_cache_size_mb}, in megabytes of result text.
      */
     private static final int RESULT_CACHE_CAPACITY = 256;
-    private static final Map<String, JsonObject> executedResults =
-            new LinkedHashMap<String, JsonObject>() {
-                @Override
-                protected boolean removeEldestEntry(Map.Entry<String, JsonObject> eldest) {
-                    return size() > RESULT_CACHE_CAPACITY;
-                }
-            };
+    private static final long MEGABYTE = 1024L * 1024;
+    private static final ResultCache executedResults =
+            new ResultCache(RESULT_CACHE_CAPACITY, resultCacheMaxChars(ConfigParser.getParsedConfigs()));
 
     private ICPCommandExecutor() {
     }
@@ -187,12 +189,10 @@ class ICPCommandExecutor {
             log.error("Ignoring an ICP management command with no command id");
             return null;
         }
-        synchronized (executedResults) {
-            JsonObject cached = executedResults.get(commandId);
-            if (cached != null) {
-                log.info("Replaying the stored result for redelivered ICP command: " + commandId);
-                return cached;
-            }
+        JsonObject cached = executedResults.get(commandId);
+        if (cached != null) {
+            log.info("Replaying the stored result for redelivered ICP command: " + commandId);
+            return cached;
         }
         // A command past its deadline must not run: the ICP-side caller has already been told
         // the read failed, and a late mutation is worse than none.
@@ -207,9 +207,7 @@ class ICPCommandExecutor {
         JsonObject result = params == null
                 ? failure(runtimeId, commandId, 400, "Command carried no params")
                 : invokeManagementApi(params, runtimeId, commandId, jwtToken);
-        synchronized (executedResults) {
-            executedResults.put(commandId, result);
-        }
+        executedResults.put(commandId, result);
         return result;
     }
 
@@ -293,6 +291,32 @@ class ICPCommandExecutor {
             return null;
         }
         return uri.toString();
+    }
+
+    /**
+     * The replay cache's size budget in characters, from
+     * {@code icp_config.command_result_cache_size_mb}. Anything but a positive whole number
+     * of megabytes falls back to the default.
+     */
+    static long resultCacheMaxChars(Map<String, Object> configs) {
+        long megabytes = Constants.DEFAULT_COMMAND_RESULT_CACHE_SIZE_MB;
+        Object configured = configs == null
+                ? null : configs.get(Constants.ICP_CONFIG_COMMAND_RESULT_CACHE_SIZE_MB);
+        if (configured != null) {
+            long parsed;
+            try {
+                parsed = Long.parseLong(configured.toString().trim());
+            } catch (NumberFormatException e) {
+                parsed = 0;
+            }
+            if (parsed > 0 && parsed <= Long.MAX_VALUE / MEGABYTE) {
+                megabytes = parsed;
+            } else {
+                log.warn("Invalid config for '" + Constants.ICP_CONFIG_COMMAND_RESULT_CACHE_SIZE_MB
+                        + "': " + configured + ". Using default: " + megabytes);
+            }
+        }
+        return megabytes * MEGABYTE;
     }
 
     /** Posts one outcome. A lost result is not retried here — the ICP redelivers, and the
@@ -405,5 +429,72 @@ class ICPCommandExecutor {
     private static String optString(JsonObject object, String member) {
         JsonElement value = object == null ? null : object.get(member);
         return value == null || value.isJsonNull() ? null : value.getAsString();
+    }
+
+    /**
+     * Insertion-ordered results, evicted oldest first once there are more than
+     * {@code maxEntries} of them or their serialized length passes {@code maxChars}.
+     * <p>
+     * A single result longer than {@code maxChars} is not kept at all. Those are large reads,
+     * a log file download for instance, and performing a read again on a redelivery is
+     * harmless; holding it would evict everything else.
+     */
+    static final class ResultCache {
+
+        private final int maxEntries;
+        private final long maxChars;
+        private final Map<String, Stored> results = new LinkedHashMap<>();
+        private long totalChars;
+
+        ResultCache(int maxEntries, long maxChars) {
+            this.maxEntries = maxEntries;
+            this.maxChars = maxChars;
+        }
+
+        synchronized JsonObject get(String commandId) {
+            Stored stored = results.get(commandId);
+            return stored == null ? null : stored.result;
+        }
+
+        synchronized void put(String commandId, JsonObject result) {
+            long chars = result.toString().length();
+            Stored previous = results.remove(commandId);
+            if (previous != null) {
+                totalChars -= previous.chars;
+            }
+            if (chars > maxChars) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Not keeping the " + chars + "-character result of ICP command "
+                            + commandId + " for replay");
+                }
+                return;
+            }
+            results.put(commandId, new Stored(result, chars));
+            totalChars += chars;
+            Iterator<Stored> oldestFirst = results.values().iterator();
+            while (results.size() > maxEntries || totalChars > maxChars) {
+                totalChars -= oldestFirst.next().chars;
+                oldestFirst.remove();
+            }
+        }
+
+        synchronized int size() {
+            return results.size();
+        }
+
+        synchronized long totalChars() {
+            return totalChars;
+        }
+
+        private static final class Stored {
+
+            private final JsonObject result;
+            private final long chars;
+
+            private Stored(JsonObject result, long chars) {
+                this.result = result;
+                this.chars = chars;
+            }
+        }
     }
 }

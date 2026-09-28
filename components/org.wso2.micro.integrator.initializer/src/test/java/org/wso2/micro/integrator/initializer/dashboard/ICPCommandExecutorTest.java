@@ -24,6 +24,8 @@ import org.junit.Test;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -133,6 +135,61 @@ public class ICPCommandExecutorTest {
     }
 
     @Test
+    public void testResultCache_EvictsOldestOnceTheSizeBudgetIsPassed() {
+        JsonObject result = resultOfLength(100);
+        long chars = result.toString().length();
+        ICPCommandExecutor.ResultCache cache = new ICPCommandExecutor.ResultCache(256, chars * 2);
+
+        cache.put("a", result);
+        cache.put("b", resultOfLength(100));
+        cache.put("c", resultOfLength(100));
+
+        assertNull("The oldest goes first", cache.get("a"));
+        assertNotNull(cache.get("b"));
+        assertNotNull(cache.get("c"));
+        assertEquals(chars * 2, cache.totalChars());
+    }
+
+    @Test
+    public void testResultCache_EvictsOldestOnceTheCountIsPassed() {
+        ICPCommandExecutor.ResultCache cache = new ICPCommandExecutor.ResultCache(2, Long.MAX_VALUE);
+
+        cache.put("a", resultOfLength(1));
+        cache.put("b", resultOfLength(1));
+        cache.put("c", resultOfLength(1));
+
+        assertEquals(2, cache.size());
+        assertNull(cache.get("a"));
+    }
+
+    @Test
+    public void testResultCache_OversizedResultIsNotKeptAndEvictsNothing() {
+        ICPCommandExecutor.ResultCache cache = new ICPCommandExecutor.ResultCache(256, 500);
+
+        cache.put("small", resultOfLength(10));
+        cache.put("huge", resultOfLength(10_000));
+
+        assertNull("A result over the whole budget is not held for replay", cache.get("huge"));
+        assertNotNull("and does not push out what is already held", cache.get("small"));
+    }
+
+    @Test
+    public void testResultCacheMaxChars_ConfiguredMegabytesOrTheDefault() {
+        long mb = 1024L * 1024;
+        Map<String, Object> configs = new HashMap<>();
+        assertEquals("Unset", 8 * mb, ICPCommandExecutor.resultCacheMaxChars(configs));
+        assertEquals("No configs parsed yet", 8 * mb, ICPCommandExecutor.resultCacheMaxChars(null));
+
+        configs.put("icp_config.command_result_cache_size_mb", 32L);
+        assertEquals(32 * mb, ICPCommandExecutor.resultCacheMaxChars(configs));
+
+        for (Object invalid : new Object[] {0L, -5L, "lots", "8m", Long.MAX_VALUE}) {
+            configs.put("icp_config.command_result_cache_size_mb", invalid);
+            assertEquals(String.valueOf(invalid), 8 * mb, ICPCommandExecutor.resultCacheMaxChars(configs));
+        }
+    }
+
+    @Test
     public void testRunOne_UnreadableCommand_IsIgnored() {
         JsonObject unreadable = new JsonObject();
         unreadable.addProperty("action", "MI_MGMT");
@@ -179,6 +236,12 @@ public class ICPCommandExecutorTest {
         assertEquals("GET", ICPCommandExecutor.methodFor("get"));
         assertEquals("DELETE", ICPCommandExecutor.methodFor("DELETE"));
         assertNull(ICPCommandExecutor.methodFor("CONNECT"));
+    }
+
+    private static JsonObject resultOfLength(int bodyChars) {
+        JsonObject result = new JsonObject();
+        result.addProperty("body", new String(new char[bodyChars]).replace('\0', 'x'));
+        return result;
     }
 
     private static JsonObject command(String commandId, String method, String path) {
