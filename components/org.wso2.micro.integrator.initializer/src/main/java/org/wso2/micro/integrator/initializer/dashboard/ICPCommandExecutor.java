@@ -92,10 +92,15 @@ class ICPCommandExecutor {
      * but never the heartbeat. The runtime staying visibly alive while it works matters more
      * than any single command finishing.
      * <p>
-     * One thread, and a batch is refused while the previous one runs: that is the
+     * One thread, and a batch's reads are refused while the previous batch runs: that is the
      * back-pressure that stops the ICP handing over work faster than it can be executed. A
-     * refused batch is not lost — its fetches are re-offered on a later heartbeat, and the
-     * result cache turns a redelivery into a replay.
+     * refused read is not lost — the ICP re-offers it on a later heartbeat, and the result
+     * cache turns a redelivery into a replay.
+     * <p>
+     * Its writes are held instead and run as soon as the current batch finishes. The ICP
+     * re-offers an unanswered write too, but only after its redelivery window, so refusing
+     * one made a log-level change or an artifact toggle that happened to arrive during another
+     * command wait that long for nothing.
      */
     private static final ExecutorService COMMAND_POOL = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "ICP-Command");
@@ -103,6 +108,16 @@ class ICPCommandExecutor {
         return t;
     });
     private static final AtomicBoolean batchInFlight = new AtomicBoolean(false);
+
+    /**
+     * Writes that arrived while a batch was running, in arrival order and keyed by command id
+     * so a redelivery of one already waiting is not queued twice. Bounded: past the cap a write
+     * is refused as it always was, and the ICP re-offers it. Guarded by its own monitor, which
+     * also covers taking and releasing {@link #batchInFlight}, so a write cannot be held just as
+     * the worker decides there is nothing left to run.
+     */
+    private static final int MAX_HELD_WRITES = 64;
+    private static final Map<String, HeldCommand> heldWrites = new LinkedHashMap<>();
 
     /**
      * Outcomes of recently executed commands, so a redelivered commandId — one whose result
@@ -141,11 +156,15 @@ class ICPCommandExecutor {
         if (commands == null || commands.size() == 0) {
             return;
         }
-        if (!batchInFlight.compareAndSet(false, true)) {
-            if (log.isDebugEnabled()) {
-                log.debug("Still executing the previous ICP command batch; this one will be re-offered.");
+        synchronized (heldWrites) {
+            if (!batchInFlight.compareAndSet(false, true)) {
+                int held = holdWrites(commands, icpUrl, runtimeId, jwtToken);
+                if (log.isDebugEnabled()) {
+                    log.debug("Still executing the previous ICP command batch; held " + held
+                            + " write(s) to run next, its reads will be re-offered.");
+                }
+                return;
             }
-            return;
         }
         JsonArray batch = commands.deepCopy();
         COMMAND_POOL.submit(() -> {
@@ -158,17 +177,120 @@ class ICPCommandExecutor {
                     if (!ACTION_MI_MGMT.equals(optString(command, "action"))) {
                         continue;
                     }
-                    JsonObject result = runOne(command, runtimeId, jwtToken);
-                    if (result != null) {
-                        postResult(result, icpUrl, jwtToken);
-                    }
+                    runAndPost(new HeldCommand(command, icpUrl, runtimeId, jwtToken));
                 }
             } catch (Throwable t) {
                 log.error("ICP command batch failed", t);
             } finally {
-                batchInFlight.set(false);
+                runHeldWrites();
             }
         });
+    }
+
+    /**
+     * Runs the writes held while the batch ran, then releases the batch slot — the release
+     * inside the same monitor that {@link #execute} holds a write under, so the last write
+     * held is always either run here or taken by the next batch.
+     */
+    private static void runHeldWrites() {
+        while (true) {
+            HeldCommand next;
+            synchronized (heldWrites) {
+                Iterator<Map.Entry<String, HeldCommand>> oldest = heldWrites.entrySet().iterator();
+                if (!oldest.hasNext()) {
+                    batchInFlight.set(false);
+                    return;
+                }
+                next = oldest.next().getValue();
+                oldest.remove();
+            }
+            try {
+                runAndPost(next);
+            } catch (Throwable t) {
+                log.error("ICP command failed", t);
+            }
+        }
+    }
+
+    private static void runAndPost(HeldCommand held) {
+        JsonObject result = runOne(held.command, held.runtimeId, held.jwtToken);
+        if (result != null) {
+            postResult(result, held.icpUrl, held.jwtToken);
+        }
+    }
+
+    /**
+     * Keeps the writes of a batch that arrived while another was running. Called with the
+     * {@link #heldWrites} monitor held.
+     *
+     * @return how many writes are waiting after this call
+     */
+    static int holdWrites(JsonArray commands, String icpUrl, String runtimeId, String jwtToken) {
+        for (JsonElement element : commands) {
+            if (!element.isJsonObject()) {
+                continue;
+            }
+            JsonObject command = element.getAsJsonObject();
+            String commandId = writeCommandId(command);
+            if (commandId == null || heldWrites.containsKey(commandId)) {
+                continue;
+            }
+            if (heldWrites.size() >= MAX_HELD_WRITES) {
+                log.warn("Too many ICP writes waiting; " + commandId + " will be re-offered by the ICP");
+                continue;
+            }
+            heldWrites.put(commandId, new HeldCommand(command.deepCopy(), icpUrl, runtimeId, jwtToken));
+        }
+        return heldWrites.size();
+    }
+
+    /**
+     * The command id of a management write, or null for a read or anything that is not a
+     * management command. Reads are safe to refuse — the ICP re-offers them — and rerunning
+     * one is harmless; a write is what a refusal delays.
+     */
+    static String writeCommandId(JsonObject command) {
+        if (!ACTION_MI_MGMT.equals(optString(command, "action"))) {
+            return null;
+        }
+        try {
+            JsonObject payload = JsonParser.parseString(optString(command, "payload")).getAsJsonObject();
+            JsonObject params = payload.getAsJsonObject("params");
+            String method = params == null ? null : optString(params, "method");
+            return method == null || "GET".equalsIgnoreCase(method) ? null : optString(payload, "commandId");
+        } catch (Exception e) {
+            // Unreadable: runOne reports it when it is offered again outside a busy batch.
+            return null;
+        }
+    }
+
+    /** Test hook: how many writes are waiting for the running batch to finish. */
+    static int heldWriteCount() {
+        synchronized (heldWrites) {
+            return heldWrites.size();
+        }
+    }
+
+    /** Test hook: forgets any held writes. */
+    static void clearHeldWrites() {
+        synchronized (heldWrites) {
+            heldWrites.clear();
+        }
+    }
+
+    /** A command and what posting its outcome needs, as the heartbeat that carried it had them. */
+    private static final class HeldCommand {
+        private final JsonObject command;
+        private final String icpUrl;
+        private final String runtimeId;
+        private final String jwtToken;
+
+        HeldCommand(JsonObject command, String icpUrl, String runtimeId, String jwtToken) {
+            this.command = command;
+            this.icpUrl = icpUrl;
+            this.runtimeId = runtimeId;
+            this.jwtToken = jwtToken;
+        }
     }
 
     /**

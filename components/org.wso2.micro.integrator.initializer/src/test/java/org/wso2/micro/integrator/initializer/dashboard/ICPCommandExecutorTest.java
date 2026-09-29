@@ -277,6 +277,59 @@ public class ICPCommandExecutorTest {
         return result;
     }
 
+    @Test
+    public void testWriteCommandId_OnlyManagementWritesAreHeld() {
+        // A read refused while busy is re-offered and harmless to rerun; a write is what a
+        // refusal delays, so only writes are kept for after the running batch.
+        assertEquals("w1", ICPCommandExecutor.writeCommandId(command("w1", "POST", "/management/apis")));
+        assertEquals("w2", ICPCommandExecutor.writeCommandId(command("w2", "PATCH", "/management/logging")));
+        assertEquals("w3", ICPCommandExecutor.writeCommandId(command("w3", "DELETE", "/management/users/a")));
+        assertNull(ICPCommandExecutor.writeCommandId(command("r1", "GET", "/management/logging")));
+
+        JsonObject otherFeature = command("x1", "POST", "/management/apis");
+        otherFeature.addProperty("action", "WORKFLOW_MGMT");
+        assertNull(ICPCommandExecutor.writeCommandId(otherFeature));
+
+        JsonObject unreadable = new JsonObject();
+        unreadable.addProperty("action", "MI_MGMT");
+        unreadable.addProperty("payload", "not json");
+        assertNull(ICPCommandExecutor.writeCommandId(unreadable));
+    }
+
+    @Test
+    public void testHoldWrites_KeepsEachWriteOnceAndLeavesReadsToBeReoffered() {
+        ICPCommandExecutor.clearHeldWrites();
+        try {
+            com.google.gson.JsonArray batch = new com.google.gson.JsonArray();
+            batch.add(command("w1", "POST", "/management/sequences"));
+            batch.add(command("r1", "GET", "/management/logs"));
+            batch.add(command("w2", "POST", "/management/apis"));
+            assertEquals(2, ICPCommandExecutor.holdWrites(batch, "https://icp", RUNTIME_ID, TOKEN));
+
+            // The same write offered again while it still waits is not queued a second time.
+            com.google.gson.JsonArray redelivered = new com.google.gson.JsonArray();
+            redelivered.add(command("w1", "POST", "/management/sequences"));
+            assertEquals(2, ICPCommandExecutor.holdWrites(redelivered, "https://icp", RUNTIME_ID, TOKEN));
+        } finally {
+            ICPCommandExecutor.clearHeldWrites();
+        }
+    }
+
+    @Test
+    public void testHoldWrites_IsBoundedAndPastTheCapLeavesTheRestToTheIcp() {
+        ICPCommandExecutor.clearHeldWrites();
+        try {
+            com.google.gson.JsonArray flood = new com.google.gson.JsonArray();
+            for (int i = 0; i < 100; i++) {
+                flood.add(command("w" + i, "POST", "/management/apis"));
+            }
+            assertEquals(64, ICPCommandExecutor.holdWrites(flood, "https://icp", RUNTIME_ID, TOKEN));
+            assertEquals(64, ICPCommandExecutor.heldWriteCount());
+        } finally {
+            ICPCommandExecutor.clearHeldWrites();
+        }
+    }
+
     private static JsonObject command(String commandId, String method, String path) {
         JsonObject params = new JsonObject();
         params.addProperty("method", method);
