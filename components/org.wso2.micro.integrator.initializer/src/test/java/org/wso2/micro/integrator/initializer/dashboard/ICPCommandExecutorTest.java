@@ -368,18 +368,22 @@ public class ICPCommandExecutorTest {
         assertFalse(ICPHeartBeatComponent.hashIsReusable(null, now - 1_000, now, 10));
     }
 
-    // The same vector is asserted by the ICP's mi_tunnel_tests: both sides sign the payload
-    // string exactly as sent, so they interoperate only if both produce this.
+    // The same vectors are asserted by the ICP's and the BI bridge's tests, computed
+    // independently; the three sides interoperate only if all three produce these.
     private static final String SIGNED_PAYLOAD = "{\"commandId\":\"mio-1.runtime-1\",\"operation\":\"management\","
             + "\"params\":{\"method\":\"POST\",\"path\":\"/management/sequences\",\"body\":{\"name\":\"fault\","
             + "\"statistics\":\"enable\"}},\"deadline\":\"2026-09-30T10:00:00Z\"}";
-    private static final String SIGNATURE = "s3V8zp25O+8ls4xvHo5nCV2pUHgMv67lXPi52Se1b3Y=";
+    private static final String SIGNATURE = "3zoKUUS0CVRD/4ccF6nqssTJfGQgx7sPyj8nG980VRA=";
     private static final byte[] KEY = "key-material-that-is-at-least-32-bytes-long"
             .getBytes(java.nio.charset.StandardCharsets.UTF_8);
 
     private static JsonObject signed(String payload, String signature) {
         JsonObject command = new JsonObject();
+        command.addProperty("commandId", "mio-1.runtime-1");
         command.addProperty("action", "MI_MGMT");
+        JsonObject target = new JsonObject();
+        target.addProperty("name", "management");
+        command.add("targetArtifact", target);
         command.addProperty("payload", payload);
         if (signature != null) {
             command.addProperty("signature", signature);
@@ -402,6 +406,10 @@ public class ICPCommandExecutorTest {
                 signed(SIGNED_PAYLOAD, "%%%"), "runtime-1", KEY, false));
         assertNotNull("A signed command cannot be verified without the key", ICPCommandExecutor.signatureRefusal(
                 signed(SIGNED_PAYLOAD, SIGNATURE), "runtime-1", null, false));
+        JsonObject renamed = signed(SIGNED_PAYLOAD, SIGNATURE);
+        renamed.addProperty("commandId", "mio-2.runtime-1");
+        assertNotNull("The command id is signed too", ICPCommandExecutor.signatureRefusal(
+                renamed, "runtime-1", KEY, false));
     }
 
     @Test
