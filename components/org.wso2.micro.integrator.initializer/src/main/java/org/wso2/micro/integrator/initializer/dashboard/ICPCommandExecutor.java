@@ -589,7 +589,8 @@ class ICPCommandExecutor {
     static String signatureRefusal(JsonObject command, String runtimeId, byte[] key, boolean required) {
         String signature = optString(command, "signature");
         if (signature == null) {
-            return required ? "it is unsigned and " + Constants.ICP_CONFIG_REQUIRE_SIGNED_COMMANDS + " is on" : null;
+            return required ? "it is unsigned, and " + Constants.ICP_CONFIG_REQUIRE_SIGNED_COMMANDS
+                    + " is on (the default). Set it to false only for an ICP that does not sign commands" : null;
         }
         if (key == null) {
             return "it is signed but no ICP secret is available to verify it";

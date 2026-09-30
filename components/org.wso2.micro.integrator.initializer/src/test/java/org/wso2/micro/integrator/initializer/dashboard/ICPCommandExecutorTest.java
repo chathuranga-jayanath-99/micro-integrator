@@ -413,6 +413,20 @@ public class ICPCommandExecutorTest {
     }
 
     @Test
+    public void testRequireSignedCommands_OnUnlessExplicitlyTurnedOff() {
+        Map<String, Object> configs = new HashMap<>();
+        assertTrue("Unset means required", ICPHeartBeatComponent.requireSignedCommands(configs));
+        configs.put("icp_config.require_signed_commands", "false");
+        assertFalse(ICPHeartBeatComponent.requireSignedCommands(configs));
+        configs.put("icp_config.require_signed_commands", " FALSE ");
+        assertFalse(ICPHeartBeatComponent.requireSignedCommands(configs));
+        configs.put("icp_config.require_signed_commands", "flase");
+        assertTrue("A mistyped value must fail safe", ICPHeartBeatComponent.requireSignedCommands(configs));
+        configs.put("icp_config.require_signed_commands", true);
+        assertTrue(ICPHeartBeatComponent.requireSignedCommands(configs));
+    }
+
+    @Test
     public void testSignatureRefusal_UnsignedIsRefusedOnlyWhenRequired() {
         // Off by default for a release, so this MI still takes commands from an ICP that does
         // not sign yet; turning require_signed_commands on closes that.

@@ -290,17 +290,27 @@ public class ICPHeartBeatComponent {
     }
 
     /**
-     * Whether an unsigned tunneled command is refused. Off by default for one release so this
-     * runtime still takes commands from an ICP that does not sign yet; a signed command is
+     * Whether an unsigned tunneled command is refused. On unless
+     * {@code icp_config.require_signed_commands} is set to {@code false}; a signed command is
      * verified either way.
+     * <p>
+     * On by default because every ICP that tunnels management commands signs them: the tunnel
+     * and command signing reached the ICP together. Turning it off is only for an ICP built
+     * from the short stretch of its main branch that had the tunnel and not yet signing.
      */
     static boolean requireSignedCommands() {
-        // Before the heartbeat has loaded its configuration there is nothing to decide with;
-        // commands only arrive once it has, so this default never admits a real one.
+        return requireSignedCommands(configs);
+    }
+
+    static boolean requireSignedCommands(Map<String, Object> configs) {
+        // Without a loaded configuration there is no ICP to take commands from, so nothing
+        // this answers can admit a real command. Unit tests run this way.
         if (configs == null) {
             return false;
         }
-        return "true".equalsIgnoreCase(getConfigValue(ICP_CONFIG_REQUIRE_SIGNED_COMMANDS, "false"));
+        // Anything but an explicit "false" requires a signature, so a mistyped value fails safe.
+        Object configured = configs.get(ICP_CONFIG_REQUIRE_SIGNED_COMMANDS);
+        return configured == null || !"false".equalsIgnoreCase(configured.toString().trim());
     }
 
     /** Makes the next delta heartbeat collect the artifacts again rather than reuse its hash. */
