@@ -107,6 +107,9 @@ public class ICPHeartBeatComponent {
     private static volatile String cachedJwtToken = null;
     private static volatile long jwtTokenExpiry = 0;
     private static volatile ScheduledExecutorService heartbeatExecutor = null;
+    // The last delta heartbeat's hash and when it was computed; see runtimeHash.
+    private static volatile String reusableHash;
+    private static volatile long reusableHashAt;
     private static volatile boolean shutdownHookRegistered = false;
     private static volatile boolean sslWarnLogged = false;
 
@@ -177,14 +180,20 @@ public class ICPHeartBeatComponent {
         // Self-rescheduling rather than scheduleAtFixedRate: the ICP asks for a faster
         // cadence while a user is working with a management view, and a fixed-rate task
         // cannot honour that. See heartbeatRound.
-        scheduleHeartbeat(icpUrl, managementEndpoint, 5);
+        scheduleHeartbeat(heartbeatExecutor, icpUrl, managementEndpoint, 5);
     }
 
-    private static synchronized void scheduleHeartbeat(String icpUrl,
+    /**
+     * Schedules the next round of the loop that runs on {@code executor}, unless that loop has
+     * been stopped. Bound to its own executor, not to whichever one is current: after a stop
+     * and restart, a round of the old loop still finishing must end with it rather than
+     * schedule itself onto the new executor and run a second loop beside the new one.
+     */
+    private static synchronized void scheduleHeartbeat(ScheduledExecutorService executor, String icpUrl,
                                                        ManagementEndpoint managementEndpoint,
                                                        long delaySeconds) {
-        ScheduledExecutorService executor = heartbeatExecutor;
-        if (executor == null || executor.isShutdown() || executor.isTerminated()) {
+        if (executor == null || executor != heartbeatExecutor || executor.isShutdown()
+                || executor.isTerminated()) {
             return;
         }
         executor.schedule(() -> {
@@ -197,7 +206,7 @@ public class ICPHeartBeatComponent {
                 // sees a healthy MI that the console calls offline.
                 log.error("Error occurred while sending heartbeat to ICP.", t);
             } finally {
-                scheduleHeartbeat(icpUrl, managementEndpoint, next);
+                scheduleHeartbeat(executor, icpUrl, managementEndpoint, next);
             }
         }, delaySeconds, TimeUnit.SECONDS);
     }
@@ -241,23 +250,64 @@ public class ICPHeartBeatComponent {
     }
 
     /**
+     * The hash of this runtime's artifacts for a delta heartbeat, recomputed at most once per
+     * configured interval.
+     * <p>
+     * Computing it means collecting every artifact, which is fine at the configured cadence
+     * but not at the one-second cadence the ICP asks for while someone is using a management
+     * view: that would put the collection on a server's hot path for the length of every
+     * session. A boosted round exists to carry commands, not to notice deployments, so it
+     * reuses the last hash; a deployment is still noticed within the configured interval, as
+     * it always was. A write executed through the tunnel clears it (see
+     * {@link #invalidateRuntimeHash()}), because a write is exactly what changes the
+     * artifacts, and the console should see its effect on the next round.
+     */
+    private static String runtimeHash(ManagementEndpoint managementEndpoint) throws IOException {
+        long now = System.currentTimeMillis();
+        String reusable = reusableHash;
+        if (hashIsReusable(reusable, reusableHashAt, now, getInterval())) {
+            return reusable;
+        }
+        String hash = buildFullHeartbeatPayload(false, managementEndpoint).get(FIELD_RUNTIME_HASH).getAsString();
+        reusableHashAt = now;
+        reusableHash = hash;
+        return hash;
+    }
+
+    /** Whether a hash computed at {@code computedAt} may stand in for a new one at {@code now}. */
+    static boolean hashIsReusable(String hash, long computedAt, long now, long intervalSeconds) {
+        return hash != null && now - computedAt < TimeUnit.SECONDS.toMillis(intervalSeconds);
+    }
+
+    /** Makes the next delta heartbeat collect the artifacts again rather than reuse its hash. */
+    static void invalidateRuntimeHash() {
+        reusableHash = null;
+    }
+
+    /**
      * Stops the ICP heartbeat executor service and allows a safe restart.
      */
-    public static synchronized void stopICPHeartbeatExecutorService() {
-        if (heartbeatExecutor == null) {
-            return;
+    public static void stopICPHeartbeatExecutorService() {
+        // Shut down under the lock, so no round can schedule onto the executor after this, but
+        // wait outside it. A round in flight ends by rescheduling, which takes the same lock:
+        // waiting while holding it made every stop during a round sit out the full timeout
+        // and warn, however quickly the round itself finished.
+        ScheduledExecutorService executor;
+        synchronized (ICPHeartBeatComponent.class) {
+            executor = heartbeatExecutor;
+            if (executor == null) {
+                return;
+            }
+            heartbeatExecutor = null;
+            executor.shutdownNow();
         }
-
         try {
-            heartbeatExecutor.shutdownNow();
-            if (!heartbeatExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+            if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
                 log.warn("ICP heartbeat executor did not terminate within timeout.");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.warn("Interrupted while stopping ICP heartbeat executor service.", e);
-        } finally {
-            heartbeatExecutor = null;
         }
     }
 
@@ -285,9 +335,7 @@ public class ICPHeartBeatComponent {
      */
     private static JsonObject sendDeltaHeartbeat(String icpUrl, ManagementEndpoint managementEndpoint) {
         try {
-            // Build full payload to calculate hash
-            JsonObject fullPayload = buildFullHeartbeatPayload(false, managementEndpoint);
-            String currentHash = fullPayload.get(FIELD_RUNTIME_HASH).getAsString();
+            String currentHash = runtimeHash(managementEndpoint);
 
             // Build delta payload
             JsonObject deltaPayload = new JsonObject();

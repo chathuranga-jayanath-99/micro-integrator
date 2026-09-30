@@ -166,7 +166,19 @@ class ICPCommandExecutor {
                 return;
             }
         }
-        JsonArray batch = commands.deepCopy();
+        try {
+            submitBatch(commands.deepCopy(), icpUrl, runtimeId, jwtToken);
+        } catch (Throwable t) {
+            // The batch slot is taken but no task will ever release it: without this, one
+            // failed hand-over would have every later batch refused as "still executing".
+            log.error("Could not start the ICP command batch; its commands will be re-offered", t);
+            synchronized (heldWrites) {
+                batchInFlight.set(false);
+            }
+        }
+    }
+
+    private static void submitBatch(JsonArray batch, String icpUrl, String runtimeId, String jwtToken) {
         COMMAND_POOL.submit(() -> {
             try {
                 for (JsonElement element : batch) {
@@ -216,6 +228,11 @@ class ICPCommandExecutor {
         JsonObject result = runOne(held.command, held.runtimeId, held.jwtToken);
         if (result != null) {
             postResult(result, held.icpUrl, held.jwtToken);
+        }
+        if (writeCommandId(held.command) != null) {
+            // A write is what changes the artifacts (an enabled statistic, a deactivated
+            // proxy), so the next heartbeat must hash them afresh for the console to see it.
+            ICPHeartBeatComponent.invalidateRuntimeHash();
         }
     }
 
@@ -331,7 +348,7 @@ class ICPCommandExecutor {
                 ? failure(runtimeId, commandId, 400, "Command carried no params")
                 : invokeManagementApi(params, runtimeId, commandId, jwtToken);
         boolean rerunnable = params != null && "GET".equalsIgnoreCase(optString(params, "method"));
-        executedResults.put(commandId, result, rerunnable);
+        executedResults.put(commandId, result, rerunnable, deadlineMillis(deadline));
         return result;
     }
 
@@ -540,6 +557,18 @@ class ICPCommandExecutor {
         return result(runtimeId, commandId, "FAILED", httpStatus, error);
     }
 
+    /** Epoch millis of an ISO-8601 deadline, or {@link Long#MAX_VALUE} when there is none. */
+    static long deadlineMillis(String isoInstant) {
+        if (isoInstant == null) {
+            return Long.MAX_VALUE;
+        }
+        try {
+            return Instant.parse(isoInstant).toEpochMilli();
+        } catch (Exception e) {
+            return Long.MAX_VALUE;
+        }
+    }
+
     static boolean isPast(String isoInstant) {
         try {
             return Instant.parse(isoInstant).isBefore(Instant.now());
@@ -583,11 +612,27 @@ class ICPCommandExecutor {
         }
 
         synchronized void put(String commandId, JsonObject result, boolean rerunnable) {
+            put(commandId, result, rerunnable, Long.MAX_VALUE);
+        }
+
+        /**
+         * Keeps a result for replay until its command's deadline.
+         * <p>
+         * Past its deadline a command is never run again — {@code runOne} drops a redelivery
+         * that arrives late — so its record protects nothing. Those go first, before the count
+         * bound evicts oldest-first: otherwise a burst of reads could push out the replay
+         * record of a live write, and its redelivery would perform the write a second time.
+         *
+         * @param deadlineMillis epoch millis after which the command cannot be redelivered,
+         *                       or {@link Long#MAX_VALUE} when it has no deadline
+         */
+        synchronized void put(String commandId, JsonObject result, boolean rerunnable, long deadlineMillis) {
             Stored previous = results.remove(commandId);
             if (previous != null) {
                 totalChars -= previous.chars;
             }
-            Stored stored = new Stored(result, rerunnable, false);
+            evictExpired(System.currentTimeMillis());
+            Stored stored = new Stored(result, rerunnable, false, deadlineMillis);
             if (stored.chars > maxChars) {
                 if (rerunnable) {
                     if (log.isDebugEnabled()) {
@@ -623,6 +668,17 @@ class ICPCommandExecutor {
             }
         }
 
+        private void evictExpired(long now) {
+            Iterator<Map.Entry<String, Stored>> entries = results.entrySet().iterator();
+            while (entries.hasNext()) {
+                Stored held = entries.next().getValue();
+                if (held.deadlineMillis <= now) {
+                    totalChars -= held.chars;
+                    entries.remove();
+                }
+            }
+        }
+
         synchronized int size() {
             return results.size();
         }
@@ -641,12 +697,14 @@ class ICPCommandExecutor {
             private final boolean rerunnable;
             private final boolean bodyless;
             private final long chars;
+            private final long deadlineMillis;
 
-            private Stored(JsonObject result, boolean rerunnable, boolean bodyless) {
+            private Stored(JsonObject result, boolean rerunnable, boolean bodyless, long deadlineMillis) {
                 this.result = result;
                 this.rerunnable = rerunnable;
                 this.bodyless = bodyless;
                 this.chars = result.toString().length();
+                this.deadlineMillis = deadlineMillis;
             }
 
             /** The same outcome (status, HTTP status, ids) with the body replaced by a note. */
@@ -658,7 +716,7 @@ class ICPCommandExecutor {
                     }
                 }
                 slim.add("body", BODY_NOT_KEPT);
-                return new Stored(slim, rerunnable, true);
+                return new Stored(slim, rerunnable, true, deadlineMillis);
             }
         }
     }

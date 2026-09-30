@@ -330,6 +330,44 @@ public class ICPCommandExecutorTest {
         }
     }
 
+    @Test
+    public void testResultCache_ExpiredRecordsGoBeforeALiveWriteIsEvicted() {
+        // Past its deadline a command is never run again, so its record protects nothing. A
+        // burst of results must push those out, not the replay record of a write that can
+        // still be redelivered — that write would otherwise run twice.
+        ICPCommandExecutor.ResultCache cache = new ICPCommandExecutor.ResultCache(3, Long.MAX_VALUE);
+        long past = System.currentTimeMillis() - 1_000;
+        long future = System.currentTimeMillis() + 60_000;
+        cache.put("expired-1", resultOfLength(10), false, past);
+        cache.put("expired-2", resultOfLength(10), false, past);
+        cache.put("live-write", resultOfLength(10), false, future);
+        cache.put("read-1", resultOfLength(10), true, future);
+        cache.put("read-2", resultOfLength(10), true, future);
+
+        assertNotNull("A live write's replay record must survive", cache.get("live-write"));
+        assertNull(cache.get("expired-1"));
+        assertNull(cache.get("expired-2"));
+        assertEquals(3, cache.size());
+    }
+
+    @Test
+    public void testDeadlineMillis_ParsesTheDeadlineOrTreatsItAsOpenEnded() {
+        assertEquals(Instant.parse("2026-09-30T10:00:00Z").toEpochMilli(),
+                ICPCommandExecutor.deadlineMillis("2026-09-30T10:00:00Z"));
+        assertEquals(Long.MAX_VALUE, ICPCommandExecutor.deadlineMillis(null));
+        assertEquals(Long.MAX_VALUE, ICPCommandExecutor.deadlineMillis("not a time"));
+    }
+
+    @Test
+    public void testHashIsReusable_OnlyWithinTheConfiguredInterval() {
+        // Boosted rounds come every second; collecting every artifact that often is the cost
+        // this avoids. At the configured cadence the hash is computed afresh, as it always was.
+        long now = 1_000_000L;
+        assertTrue(ICPHeartBeatComponent.hashIsReusable("h", now - 1_000, now, 10));
+        assertFalse(ICPHeartBeatComponent.hashIsReusable("h", now - 10_000, now, 10));
+        assertFalse(ICPHeartBeatComponent.hashIsReusable(null, now - 1_000, now, 10));
+    }
+
     private static JsonObject command(String commandId, String method, String path) {
         JsonObject params = new JsonObject();
         params.addProperty("method", method);
