@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
@@ -106,6 +107,9 @@ public class ICPHeartBeatComponent {
     private static volatile String cachedJwtToken = null;
     private static volatile long jwtTokenExpiry = 0;
     private static volatile ScheduledExecutorService heartbeatExecutor = null;
+    // The last delta heartbeat's hash and when it was computed; see runtimeHash.
+    private static volatile String reusableHash;
+    private static volatile long reusableHashAt;
     private static volatile boolean shutdownHookRegistered = false;
     private static volatile boolean sslWarnLogged = false;
 
@@ -172,36 +176,138 @@ public class ICPHeartBeatComponent {
             t.setDaemon(true);
             return t;
         });
-        Runnable runnableTask = () -> {
-            try {
-                sendDeltaHeartbeat(icpUrl, managementEndpoint);
-            } catch (Exception e) {
-                log.error("Error occurred while sending delta heartbeat to ICP.", e);
-            }
-        };
 
-        // Initial delay of 5 seconds, then send at configured interval
-        heartbeatExecutor.scheduleAtFixedRate(runnableTask, 5, interval, TimeUnit.SECONDS);
+        // Self-rescheduling rather than scheduleAtFixedRate: the ICP asks for a faster
+        // cadence while a user is working with a management view, and a fixed-rate task
+        // cannot honour that. See heartbeatRound.
+        scheduleHeartbeat(heartbeatExecutor, icpUrl, managementEndpoint, 5);
+    }
+
+    /**
+     * Schedules the next round of the loop that runs on {@code executor}, unless that loop has
+     * been stopped. Bound to its own executor, not to whichever one is current: after a stop
+     * and restart, a round of the old loop still finishing must end with it rather than
+     * schedule itself onto the new executor and run a second loop beside the new one.
+     */
+    private static synchronized void scheduleHeartbeat(ScheduledExecutorService executor, String icpUrl,
+                                                       ManagementEndpoint managementEndpoint,
+                                                       long delaySeconds) {
+        if (executor == null || executor != heartbeatExecutor || executor.isShutdown()
+                || executor.isTerminated()) {
+            return;
+        }
+        executor.schedule(() -> {
+            long next = getInterval();
+            try {
+                next = heartbeatRound(icpUrl, managementEndpoint);
+            } catch (Throwable t) {
+                // Throwable, and rescheduled in `finally`: a self-rescheduling loop that skips
+                // its own reschedule is a runtime that never reports again, and the operator
+                // sees a healthy MI that the console calls offline.
+                log.error("Error occurred while sending heartbeat to ICP.", t);
+            } finally {
+                scheduleHeartbeat(executor, icpUrl, managementEndpoint, next);
+            }
+        }, delaySeconds, TimeUnit.SECONDS);
+    }
+
+    /**
+     * One heartbeat, its tunneled commands handed to the command executor, and how long to
+     * wait before the next.
+     *
+     * @return seconds until the next heartbeat: the cadence the ICP asked for while someone is
+     *         working with this runtime, otherwise its own interval
+     */
+    private static long heartbeatRound(String icpUrl, ManagementEndpoint managementEndpoint) {
+        long interval = getInterval();
+        JsonObject response = sendDeltaHeartbeat(icpUrl, managementEndpoint);
+        if (response == null) {
+            return interval;
+        }
+        String token;
+        String runtimeId;
+        try {
+            token = generateOrGetCachedJwtToken();
+            runtimeId = getRuntimeId();
+        } catch (Exception e) {
+            log.error("Cannot execute ICP commands without a token and runtime id.", e);
+            return interval;
+        }
+        JsonElement commands = response.get("commands");
+        if (commands != null && commands.isJsonArray()) {
+            // Handed over, not run here: execution happens on its own thread so a slow
+            // management resource cannot stop this runtime from heartbeating.
+            ICPCommandExecutor.execute(commands.getAsJsonArray(), icpUrl, runtimeId, token);
+        }
+        JsonElement hint = response.get("nextHeartbeatInSeconds");
+        if (hint != null && hint.isJsonPrimitive()) {
+            long boosted = hint.getAsLong();
+            if (boosted > 0 && boosted < interval) {
+                return boosted;
+            }
+        }
+        return interval;
+    }
+
+    /**
+     * The hash of this runtime's artifacts for a delta heartbeat, recomputed at most once per
+     * configured interval.
+     * <p>
+     * Computing it means collecting every artifact, which is fine at the configured cadence
+     * but not at the one-second cadence the ICP asks for while someone is using a management
+     * view: that would put the collection on a server's hot path for the length of every
+     * session. A boosted round exists to carry commands, not to notice deployments, so it
+     * reuses the last hash; a deployment is still noticed within the configured interval, as
+     * it always was. A write executed through the tunnel clears it (see
+     * {@link #invalidateRuntimeHash()}), because a write is exactly what changes the
+     * artifacts, and the console should see its effect on the next round.
+     */
+    private static String runtimeHash(ManagementEndpoint managementEndpoint) throws IOException {
+        long now = System.currentTimeMillis();
+        String reusable = reusableHash;
+        if (hashIsReusable(reusable, reusableHashAt, now, getInterval())) {
+            return reusable;
+        }
+        String hash = buildFullHeartbeatPayload(false, managementEndpoint).get(FIELD_RUNTIME_HASH).getAsString();
+        reusableHashAt = now;
+        reusableHash = hash;
+        return hash;
+    }
+
+    /** Whether a hash computed at {@code computedAt} may stand in for a new one at {@code now}. */
+    static boolean hashIsReusable(String hash, long computedAt, long now, long intervalSeconds) {
+        return hash != null && now - computedAt < TimeUnit.SECONDS.toMillis(intervalSeconds);
+    }
+
+    /** Makes the next delta heartbeat collect the artifacts again rather than reuse its hash. */
+    static void invalidateRuntimeHash() {
+        reusableHash = null;
     }
 
     /**
      * Stops the ICP heartbeat executor service and allows a safe restart.
      */
-    public static synchronized void stopICPHeartbeatExecutorService() {
-        if (heartbeatExecutor == null) {
-            return;
+    public static void stopICPHeartbeatExecutorService() {
+        // Shut down under the lock, so no round can schedule onto the executor after this, but
+        // wait outside it. A round in flight ends by rescheduling, which takes the same lock:
+        // waiting while holding it made every stop during a round sit out the full timeout
+        // and warn, however quickly the round itself finished.
+        ScheduledExecutorService executor;
+        synchronized (ICPHeartBeatComponent.class) {
+            executor = heartbeatExecutor;
+            if (executor == null) {
+                return;
+            }
+            heartbeatExecutor = null;
+            executor.shutdownNow();
         }
-
         try {
-            heartbeatExecutor.shutdownNow();
-            if (!heartbeatExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+            if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
                 log.warn("ICP heartbeat executor did not terminate within timeout.");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.warn("Interrupted while stopping ICP heartbeat executor service.", e);
-        } finally {
-            heartbeatExecutor = null;
         }
     }
 
@@ -223,12 +329,13 @@ public class ICPHeartBeatComponent {
      * Sends a delta heartbeat to ICP with only runtime hash.
      * If ICP detects a hash mismatch, it will respond with
      * fullHeartbeatRequired=true.
+     *
+     * @return the acknowledged response whose commands are to be executed — the full
+     *         heartbeat's when one was demanded — or null when the round produced none
      */
-    private static void sendDeltaHeartbeat(String icpUrl, ManagementEndpoint managementEndpoint) {
+    private static JsonObject sendDeltaHeartbeat(String icpUrl, ManagementEndpoint managementEndpoint) {
         try {
-            // Build full payload to calculate hash
-            JsonObject fullPayload = buildFullHeartbeatPayload(false, managementEndpoint);
-            String currentHash = fullPayload.get(FIELD_RUNTIME_HASH).getAsString();
+            String currentHash = runtimeHash(managementEndpoint);
 
             // Build delta payload
             JsonObject deltaPayload = new JsonObject();
@@ -245,22 +352,26 @@ public class ICPHeartBeatComponent {
             if (response != null && response.has("fullHeartbeatRequired")
                     && response.get("fullHeartbeatRequired").getAsBoolean()) {
                 log.info("ICP requested full heartbeat. Sending full heartbeat with all artifacts.");
-                sendFullHeartbeat(icpUrl, managementEndpoint);
+                return sendFullHeartbeat(icpUrl, managementEndpoint);
             } else if (response != null && response.has("acknowledged")
                     && response.get("acknowledged").getAsBoolean()) {
                 if (log.isDebugEnabled()) {
                     log.debug("Delta heartbeat acknowledged by ICP.");
                 }
+                return response;
             }
         } catch (Exception e) {
             log.error("Error sending delta heartbeat to ICP.", e);
         }
+        return null;
     }
 
     /**
      * Sends a full heartbeat to ICP with all artifact metadata.
+     *
+     * @return the acknowledged response, or null
      */
-    private static void sendFullHeartbeat(String icpUrl, ManagementEndpoint managementEndpoint) {
+    private static JsonObject sendFullHeartbeat(String icpUrl, ManagementEndpoint managementEndpoint) {
         try {
             JsonObject fullPayload = buildFullHeartbeatPayload(true, managementEndpoint);
             String fullEndpoint = icpUrl + ICP_HEARTBEAT_ENDPOINT;
@@ -269,18 +380,20 @@ public class ICPHeartBeatComponent {
 
             if (response == null) {
                 if (heartbeatExecutor == null || heartbeatExecutor.isShutdown()) {
-                    return;
+                    return null;
                 }
                 log.error("Unexpected null response from ICP full heartbeat.");
             } else if (response.has("acknowledged")
                     && response.get("acknowledged").getAsBoolean()) {
                 log.info("Full heartbeat acknowledged by ICP.");
+                return response;
             } else {
                 log.error("Unexpected response from ICP full heartbeat." + response.toString());
             }
         } catch (Exception e) {
             log.error("Error sending full heartbeat to ICP.", e);
         }
+        return null;
     }
 
     /**
@@ -748,7 +861,14 @@ public class ICPHeartBeatComponent {
      * server certificate validation and hostname verification are skipped.
      * This should only be used in development or testing environments.
      */
-    private static CloseableHttpClient createHttpClient() throws Exception {
+    static CloseableHttpClient createHttpClient() throws Exception {
+        // Bounded on purpose: an ICP that accepts a connection and never answers would
+        // otherwise block this runtime's only heartbeat thread indefinitely.
+        RequestConfig timeouts = RequestConfig.custom()
+                .setConnectTimeout(5_000)
+                .setConnectionRequestTimeout(5_000)
+                .setSocketTimeout(30_000)
+                .build();
         boolean sslVerify = !"false".equalsIgnoreCase(getConfigValue(ICP_CONFIG_SSL_VERIFY, "true"));
         if (!sslVerify) {
             if (!sslWarnLogged) {
@@ -759,11 +879,13 @@ public class ICPHeartBeatComponent {
                     .loadTrustMaterial(null, (chain, authType) -> true)
                     .build();
             return HttpClients.custom()
+                    .setDefaultRequestConfig(timeouts)
                     .setSSLContext(trustAllContext)
                     .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
                     .build();
         }
         return HttpClients.custom()
+                .setDefaultRequestConfig(timeouts)
                 .setSSLContext(SSLContexts.createDefault())
                 .build();
     }
@@ -805,7 +927,11 @@ public class ICPHeartBeatComponent {
         Object configuredInterval = configs.get(ICP_CONFIG_HEARTBEAT_INTERVAL);
         if (configuredInterval != null) {
             try {
-                interval = Integer.parseInt(configuredInterval.toString());
+                long parsed = Integer.parseInt(configuredInterval.toString());
+                // A non-positive delay would reschedule the heartbeat in a tight loop.
+                if (parsed > 0) {
+                    interval = parsed;
+                }
             } catch (IllegalArgumentException e) {
                 log.warn("Invalid config for '" + ICP_CONFIG_HEARTBEAT_INTERVAL + "': "
                         + configuredInterval + ". Using default: " + DEFAULT_HEARTBEAT_INTERVAL);

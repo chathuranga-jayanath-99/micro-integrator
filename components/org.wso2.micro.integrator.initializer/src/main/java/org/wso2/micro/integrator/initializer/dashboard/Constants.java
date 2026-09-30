@@ -35,6 +35,7 @@ public class Constants {
     public static final String ICP_JWT_EXPIRY_SECONDS = "icp_config.jwt_expiry_seconds";
     public static final String ICP_SHARED_SECRET = "icp_config.secret";
     public static final String ICP_JWT_CLOCK_SKEW_TOLERANCE_MS = "icp_config.jwt_clock_skew_tolerance_ms";
+    public static final String ICP_CONFIG_COMMAND_RESULT_CACHE_SIZE_MB = "icp_config.command_result_cache_size_mb";
     
     // Default ICP Configuration
     public static final String DEFAULT_ENVIRONMENT = "production";
@@ -55,6 +56,7 @@ public class Constants {
 
     public static final String DEFAULT_GROUP_ID = "default";
     public static final long DEFAULT_HEARTBEAT_INTERVAL = 10;
+    public static final long DEFAULT_COMMAND_RESULT_CACHE_SIZE_MB = 8;
 
     public static final String HEADER_VALUE_APPLICATION_JSON = "application/json";
     public static final String FORWARD_SLASH = "/";
