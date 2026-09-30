@@ -36,6 +36,7 @@ public class Constants {
     public static final String ICP_SHARED_SECRET = "icp_config.secret";
     public static final String ICP_JWT_CLOCK_SKEW_TOLERANCE_MS = "icp_config.jwt_clock_skew_tolerance_ms";
     public static final String ICP_CONFIG_COMMAND_RESULT_CACHE_SIZE_MB = "icp_config.command_result_cache_size_mb";
+    public static final String ICP_CONFIG_REQUIRE_SIGNED_COMMANDS = "icp_config.require_signed_commands";
     
     // Default ICP Configuration
     public static final String DEFAULT_ENVIRONMENT = "production";

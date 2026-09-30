@@ -100,6 +100,11 @@ public class HMACJWTTokenGenerator {
         return "";
     }
 
+    /** The key material part of the shared secret, which also verifies tunneled commands. */
+    String keyMaterial() {
+        return getKeyMaterial();
+    }
+
     private String getKeyMaterial() {
         int dotIndex = hmacSecret.indexOf('.');
         if (dotIndex > 0 && dotIndex < hmacSecret.length() - 1) {

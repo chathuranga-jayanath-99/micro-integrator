@@ -47,7 +47,10 @@ import org.wso2.config.mapper.ConfigParser;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -55,6 +58,9 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 /**
  * Executes management commands the ICP tunnels through heartbeat responses.
@@ -317,6 +323,15 @@ class ICPCommandExecutor {
     // Package-private, like the three helpers below: every refusal this class can make is
     // decided without a server around it, and the tests exercise them that way.
     static JsonObject runOne(JsonObject command, String runtimeId, String jwtToken) {
+        // Before anything in the command is believed, its commandId included: an unverified
+        // command is dropped, not reported, so a forged one cannot fail a genuine command that
+        // shares its id.
+        String refusal = signatureRefusal(command, runtimeId, ICPHeartBeatComponent.commandSigningKey(),
+                ICPHeartBeatComponent.requireSignedCommands());
+        if (refusal != null) {
+            log.warn("Refusing an ICP management command: " + refusal + ". It was not executed.");
+            return null;
+        }
         JsonObject payload;
         try {
             payload = JsonParser.parseString(optString(command, "payload")).getAsJsonObject();
@@ -555,6 +570,76 @@ class ICPCommandExecutor {
         detail.addProperty("message", message == null ? "Command execution failed" : message);
         error.add("error", detail);
         return result(runtimeId, commandId, "FAILED", httpStatus, error);
+    }
+
+    /** Names the field list {@link #signingInput} covers; the ICP signs the same version. */
+    private static final String COMMAND_SIGNATURE_VERSION = "v1";
+
+    /**
+     * Why a command must not run, or null when it may.
+     * <p>
+     * The ICP signs every command with HMAC-SHA256, keyed with the shared secret this runtime
+     * heartbeats with, over the fields the runtime acts on (see {@link #signingInput}).
+     * Verifying it means a command is only run if the ICP issued it for this runtime; without
+     * it, an MI with {@code ssl_verify = false} runs whatever a party on the path puts in a
+     * heartbeat response.
+     *
+     * @param required refuse an unsigned command too, rather than only a badly signed one
+     */
+    static String signatureRefusal(JsonObject command, String runtimeId, byte[] key, boolean required) {
+        String signature = optString(command, "signature");
+        if (signature == null) {
+            return required ? "it is unsigned, and " + Constants.ICP_CONFIG_REQUIRE_SIGNED_COMMANDS
+                    + " is on (the default). Set it to false only for an ICP that does not sign commands" : null;
+        }
+        if (key == null) {
+            return "it is signed but no ICP secret is available to verify it";
+        }
+        byte[] given;
+        try {
+            given = Base64.getDecoder().decode(signature);
+        } catch (IllegalArgumentException e) {
+            return "its signature is not Base64";
+        }
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(key, "HmacSHA256"));
+            byte[] expected = mac.doFinal(signingInput(command, runtimeId));
+            return MessageDigest.isEqual(expected, given) ? null : "its signature does not match";
+        } catch (Exception e) {
+            return "its signature could not be verified (" + e.getMessage() + ")";
+        }
+    }
+
+    /**
+     * The bytes a command's signature covers, as the ICP computes them: each of version,
+     * runtime id, command id, action, target artifact name and package, and payload, written
+     * as {@code <UTF-8 byte length>:<value>} so no field runs into the next. Values are taken
+     * as they arrived — the payload is the JSON string as delivered — so neither side
+     * depends on how the other writes JSON. The runtime id is this node's own, which is what
+     * binds a command to the replica it was issued for.
+     */
+    static byte[] signingInput(JsonObject command, String runtimeId) {
+        JsonElement target = command.get("targetArtifact");
+        JsonObject artifact = target != null && target.isJsonObject() ? target.getAsJsonObject() : new JsonObject();
+        String[] fields = {
+                COMMAND_SIGNATURE_VERSION,
+                runtimeId,
+                orEmpty(optString(command, "commandId")),
+                orEmpty(optString(command, "action")),
+                orEmpty(optString(artifact, "name")),
+                orEmpty(optString(artifact, "package")),
+                orEmpty(optString(command, "payload"))
+        };
+        StringBuilder input = new StringBuilder();
+        for (String field : fields) {
+            input.append(field.getBytes(StandardCharsets.UTF_8).length).append(':').append(field);
+        }
+        return input.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    private static String orEmpty(String value) {
+        return value == null ? "" : value;
     }
 
     /** Epoch millis of an ISO-8601 deadline, or {@link Long#MAX_VALUE} when there is none. */
