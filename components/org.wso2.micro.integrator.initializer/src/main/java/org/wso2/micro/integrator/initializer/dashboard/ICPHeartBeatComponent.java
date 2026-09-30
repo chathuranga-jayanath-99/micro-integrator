@@ -76,6 +76,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.Arrays;
@@ -109,6 +110,9 @@ public class ICPHeartBeatComponent {
     private static volatile ScheduledExecutorService heartbeatExecutor = null;
     // The last delta heartbeat's hash and when it was computed; see runtimeHash.
     private static volatile String reusableHash;
+    // Key material of the shared ICP secret, kept for verifying tunneled commands; set with
+    // the heartbeat token, which is generated before the heartbeat loop starts.
+    private static volatile byte[] commandSigningKey;
     private static volatile long reusableHashAt;
     private static volatile boolean shutdownHookRegistered = false;
     private static volatile boolean sslWarnLogged = false;
@@ -277,6 +281,26 @@ public class ICPHeartBeatComponent {
     /** Whether a hash computed at {@code computedAt} may stand in for a new one at {@code now}. */
     static boolean hashIsReusable(String hash, long computedAt, long now, long intervalSeconds) {
         return hash != null && now - computedAt < TimeUnit.SECONDS.toMillis(intervalSeconds);
+    }
+
+    /** The key tunneled commands are verified with, or null before the heartbeat has started. */
+    static byte[] commandSigningKey() {
+        byte[] key = commandSigningKey;
+        return key == null ? null : key.clone();
+    }
+
+    /**
+     * Whether an unsigned tunneled command is refused. Off by default for one release so this
+     * runtime still takes commands from an ICP that does not sign yet; a signed command is
+     * verified either way.
+     */
+    static boolean requireSignedCommands() {
+        // Before the heartbeat has loaded its configuration there is nothing to decide with;
+        // commands only arrive once it has, so this default never admits a real one.
+        if (configs == null) {
+            return false;
+        }
+        return "true".equalsIgnoreCase(getConfigValue(ICP_CONFIG_REQUIRE_SIGNED_COMMANDS, "false"));
     }
 
     /** Makes the next delta heartbeat collect the artifacts again rather than reuse its hash. */
@@ -843,6 +867,7 @@ public class ICPHeartBeatComponent {
             // Resolve Secure Vault alias if present (e.g., $secret{icp_config.secret})
             String jwtHmacSecret = resolveSecret(jwtHmacSecretRaw);
             HMACJWTTokenGenerator hmacJWTTokenGenerator = new HMACJWTTokenGenerator(jwtHmacSecret);
+            commandSigningKey = hmacJWTTokenGenerator.keyMaterial().getBytes(StandardCharsets.UTF_8);
             String issuer = getConfigValue(ICP_JWT_ISSUER, DEFAULT_JWT_ISSUER);
             String audience = getConfigValue(ICP_JWT_AUDIENCE, DEFAULT_JWT_AUDIENCE);
             String scope = getConfigValue(ICP_JWT_SCOPE, DEFAULT_JWT_SCOPE);

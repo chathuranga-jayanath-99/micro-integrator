@@ -47,7 +47,10 @@ import org.wso2.config.mapper.ConfigParser;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -55,6 +58,9 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 /**
  * Executes management commands the ICP tunnels through heartbeat responses.
@@ -317,6 +323,15 @@ class ICPCommandExecutor {
     // Package-private, like the three helpers below: every refusal this class can make is
     // decided without a server around it, and the tests exercise them that way.
     static JsonObject runOne(JsonObject command, String runtimeId, String jwtToken) {
+        // Before anything in the command is believed, its commandId included: an unverified
+        // command is dropped, not reported, so a forged one cannot fail a genuine command that
+        // shares its id.
+        String refusal = signatureRefusal(command, runtimeId, ICPHeartBeatComponent.commandSigningKey(),
+                ICPHeartBeatComponent.requireSignedCommands());
+        if (refusal != null) {
+            log.warn("Refusing an ICP management command: " + refusal + ". It was not executed.");
+            return null;
+        }
         JsonObject payload;
         try {
             payload = JsonParser.parseString(optString(command, "payload")).getAsJsonObject();
@@ -555,6 +570,46 @@ class ICPCommandExecutor {
         detail.addProperty("message", message == null ? "Command execution failed" : message);
         error.add("error", detail);
         return result(runtimeId, commandId, "FAILED", httpStatus, error);
+    }
+
+    /**
+     * Why a command must not run, or null when it may.
+     * <p>
+     * The ICP signs each command with HMAC-SHA256 over this runtime's id and the payload
+     * string exactly as delivered, keyed with the shared secret this runtime heartbeats with.
+     * Verifying it means a command is only run if the ICP issued it for this runtime; without
+     * it, an MI with {@code ssl_verify = false} runs whatever a party on the path puts in a
+     * heartbeat response. The payload is verified as the bytes it arrived as, so neither side
+     * depends on how the other writes JSON.
+     *
+     * @param required refuse an unsigned command too, rather than only a badly signed one
+     */
+    static String signatureRefusal(JsonObject command, String runtimeId, byte[] key, boolean required) {
+        String signature = optString(command, "signature");
+        if (signature == null) {
+            return required ? "it is unsigned and " + Constants.ICP_CONFIG_REQUIRE_SIGNED_COMMANDS + " is on" : null;
+        }
+        if (key == null) {
+            return "it is signed but no ICP secret is available to verify it";
+        }
+        String payload = optString(command, "payload");
+        if (payload == null) {
+            return "it carries a signature but no payload";
+        }
+        byte[] given;
+        try {
+            given = Base64.getDecoder().decode(signature);
+        } catch (IllegalArgumentException e) {
+            return "its signature is not Base64";
+        }
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(key, "HmacSHA256"));
+            byte[] expected = mac.doFinal((runtimeId + "\n" + payload).getBytes(StandardCharsets.UTF_8));
+            return MessageDigest.isEqual(expected, given) ? null : "its signature does not match";
+        } catch (Exception e) {
+            return "its signature could not be verified (" + e.getMessage() + ")";
+        }
     }
 
     /** Epoch millis of an ISO-8601 deadline, or {@link Long#MAX_VALUE} when there is none. */
