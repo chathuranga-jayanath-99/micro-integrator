@@ -323,11 +323,18 @@ class ICPCommandExecutor {
     // Package-private, like the three helpers below: every refusal this class can make is
     // decided without a server around it, and the tests exercise them that way.
     static JsonObject runOne(JsonObject command, String runtimeId, String jwtToken) {
+        return runOne(command, runtimeId, jwtToken, ICPHeartBeatComponent.commandSigningKey(),
+                ICPHeartBeatComponent.requireSignedCommands());
+    }
+
+    // The key and the requirement are passed in so the tests decide them, rather than whatever
+    // configuration another test left loaded in the same JVM.
+    static JsonObject runOne(JsonObject command, String runtimeId, String jwtToken, byte[] signingKey,
+                             boolean requireSigned) {
         // Before anything in the command is believed, its commandId included: an unverified
         // command is dropped, not reported, so a forged one cannot fail a genuine command that
         // shares its id.
-        String refusal = signatureRefusal(command, runtimeId, ICPHeartBeatComponent.commandSigningKey(),
-                ICPHeartBeatComponent.requireSignedCommands());
+        String refusal = signatureRefusal(command, runtimeId, signingKey, requireSigned);
         if (refusal != null) {
             log.warn("Refusing an ICP management command: " + refusal + ". It was not executed.");
             return null;

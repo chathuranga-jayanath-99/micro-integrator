@@ -55,8 +55,7 @@ public class ICPCommandExecutorTest {
     public void testRunOne_PathOutsideManagement_IsRefusedNotPerformed() {
         // The ICP confines the path too. Both sides check, deliberately: a tunneled
         // method-and-path envelope is otherwise a relay into anything this process can reach.
-        JsonObject result = ICPCommandExecutor.runOne(
-                command("cmd-outside", "GET", "/internal/apis"), RUNTIME_ID, TOKEN);
+        JsonObject result = runUnsigned(command("cmd-outside", "GET", "/internal/apis"));
 
         assertNotNull("A refusal is still a result the ICP can hand to its caller", result);
         assertEquals("FAILED", result.get("status").getAsString());
@@ -77,8 +76,7 @@ public class ICPCommandExecutorTest {
                 "//evil.example/management/apis",
         };
         for (String path : escapes) {
-            JsonObject result = ICPCommandExecutor.runOne(
-                    command("cmd-" + path, "GET", path), RUNTIME_ID, TOKEN);
+            JsonObject result = runUnsigned(command("cmd-" + path, "GET", path));
             assertEquals(path, 403, result.get("httpStatus").getAsInt());
         }
     }
@@ -94,8 +92,7 @@ public class ICPCommandExecutorTest {
 
     @Test
     public void testRunOne_UnsupportedMethod_IsRefusedWithoutTouchingTheListener() {
-        JsonObject result = ICPCommandExecutor.runOne(
-                command("cmd-verb", "TRACE", "/management/logging"), RUNTIME_ID, TOKEN);
+        JsonObject result = runUnsigned(command("cmd-verb", "TRACE", "/management/logging"));
 
         assertEquals(405, result.get("httpStatus").getAsInt());
         assertEquals("FAILED", result.get("status").getAsString());
@@ -105,9 +102,16 @@ public class ICPCommandExecutorTest {
     public void testRunOne_NoParams_FailsRatherThanThrows() {
         JsonObject payload = new JsonObject();
         payload.addProperty("commandId", "cmd-empty");
-        JsonObject result = ICPCommandExecutor.runOne(wrap(payload), RUNTIME_ID, TOKEN);
+        JsonObject result = runUnsigned(wrap(payload));
 
         assertEquals(400, result.get("httpStatus").getAsInt());
+    }
+
+    @Test
+    public void testRunOne_UnsignedCommand_IsDroppedWhenSignaturesAreRequired() {
+        // Dropped before the path is even looked at: without the requirement this is a 403.
+        assertNull(ICPCommandExecutor.runOne(command("cmd-unsigned", "GET", "/internal/apis"),
+                RUNTIME_ID, TOKEN, KEY, true));
     }
 
     @Test
@@ -119,18 +123,17 @@ public class ICPCommandExecutorTest {
         payload.addProperty("deadline", Instant.now().minus(1, ChronoUnit.MINUTES).toString());
         expired.addProperty("payload", payload.toString());
 
-        assertNull(ICPCommandExecutor.runOne(expired, RUNTIME_ID, TOKEN));
+        assertNull(runUnsigned(expired));
     }
 
     @Test
     public void testRunOne_RedeliveredCommand_ReplaysItsStoredResult() {
         // A result lost in flight makes the ICP re-offer the command. Performing it again
         // would delete a user twice; the stored outcome is returned instead.
-        JsonObject first = ICPCommandExecutor.runOne(
-                command("cmd-replay", "GET", "/etc/passwd"), RUNTIME_ID, TOKEN);
-        JsonObject second = ICPCommandExecutor.runOne(
-                command("cmd-replay", "GET", "/etc/passwd"), RUNTIME_ID, TOKEN);
+        JsonObject first = runUnsigned(command("cmd-replay", "GET", "/etc/passwd"));
+        JsonObject second = runUnsigned(command("cmd-replay", "GET", "/etc/passwd"));
 
+        assertNotNull(first);
         assertSame("The second delivery must replay the first outcome", first, second);
     }
 
@@ -225,13 +228,13 @@ public class ICPCommandExecutorTest {
         JsonObject unreadable = new JsonObject();
         unreadable.addProperty("action", "MI_MGMT");
         unreadable.addProperty("payload", "not json");
-        assertNull(ICPCommandExecutor.runOne(unreadable, RUNTIME_ID, TOKEN));
+        assertNull(runUnsigned(unreadable));
 
         JsonObject anonymous = new JsonObject();
         anonymous.addProperty("action", "MI_MGMT");
         anonymous.addProperty("payload", new JsonObject().toString());
         assertNull("Without a command id there is nothing to report an outcome under",
-                ICPCommandExecutor.runOne(anonymous, RUNTIME_ID, TOKEN));
+                runUnsigned(anonymous));
     }
 
     @Test
@@ -432,6 +435,15 @@ public class ICPCommandExecutorTest {
         // not sign yet; turning require_signed_commands on closes that.
         assertNull(ICPCommandExecutor.signatureRefusal(signed(SIGNED_PAYLOAD, null), "runtime-1", KEY, false));
         assertNotNull(ICPCommandExecutor.signatureRefusal(signed(SIGNED_PAYLOAD, null), "runtime-1", KEY, true));
+    }
+
+    /**
+     * Runs an unsigned command with signatures not required, as an ICP that does not sign yet
+     * would send it. Passed explicitly: the default follows the loaded configuration, which
+     * another test in the same JVM may have left in place.
+     */
+    private static JsonObject runUnsigned(JsonObject command) {
+        return ICPCommandExecutor.runOne(command, RUNTIME_ID, TOKEN, KEY, false);
     }
 
     private static JsonObject command(String commandId, String method, String path) {
