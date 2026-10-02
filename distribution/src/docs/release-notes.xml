@@ -125,7 +125,7 @@
                 </li>
             </ul>
 
-            <p>Following are the improvements and bug fixes done on each component of WSO2 Integrator: MI version 4.6.0.</p>
+            <p>Following are the improvements and bug fixes done on each component of WSO2 Integrator: MI version 4.7.0.</p>
             <ul>
                 <li>Runtime - Improvements and bug fixes <a href="https://github.com/wso2/product-integrator-mi/issues?q=is%3Aissue%20is%3Aclosed%20closed%3A2026-03-27..2026-10-15">here</a></li>
                 <li>VSCode extension - Improvements and bug fixes <a href="https://github.com/wso2/mi-vscode/issues?q=is%3Aissue%20is%3Aclosed%20closed%3A2026-03-27..2026-10-15">here</a></li>
