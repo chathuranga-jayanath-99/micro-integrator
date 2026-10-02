@@ -95,53 +95,40 @@
             <h2>What's new in this release</h2>
             <p>WSO2 Integrator: MI @product.version@ is shipped with the following new features:</p>
             <ul>
-                <li>JDK 25 Support</li>
-                <li>Make WSO2 Integrator: MI post quantum secure</li>
-                <li>Bouncy Castle FIPS Crypto Provider Support</li>
-                <li>OAuth 2.0 (JWT) Authentication Handler for REST APIs</li>
-                <li>Enable/disable Support for Scheduled Tasks with the management API</li>
-                <li>Add support to configure the endpoint suspend duration globally</li>
-                <li>Enhanced logging with mediator ID</li>
-                <li>Observability Features/Improvements:
-                    <ul>
-                        <li>Support Prometheus API 1.x</li>
-                        <li>Support to Publish Observability Data to Moesif</li>
-                        <li>OpenTelemetry-based Observability in Dataservices</li>
-                        <li>OpenTelemetry support for Traces and Logs</li>
-                        <li>OpenTelemetry Span Filtering Support for Mediators</li>
-                        <li>Show connector/module operations as a single span in traces</li>
-                        <li>Enable/disable Support for statistics with the management API</li>
-                    </ul>
-                </li>
+                <li>Priority based CApp deployment</li>
+                <li>ELK analytics support for data services</li>
+                <li>Configuration and Secret Management Improvements</li>
+                <li>Native support for Brotli encoded requests</li>
+                <li>Hardened scheduled task coordination</li>
+                <li>Improved operational visibility into clustered deployments</li>
                 <li>VSCode extension Features/Improvements:
                     <ul>
-                        <li>Remote Debugging</li>
-                        <li>Unit test coverage for synapse artifacts</li>
+                        <li>Data services editor improvements</li>
+                        <li>Enhanced dependency management in the editor</li>
+                        <li>Workspace overview in the editor</li>
                     </ul>
                 </li>
                 <li>AI Features:
                     <ul>
-                        <li>MCP Tool Support for Agents in AI Connector</li>
-                        <li>Agent Memory Trim and Summarization Support</li>
-                        <li>Agent Mode in MI Copilot</li>
-                        <li>New Vector Database Support</li>
-                        <li>Azure OpenAI Embeddings Support</li>
-                        <li>AWS Bedrock Login Support</li>
+                        <li>Custom AI instructions support</li>
+                        <li>Integrate skills framework support</li>
+                        <li>Expose WSO2 Integrator: MI as an MCP Server</li>
                     </ul>
                 </li>
                 <li>Connector Enhancements:
                     <ul>
-                        <li>AMQP 1.0 Protocol Support</li>
-                        <li>gRPC Connector with Import Support</li>
-                        <li>MI connector generation from Ballerina connectors</li>
+                        <li>Solace Connector and Inbound Endpoint support</li>
+                        <li>PGP connector support</li>
+                        <li>Azure Service Bus Connector and Inbound Endpoint support</li>
+                        <li>Streaming large files to S3 bucket support</li>
                     </ul>
                 </li>
             </ul>
 
-            <p>Following are the improvements and bug fixes done on each component of WSO2 Integrator: MI version 4.6.0.</p>
+            <p>Following are the improvements and bug fixes done on each component of WSO2 Integrator: MI version 4.7.0.</p>
             <ul>
-                <li>Runtime - Improvements and bug fixes <a href="https://github.com/wso2/product-micro-integrator/issues?q=is%3Aissue%20is%3Aclosed%20closed%3A2025-10-22..2026-05-07">here</a></li>
-                <li>VSCode extension - Improvements and bug fixes <a href="https://github.com/wso2/mi-vscode/issues?q=is%3Aissue%20is%3Aclosed%20closed%3A2025-10-22..2026-05-07">here</a></li>
+                <li>Runtime - Improvements and bug fixes <a href="https://github.com/wso2/product-integrator-mi/issues?q=is%3Aissue%20is%3Aclosed%20closed%3A2026-03-27..2026-10-15">here</a></li>
+                <li>VSCode extension - Improvements and bug fixes <a href="https://github.com/wso2/mi-vscode/issues?q=is%3Aissue%20is%3Aclosed%20closed%3A2026-03-27..2026-10-15">here</a></li>
             </ul>
 
             <h2>Known Issues</h2>
