@@ -2162,7 +2162,7 @@
         <sap-adapter.feature.version>4.7.38</sap-adapter.feature.version>
 
         <cipher.tool.version>1.2.10</cipher.tool.version>
-        <axis2.transport.version>2.0.0-wso2v90</axis2.transport.version>
+        <axis2.transport.version>2.0.0-wso2v91</axis2.transport.version>
         <transport.http.netty.version>6.4.3</transport.http.netty.version>
 
         <esotericsoftware.kryo.version>3.0.3</esotericsoftware.kryo.version>
@@ -2170,7 +2170,7 @@
         <org.objenesis.version>2.6</org.objenesis.version>
 
         <!-- Apache Axis2 -->
-        <axis2.wso2.version>1.6.1-wso2v130</axis2.wso2.version>
+        <axis2.wso2.version>1.6.1-wso2v133</axis2.wso2.version>
         <!-- Please unify axis2 versions in future -->
         <axis2.wso2.integration.test.version>1.6.1-wso2v120</axis2.wso2.integration.test.version>
         <imp.pkg.version.axis2>[1.6.1, 1.7.0)</imp.pkg.version.axis2>
